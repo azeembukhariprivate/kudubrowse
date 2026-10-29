@@ -311,6 +311,21 @@ namespace Kudubrowse.Views
                         await Wait(() => tab.Title == "Second page" && !tab.IsLoading, 20, "another page");
                         Expect(PasswordStore.Vault.For("https://other.example/").Count == 0, "no logins for another site");
 
+                        // The list is for the page it was shown on: if the page goes to another site before a login is
+                        // picked (a trick a page that opened this tab could try), the list goes away and nothing is sent.
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest-other.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/login.html");
+                        await Wait(() => tab.Title == "Sign in" && !tab.IsLoading, 20, "the sign-in page once more");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('user').focus()");
+                        await Wait(() => main.FillListOpen && main.FillChoices.Contains("login:azeem"), 10, "the saved login offered again");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("location.href = 'https://kudutest-other.example/login.html'");
+                        await Wait(() => tab.Url.StartsWith("https://kudutest-other.example/") && !tab.IsLoading, 20, "the page to move to another site");
+                        Expect(!main.FillListOpen, "the list closed when the page moved on");
+                        main.ChooseFill("login:azeem");
+                        Expect(!tab.Fill("https://kudutest.example", "azeem", "Kochi-2025!"), "a login is never sent to another site");
+                        await Task.Delay(500);
+                        Expect(await Value(tab, "pass") == "", "nothing filled on the other site");
+
                         // Signing up: a strong password is suggested and fills both boxes.
                         main.Go("https://kudutest.example/signup.html");
                         await Wait(() => tab.Title == "Sign up" && !tab.IsLoading, 20, "the sign-up page");

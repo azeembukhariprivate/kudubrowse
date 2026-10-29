@@ -17,7 +17,9 @@ namespace Kudubrowse.Core
         {
             ".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle", ".bat", ".cmd", ".com", ".scr", ".pif", ".cpl",
             ".ps1", ".psm1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".hta", ".jar", ".lnk", ".reg", ".dll", ".sys",
-            ".iso", ".img", ".vhd", ".vhdx", ".application", ".appref-ms", ".docm", ".xlsm", ".pptm", ".chm", ".url"
+            ".iso", ".img", ".vhd", ".vhdx", ".application", ".appref-ms", ".docm", ".xlsm", ".pptm", ".chm", ".url",
+            ".one", ".onepkg", ".xll", ".xlam", ".ppam", ".dotm", ".xltm", ".potm", ".wsc", ".sct", ".msc", ".msp", ".mst", ".inf",
+            ".scf", ".gadget", ".vb", ".msh", ".psc1", ".ps1xml", ".appinstaller", ".diagcab", ".settingcontent-ms", ".library-ms", ".search-ms"
         };
 
         public static bool IsRisky(string fileName)

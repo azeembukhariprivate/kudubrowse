@@ -11,7 +11,9 @@ namespace Kudubrowse.Core
 {
     /// <summary>
     /// Keeps one running copy of the browser for each Windows user: when it's started again (a link clicked in another
-    /// app), the new copy hands the address to the one already running and closes.
+    /// app), the new copy hands the address to the one already running and closes. The pipe only lets this Windows user
+    /// in, and a new copy only hands over to a running copy of the same user (so on a shared PC nobody else can listen in
+    /// on the addresses).
     /// </summary>
     public sealed class SingleInstance : IDisposable
     {
@@ -48,7 +50,7 @@ namespace Kudubrowse.Core
                 {
                     try
                     {
-                        using (var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous))
+                        using (var server = CreateServer(PipeName))
                         {
                             await server.WaitForConnectionAsync(_stop.Token).ConfigureAwait(false);
                             using (var reader = new StreamReader(server, Encoding.UTF8))
@@ -63,7 +65,7 @@ namespace Kudubrowse.Core
                     {
                         return;
                     }
-                    catch (IOException)
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                     {
                         await Task.Delay(200).ConfigureAwait(false);
                     }
@@ -76,19 +78,49 @@ namespace Kudubrowse.Core
         {
             try
             {
+#if NETFRAMEWORK
                 using (var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out))
                 {
                     client.Connect(timeoutMs);
+                    // Only a pipe made by this same user (another user could have made one with this name first).
+                    using (var me = System.Security.Principal.WindowsIdentity.GetCurrent())
+                    {
+                        var owner = client.GetAccessControl().GetOwner(typeof(System.Security.Principal.SecurityIdentifier));
+                        if (owner == null || !owner.Equals(me.User)) return false;
+                    }
+#else
+                using (var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.CurrentUserOnly))
+                {
+                    client.Connect(timeoutMs);
+#endif
                     var data = Encoding.UTF8.GetBytes(string.Join("\n", args.Select(a => a.Replace("\n", " "))));
                     client.Write(data, 0, data.Length);
                     client.Flush();
                     return true;
                 }
             }
-            catch (Exception ex) when (ex is TimeoutException || ex is IOException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is TimeoutException || ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
                 return false;
             }
+        }
+
+        /// <summary>The listening end of the pipe, which only this Windows user can open.</summary>
+        private static NamedPipeServerStream CreateServer(string name)
+        {
+#if NETFRAMEWORK
+            using (var me = System.Security.Principal.WindowsIdentity.GetCurrent())
+            {
+                var security = new PipeSecurity();
+                security.SetAccessRuleProtection(true, false);
+                security.AddAccessRule(new PipeAccessRule(me.User, PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                    System.Security.AccessControl.AccessControlType.Allow));
+                security.SetOwner(me.User);
+                return new NamedPipeServerStream(name, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
+            }
+#else
+            return new NamedPipeServerStream(name, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+#endif
         }
 
         public void Dispose()

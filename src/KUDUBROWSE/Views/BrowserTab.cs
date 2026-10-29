@@ -174,12 +174,27 @@ namespace Kudubrowse.Views
         }
 
         /// <summary>Fills the focused login box with a saved login (only called after the person picks it).</summary>
-        public void Fill(string username, string password) =>
-            View?.CoreWebView2?.PostWebMessageAsJson(Json.Serialize(new { kudu = "fill", username, password }));
+        /// <summary>
+        /// Only when the page is still on <paramref name="origin"/>, the site the list was shown for: a page that moved on
+        /// to another site in the meantime never gets the login. Returns false when nothing was sent.
+        /// </summary>
+        public bool Fill(string origin, string username, string password) =>
+            Send(origin, Json.Serialize(new { kudu = "fill", username, password }));
 
-        /// <summary>Fills the new-password boxes with a strong password.</summary>
-        public void FillGenerated(string password) =>
-            View?.CoreWebView2?.PostWebMessageAsJson(Json.Serialize(new { kudu = "fill", generated = true, password }));
+        /// <summary>Fills the new-password boxes with a strong password (also only on the same site).</summary>
+        public bool FillGenerated(string origin, string password) =>
+            Send(origin, Json.Serialize(new { kudu = "fill", generated = true, password }));
+
+        private bool Send(string origin, string json)
+        {
+            var core = View?.CoreWebView2;
+            if (core == null || origin == null || Core.Passwords.Vault.OriginOf(core.Source) != origin) return false;
+            core.PostWebMessageAsJson(json);
+            return true;
+        }
+
+        /// <summary>The page is going somewhere (another page or site).</summary>
+        public event Action<BrowserTab> Navigating;
 
         public void CountBlockedPopup()
         {
@@ -298,6 +313,7 @@ namespace Kudubrowse.Views
             core.NavigationStarting += (s, e) =>
             {
                 IsLoading = true;
+                Navigating?.Invoke(this);
                 _mainUrl = e.Uri;
                 PageHost = HostOf(e.Uri);
                 SiteAllowed = Blocker.IsAllowed(PageHost);

@@ -72,6 +72,11 @@ namespace Kudubrowse.Views
             {
                 if (t == Current && !_fillPopup.IsMouseOver) _fillPopup.IsOpen = false;
             };
+            // The list belongs to the page it was shown for: it goes away as soon as the page moves on.
+            tab.Navigating += t =>
+            {
+                if (t == _fillTab) _fillPopup.IsOpen = false;
+            };
         }
 
         // ================================================================ saving
@@ -121,12 +126,20 @@ namespace Kudubrowse.Views
         // ================================================================ filling
 
         /// <summary>What the list next to the login box offers (for the self-test).</summary>
+        private BrowserTab _fillTab;
+
+        /// <summary>The list of saved logins is showing (for the self-test).</summary>
+        public bool FillListOpen => _fillPopup.IsOpen;
+
         public IReadOnlyList<string> FillChoices => _fillItems.Children.OfType<Button>().Select(b => b.Tag as string).ToList();
 
         private void OnLoginField(BrowserTab tab, Point at, bool isNew)
         {
             if (tab != Current || tab.View == null) return;
-            var logins = PasswordStore.Vault.For(tab.Url);
+            var origin = Vault.OriginOf(tab.View.CoreWebView2?.Source);
+            if (origin == null) return;
+            _fillTab = tab;
+            var logins = PasswordStore.Vault.For(origin);
             _fillItems.Children.Clear();
             Button Choice(string title, string sub, string icon, string tag, Action act)
             {
@@ -149,14 +162,13 @@ namespace Kudubrowse.Views
                 var login = l;
                 _fillItems.Children.Add(Choice(string.IsNullOrEmpty(l.Username) ? "(no name)" : l.Username, "••••••••  ·  " + l.Site, "IconUser", "login:" + l.Username, () =>
                 {
-                    tab.Fill(login.Username, login.Password);
-                    PasswordStore.Vault.MarkUsed(login);
+                    if (tab.Fill(origin, login.Username, login.Password)) PasswordStore.Vault.MarkUsed(login);
                 }));
             }
             if (isNew)
             {
                 var generated = PasswordTools.Generate();
-                _fillItems.Children.Add(Choice("Use a strong password", generated, "IconLock", "generated", () => tab.FillGenerated(generated)));
+                _fillItems.Children.Add(Choice("Use a strong password", generated, "IconLock", "generated", () => tab.FillGenerated(origin, generated)));
             }
             if (_fillItems.Children.Count == 0)
             {
