@@ -6,6 +6,13 @@ Microsoft Edge WebView2 SDK (Microsoft.Web.WebView2)
   The web pages are shown by the Microsoft Edge WebView2 Runtime that comes with Windows; it is Microsoft's and is
   kept up to date by Windows.
 
+Windows SDK contracts (Microsoft.Windows.SDK.Contracts), used to ask Windows Hello before showing a saved password
+  Copyright (C) Microsoft Corporation. Licensed under the MIT licence:
+  https://www.nuget.org/packages/Microsoft.Windows.SDK.Contracts/10.0.19041.1/License
+
+Leak check: Pwned Passwords (https://haveibeenpwned.com/Passwords), by Troy Hunt. Only asked when you press
+  "Check for leaks"; only the first 5 characters of each password's SHA-1 code are sent.
+
 Block lists: EasyList, EasyPrivacy and EasyList Cookie List (src/KUDUBROWSE/Lists, and fetched again every few days)
   By the EasyList authors (https://easylist.to/). Dual licensed under the GNU General Public License version 3 and
   the Creative Commons Attribution-ShareAlike 3.0 Unported licence; KUDUBROWSE uses them under the latter:

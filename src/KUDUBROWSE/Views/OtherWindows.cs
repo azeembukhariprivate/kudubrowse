@@ -105,6 +105,17 @@ namespace Kudubrowse.Views
                 root.Children.Add(sites);
             }
 
+            root.Children.Add(Ui.Heading("Passwords", 14).Margin(0, 16, 0, 4));
+            var offer = new CheckBox { Content = "Offer to save passwords when you sign in to sites", IsChecked = Settings.OfferToSavePasswords };
+            offer.Click += (s, e) => Settings.OfferToSavePasswords = offer.IsChecked == true;
+            root.Children.Add(offer);
+            root.Children.Add(Ui.Subtle("Saved passwords are locked to your Windows account. Showing or copying one asks for Windows Hello or your Windows password.", 12).Margin(27, 0, 0, 0));
+            var managePasswords = Ui.Small(Ui.Button("Manage passwords", "IconLock", "SecondaryButton"));
+            managePasswords.HorizontalAlignment = HorizontalAlignment.Left;
+            managePasswords.Margin = new Thickness(0, 8, 0, 0);
+            managePasswords.Click += (s, e) => PasswordsWindow.Show(Owner);
+            root.Children.Add(managePasswords);
+
             root.Children.Add(Ui.Heading("Default browser", 14).Margin(0, 16, 0, 4));
             root.Children.Add(Ui.Subtle(ShellIntegration.IsDefault
                 ? AppInfo.Name + " is your default browser: links you click in other apps open here."

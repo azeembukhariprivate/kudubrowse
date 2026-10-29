@@ -247,7 +247,7 @@ namespace Kudubrowse.Views
             }
             root.Children.Add(_bookmarks);
             root.Children.Add(_history);
-            root.Children.Add(Ui.Subtle("Passwords come later, with the password manager.", 12).Margin(0, 10, 0, 0));
+            root.Children.Add(Ui.Subtle("Passwords come in a separate step: Menu › Passwords › Bring passwords from Chrome.", 12).Margin(0, 10, 0, 0));
             root.Children.Add(_result.Margin(0, 12, 0, 0));
             var cancel = Ui.Button("Close");
             cancel.IsCancel = true;

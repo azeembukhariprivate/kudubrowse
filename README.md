@@ -7,7 +7,7 @@ account and without anything about you being collected.
 >
 > 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
 > 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
-> 3. ✅ Bookmarks, history, suggestions, bringing bookmarks and history from Chrome, default browser; passwords next
+> 3. ✅ Bookmarks, history, suggestions, passwords, bringing everything from Chrome, default browser
 > 4. Rooms (separate logins), reading mode, screenshots, and the installer
 >
 > Version 1.0 will be released when all four are done and tested.
@@ -28,6 +28,10 @@ Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
 - The address bar suggests bookmarks and pages you visit often as you type.
 - "Bring bookmarks and history from Chrome" (Chrome's files are only read), and a welcome window the first time.
 - Can be chosen as the default browser in Windows' Default apps.
+- Passwords: offered to save when you sign in, filled when you pick a login from the list next to the box, strong ones
+  suggested when you sign up. They're encrypted for your Windows account; showing or copying one asks for Windows Hello
+  (or your Windows password). "Check for leaks" sends only 5 characters of a scrambled code of each password.
+  Passwords come from Chrome through the file Chrome exports, which is deleted afterwards.
 
 The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
 

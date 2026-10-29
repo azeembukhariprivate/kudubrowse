@@ -101,6 +101,13 @@ namespace Kudubrowse.Core
             set => Set("AllowedSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
         }
 
+        /// <summary>Offer to save passwords typed into login forms.</summary>
+        public static bool OfferToSavePasswords
+        {
+            get => GetBool("OfferToSavePasswords", true);
+            set => SetBool("OfferToSavePasswords", value);
+        }
+
         /// <summary>Show the bookmarks bar under the address bar.</summary>
         public static bool ShowBookmarksBar
         {

@@ -101,6 +101,49 @@ namespace Kudubrowse.Views
         /// <summary>Something more was blocked on the page.</summary>
         public event Action<BrowserTab> BlockedChanged;
 
+        // ================================================================ passwords
+
+        /// <summary>A login box got focus: where it is on the page (in page pixels), and whether it's for a new password.</summary>
+        public event Action<BrowserTab, Point, bool> LoginFieldFocused;
+        public event Action<BrowserTab> LoginFieldLeft;
+        /// <summary>A login was sent on the page: its address, the name and the password typed.</summary>
+        public event Action<BrowserTab, string, string, string> LoginSent;
+
+        /// <summary>A login the page sent that hasn't been saved or dismissed yet.</summary>
+        public (string Url, string Username, string Password, Core.Passwords.Vault.SaveKind Kind)? PendingLogin { get; set; }
+
+        private static readonly System.Web.Script.Serialization.JavaScriptSerializer Json = new System.Web.Script.Serialization.JavaScriptSerializer();
+
+        private void OnPageMessage(string source, string json)
+        {
+            System.Collections.Generic.Dictionary<string, object> m;
+            try { m = Json.Deserialize<System.Collections.Generic.Dictionary<string, object>>(json); }
+            catch (ArgumentException) { return; }
+            if (m == null || !m.TryGetValue("kudu", out var kind) || Core.Passwords.Vault.OriginOf(source) == null) return;
+            double Num(string k) => m.TryGetValue(k, out var v) && v != null ? Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture) : 0;
+            string Text(string k) => m.TryGetValue(k, out var v) ? v as string ?? string.Empty : string.Empty;
+            switch (kind as string)
+            {
+                case "field":
+                    LoginFieldFocused?.Invoke(this, new Point(Num("x"), Num("y")), m.TryGetValue("isNew", out var n) && n is bool b && b);
+                    break;
+                case "blur":
+                    LoginFieldLeft?.Invoke(this);
+                    break;
+                case "login":
+                    LoginSent?.Invoke(this, source, Text("username"), Text("password"));
+                    break;
+            }
+        }
+
+        /// <summary>Fills the focused login box with a saved login (only called after the person picks it).</summary>
+        public void Fill(string username, string password) =>
+            View?.CoreWebView2?.PostWebMessageAsJson(Json.Serialize(new { kudu = "fill", username, password }));
+
+        /// <summary>Fills the new-password boxes with a strong password.</summary>
+        public void FillGenerated(string password) =>
+            View?.CoreWebView2?.PostWebMessageAsJson(Json.Serialize(new { kudu = "fill", generated = true, password }));
+
         public void CountBlockedPopup()
         {
             PopupsBlocked++;
@@ -183,8 +226,16 @@ namespace Kudubrowse.Views
                 string message = null;
                 try { message = e.TryGetWebMessageAsString(); }
                 catch (ArgumentException) { }
-                if (message == Blocker.PopupMessage) CountBlockedPopup();
+                if (message == Blocker.PopupMessage)
+                {
+                    CountBlockedPopup();
+                    return;
+                }
+                if (message == null) OnPageMessage(e.Source, e.WebMessageAsJson);
             };
+            // Passwords: notices login boxes and sent logins (see PasswordScript).
+            try { await core.AddScriptToExecuteOnDocumentCreatedAsync(PasswordScript.Source); }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
             await UpdateHidingScript();
             Blocker.Changed += OnBlockerChanged;
             core.NavigationCompleted += (s, e) =>

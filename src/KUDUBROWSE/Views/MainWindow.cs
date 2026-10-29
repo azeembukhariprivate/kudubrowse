@@ -149,11 +149,13 @@ namespace Kudubrowse.Views
             _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _chrome.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             _chrome.Children.Add(stripBar.At(0, 0));
             _chrome.Children.Add(toolbarBar.At(1, 0));
             _chrome.Children.Add(_bar.At(2, 0));
-            _chrome.Children.Add(_pages.At(3, 0));
+            _chrome.Children.Add(InitPasswords().At(3, 0));
+            _chrome.Children.Add(_pages.At(4, 0));
             Content = _chrome;
 
             PreviewKeyDown += OnKey;
@@ -237,6 +239,7 @@ namespace Kudubrowse.Views
                 _pages.Children.Add(t.View);
             };
             tab.NewWindowRequested += OnNewWindow;
+            WatchPasswords(tab);
             tab.PageClosed += CloseTab;
             tab.FullScreenChanged += (t, on) => SetFullScreen(on);
             tab.BlockedChanged += t =>
@@ -259,6 +262,7 @@ namespace Kudubrowse.Views
                 if (t.View != null) t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Hidden;
             }
             tab.LoadIfNeeded();
+            UpdateSaveBar();
             _newTabPage.Visibility = tab.IsBlank && tab.View == null ? Visibility.Visible : Visibility.Collapsed;
             UpdateToolbar();
             if (tab.IsBlank && tab.View == null) FocusNewTabSearch();
@@ -481,6 +485,7 @@ namespace Kudubrowse.Views
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
             menu.Items.Add(Item("Bookmarks", () => LibraryWindow.Show(this, true), "Ctrl+Shift+O"));
+            menu.Items.Add(Item("Passwords", () => PasswordsWindow.Show(this)));
             var barItem = Item(Settings.ShowBookmarksBar ? "Hide the bookmarks bar" : "Show the bookmarks bar", ToggleBookmarksBar, "Ctrl+Shift+B");
             menu.Items.Add(barItem);
             menu.Items.Add(Item("Bring bookmarks and history from Chrome...", () => new ImportWindow(this).ShowDialog()));
@@ -529,6 +534,7 @@ namespace Kudubrowse.Views
             _chrome.RowDefinitions[0].Height = on ? new GridLength(0) : GridLength.Auto;
             _chrome.RowDefinitions[1].Height = on ? new GridLength(0) : GridLength.Auto;
             _chrome.RowDefinitions[2].Height = on ? new GridLength(0) : GridLength.Auto;
+            _chrome.RowDefinitions[3].Height = on ? new GridLength(0) : GridLength.Auto;
         }
 
         // ================================================================ keyboard

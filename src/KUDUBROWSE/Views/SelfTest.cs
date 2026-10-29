@@ -39,6 +39,10 @@ namespace Kudubrowse.Views
             if (chrome != null) Core.Library.ChromeImport.UserDataFolder = Path.GetFullPath(chrome);
             Core.Library.History.KeepFor = TimeSpan.FromDays(36500); // the made-up Chrome history is old
             var wasRegistered = ShellIntegration.IsRegistered;
+            PasswordStore.Reload();
+            Verify.AutoAnswer = true;
+            var savedOffer = Settings.OfferToSavePasswords;
+            Settings.OfferToSavePasswords = true;
             var savedAllowed = Settings.AllowedSites;
             var savedBlocking = (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups);
             Settings.AllowedSites = new List<string>();
@@ -260,6 +264,78 @@ namespace Kudubrowse.Views
                     w.Close();
                     ShowAndClose(new WelcomeWindow(main));
                 });
+                await Step("Passwords: offered to save after signing in, filled when picked, strong ones suggested", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        Page("login.html", "Sign in", "<form action='second.html'><input id='user' autocomplete='username'><input id='pass' type='password'><button id='go'>Sign in</button></form>");
+                        Page("signup.html", "Sign up", "<form><input id='email' type='email'><input id='p1' type='password' autocomplete='new-password'><input id='p2' type='password' autocomplete='new-password'><button>Join</button></form>");
+                        var tab = main.NewTab(select: true);
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/login.html");
+                        await Wait(() => tab.Title == "Sign in" && !tab.IsLoading, 20, "the sign-in page");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('user').value = 'azeem'; document.getElementById('pass').value = 'Kochi-2025!'; document.getElementById('go').click();");
+                        await Wait(() => tab.PendingLogin != null, 10, "the offer to save the password");
+                        await Wait(() => tab.Title == "Second page", 10, "the page after signing in");
+                        Expect(main.SaveBarShown, "the save bar shows");
+                        Screenshots.All("Save password");
+                        main.SavePendingLogin();
+                        Expect(!main.SaveBarShown, "the bar goes away");
+                        PasswordStore.Reload();
+                        var saved = PasswordStore.Vault.For("https://kudutest.example/login.html");
+                        Expect(saved.Count == 1 && saved[0].Username == "azeem" && saved[0].Password == "Kochi-2025!", "saved, encrypted, and read back");
+                        var raw = File.ReadAllText(PasswordStore.Vault.File);
+                        Expect(!raw.Contains("Kochi-2025") && !raw.Contains("azeem"), "the file isn't readable as it is");
+
+                        // Back on the sign-in page: the list next to the box, and filling once a login is picked.
+                        main.Go("https://kudutest.example/login.html");
+                        await Wait(() => tab.Title == "Sign in" && !tab.IsLoading, 20, "the sign-in page again");
+                        Expect(await Value(tab, "pass") == "", "nothing filled before a login is picked");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('user').focus()");
+                        await Wait(() => main.FillChoices.Contains("login:azeem"), 10, "the saved login offered");
+                        Screenshots.All("Saved login offered");
+                        main.ChooseFill("login:azeem");
+                        await WaitAsync(async () => await Value(tab, "pass") == "Kochi-2025!", 10, "the password filled");
+                        Expect(await Value(tab, "user") == "azeem", "the name filled");
+
+                        // A page that's not the same site gets nothing.
+                        main.Go("https://kudutest.example/second.html");
+                        await Wait(() => tab.Title == "Second page" && !tab.IsLoading, 20, "another page");
+                        Expect(PasswordStore.Vault.For("https://other.example/").Count == 0, "no logins for another site");
+
+                        // Signing up: a strong password is suggested and fills both boxes.
+                        main.Go("https://kudutest.example/signup.html");
+                        await Wait(() => tab.Title == "Sign up" && !tab.IsLoading, 20, "the sign-up page");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('p1').focus()");
+                        await Wait(() => main.FillChoices.Contains("generated"), 10, "a strong password suggested");
+                        main.ChooseFill("generated");
+                        await WaitAsync(async () => (await Value(tab, "p1")).Length == 16, 10, "the strong password filled");
+                        Expect(await Value(tab, "p1") == await Value(tab, "p2"), "both boxes the same");
+
+                        var w = PasswordsWindow.Show(main);
+                        OffScreen(w);
+                        Pump();
+                        Expect(w.RowCount == 1, "the passwords window lists it");
+                        Screenshots.One(w, "Passwords");
+                        var csv = Path.Combine(_temp, "Chrome Passwords.csv");
+                        File.WriteAllText(csv, "name,url,username,password,note\nshop,https://shop.example/login,me,Pa55-word!x,\nbank,https://bank.example/,me,another-Pa55,\n");
+                        var imp = new ImportPasswordsWindow(w);
+                        var msg = imp.Import(csv, true);
+                        Note(msg);
+                        Expect(msg.StartsWith("2 passwords brought over") && !File.Exists(csv), "brought over from the file, and the file deleted: " + msg);
+                        Pump();
+                        Expect(w.RowCount == 3, "three passwords listed");
+                        Screenshots.One(w, "Passwords after bringing them from Chrome");
+                        w.Close();
+                    }
+                    finally
+                    {
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
                 await Step("Can be chosen as the default browser", () =>
                 {
                     ShellIntegration.Register();
@@ -315,6 +391,8 @@ namespace Kudubrowse.Views
 
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
+            Settings.OfferToSavePasswords = savedOffer;
+            Verify.AutoAnswer = null;
             Settings.AllowedSites = savedAllowed;
             (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups) = savedBlocking;
             _log.AppendLine(Errors.Count == 0 ? "SELF-TEST PASSED" : $"SELF-TEST FAILED ({Errors.Count})");
@@ -325,6 +403,15 @@ namespace Kudubrowse.Views
             catch { /* ignore */ }
             return Errors.Count == 0 ? 0 : 1;
         }
+
+        private static async Task<string> Value(BrowserTab tab, string id)
+        {
+            var json = await tab.View.CoreWebView2.ExecuteScriptAsync($"document.getElementById('{id}').value");
+            return JsonText(json);
+        }
+
+        /// <summary>A JSON string from the page as plain text.</summary>
+        private static string JsonText(string json) => new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<string>(json) ?? string.Empty;
 
         private static async Task<string> Display(BrowserTab tab, string selector)
         {
@@ -388,6 +475,16 @@ namespace Kudubrowse.Views
             {
                 if (DateTime.UtcNow > until) throw new Exception("timed out waiting for " + what);
                 await Task.Delay(50);
+            }
+        }
+
+        private static async Task WaitAsync(Func<Task<bool>> condition, int seconds, string what)
+        {
+            var until = DateTime.UtcNow.AddSeconds(seconds);
+            while (!await condition())
+            {
+                if (DateTime.UtcNow > until) throw new Exception("timed out waiting for " + what);
+                await Task.Delay(100);
             }
         }
 

@@ -33,9 +33,12 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    read-only `SqliteReader.cs`; tests use `tests/KUDUBROWSE.Tests/Fixtures/ChromeUserData`, made by
    `tools/make-chrome-fixture.py`), default-browser registration (`Core/ShellIntegration.cs`, HKCU only; Windows makes the
    person choose), welcome window. Open tabs from Chrome were left out (Chrome's session files aren't documented).
-3b. Next: passwords (saved encrypted for the Windows user, Windows Hello to view or copy, strong-password suggestions,
-   leak check that sends only part of a hash, can be turned off), and passwords from Chrome via its export file
-   (deleted afterwards).
+3b. Done (0.4): passwords. `Core/Passwords/Vault.cs` (one file, passwords.dat, encrypted with DPAPI for the user via
+   `Views/PasswordStore.cs`; logins matched by exact origin, then same registrable domain and scheme),
+   `PasswordTools.cs` (generator, weak check, Pwned Passwords k-anonymity, CSV import). `Views/PasswordScript.cs` runs in
+   top-level pages: reports focused login boxes and sent logins; it's only sent a login after the person picks one in
+   the browser's own WPF list (never automatic fill). `Verify` asks Windows Hello (UserConsentVerifier interop), else
+   the Windows password (CredUI + LogonUser), then not again for a minute.
 4. Rooms (WebView2 profiles), private windows, tab groups, sleeping tabs, side-by-side pages, reading mode
    (Mozilla Readability), full-page screenshot and PDF, downloads, one running copy, installer. Then release 1.0.
 
