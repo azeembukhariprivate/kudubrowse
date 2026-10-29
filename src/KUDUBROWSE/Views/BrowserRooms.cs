@@ -16,6 +16,39 @@ namespace Kudubrowse.Views
 
         public static void Reload() => _rooms = null;
 
+        private static readonly System.Collections.Generic.Dictionary<string, Task<CoreWebView2Controller>> HiddenPages =
+            new System.Collections.Generic.Dictionary<string, Task<CoreWebView2Controller>>();
+
+        /// <summary>
+        /// A hidden page of the engine in a room, kept while the browser runs: downloads that carry on with no tab of their
+        /// room open get that room's cookies from it. Null when no browser window is open.
+        /// </summary>
+        public static async Task<CoreWebView2> Hidden(string roomId)
+        {
+            if (!HiddenPages.TryGetValue(roomId, out var page))
+            {
+                var owner = MainWindow.LastActive;
+                if (owner == null) return null;
+                HiddenPages[roomId] = page = MakeHidden(owner, roomId);
+            }
+            try { return (await page).CoreWebView2; }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException)
+            {
+                HiddenPages.Remove(roomId);
+                return null;
+            }
+        }
+
+        private static async Task<CoreWebView2Controller> MakeHidden(Window owner, string roomId)
+        {
+            var env = await Web.Environment;
+            var options = env.CreateCoreWebView2ControllerOptions();
+            options.ProfileName = roomId;
+            var controller = await env.CreateCoreWebView2ControllerAsync(new WindowInteropHelper(owner).EnsureHandle(), options);
+            controller.IsVisible = false;
+            return controller;
+        }
+
         /// <summary>
         /// Deletes a room's cookies, logins to sites, cache and other site data (not bookmarks, history or saved passwords).
         /// Uses a hidden page of the engine in that room, as the data belongs to it.

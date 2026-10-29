@@ -344,7 +344,7 @@ namespace Kudubrowse.Views
                 Refresh();
             };
             core.FaviconChanged += async (s, e) => await LoadFavicon();
-            core.DownloadStarting += (s, e) => Downloads.Start(e);
+            core.DownloadStarting += (s, e) => Downloads.Start(this, core, e);
             core.NewWindowRequested += (s, e) => NewWindowRequested?.Invoke(this, e);
             core.WindowCloseRequested += (s, e) => PageClosed?.Invoke(this);
             core.ContainsFullScreenElementChanged += (s, e) => FullScreenChanged?.Invoke(this, core.ContainsFullScreenElement);

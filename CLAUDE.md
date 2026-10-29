@@ -51,6 +51,13 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    (`PrintToPdfAsync`), "What KUDUBROWSE can do" (`Views/FeaturesWindow.cs`, menu and About), installer checks
    (WebView2 present; uninstalling asks before removing the person's data; CI installs and uninstalls).
    Released as 1.0.0 (README with the download button, docs/logo*.png from docs/logo.svg).
+1.1: download manager. `Core/FastDownloader.cs` (the browser's own downloader: up to 6 pieces for files of 20 MB+, If-Range
+   so a changed file starts again, retries, manual redirects asking `Cookies(uri)` for each address so cookies never go to
+   another site), `Core/DownloadList.cs` (downloads.json; private windows' never saved), `Core/DownloadRules.cs` (sorting by
+   type, safe and unique names, pieces). `Views/Downloads.cs` decides at DownloadStarting: big + site allows parts + same
+   size -> cancel the engine's and fetch it ourselves; otherwise the engine (pause/resume via its operation). Own downloads
+   get the mark and virus check through `Views/AttachmentServices.cs` (IAttachmentExecute, else Zone.Identifier).
+   Cookies come from an open tab in the download's room or `BrowserRooms.Hidden`. Tests use `Views/TestServer.cs`.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

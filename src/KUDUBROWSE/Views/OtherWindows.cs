@@ -117,6 +117,34 @@ namespace Kudubrowse.Views
             managePasswords.Click += (s, e) => PasswordsWindow.Show(Owner);
             root.Children.Add(managePasswords);
 
+            root.Children.Add(Ui.Heading("Downloads", 14).Margin(0, 16, 0, 4));
+            var folderText = Ui.Text(Downloads.DefaultFolder, 12.5, wrap: true);
+            var changeFolder = Ui.Small(Ui.Button("Change...", "IconFolder", "SecondaryButton"));
+            changeFolder.Click += (s, e) =>
+            {
+                var picked = Dialogs.PickFolder(this, "Where should downloads go?", Downloads.DefaultFolder);
+                if (picked == null) return;
+                Settings.DownloadFolder = picked;
+                folderText.Text = Downloads.DefaultFolder;
+            };
+            var folderRow = Ui.Columns(Ui.Auto, Ui.Star(), Ui.Auto);
+            folderRow.Children.Add(Ui.Subtle("Save to", 12.5, false).Margin(0, 0, 10, 0).At(0, 0));
+            folderRow.Children.Add(folderText.At(0, 1));
+            folderRow.Children.Add(changeFolder.Margin(10, 0, 0, 0).At(0, 2));
+            foreach (FrameworkElement c in folderRow.Children) c.VerticalAlignment = VerticalAlignment.Center;
+            root.Children.Add(folderRow);
+            var askWhere = new CheckBox { Content = "Ask where to save each file", IsChecked = Settings.AskWhereToSave, Margin = new Thickness(0, 8, 0, 0) };
+            askWhere.Click += (s, e) => Settings.AskWhereToSave = askWhere.IsChecked == true;
+            root.Children.Add(askWhere);
+            var sortDownloads = new CheckBox { Content = "Put files in folders by type", IsChecked = Settings.SortDownloads, Margin = new Thickness(0, 8, 0, 0) };
+            sortDownloads.Click += (s, e) => Settings.SortDownloads = sortDownloads.IsChecked == true;
+            root.Children.Add(sortDownloads);
+            root.Children.Add(Ui.Subtle("Pictures, Music, Videos, Documents, Archives and Programs each get a folder inside the downloads folder.", 12).Margin(27, 0, 0, 0));
+            var fast = new CheckBox { Content = "Download big files faster", IsChecked = Settings.FastDownloads, Margin = new Thickness(0, 8, 0, 0) };
+            fast.Click += (s, e) => Settings.FastDownloads = fast.IsChecked == true;
+            root.Children.Add(fast);
+            root.Children.Add(Ui.Subtle("Files over 20 MB are fetched in up to six pieces at the same time, when the site allows it. They can also be paused and carried on later, even after closing the browser.", 12).Margin(27, 0, 0, 0));
+
             root.Children.Add(Ui.Heading("Default browser", 14).Margin(0, 16, 0, 4));
             root.Children.Add(Ui.Subtle(ShellIntegration.IsDefault
                 ? AppInfo.Name + " is your default browser: links you click in other apps open here."

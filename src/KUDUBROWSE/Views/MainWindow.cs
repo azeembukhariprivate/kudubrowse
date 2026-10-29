@@ -136,6 +136,7 @@ namespace Kudubrowse.Views
             _downloads.Visibility = Visibility.Collapsed;
             Downloads.Changed += OnDownloadsChanged;
             Closed += (s, e) => Downloads.Changed -= OnDownloadsChanged;
+            OnDownloadsChanged(); // downloads paused last time show the button straight away
             var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto, Ui.Auto, Ui.Auto);
             toolbar.Children.Add(_back.At(0, 0));
             toolbar.Children.Add(_forward.At(0, 1));
@@ -204,7 +205,11 @@ namespace Kudubrowse.Views
                 if (Open.Count > 1 && !IsPrivate)
                     foreach (var t in _tabs) RecentlyClosed.Add(t.ToSaved());
                 Open.Remove(this);
-                if (Open.Count == 0) BrowserLibrary.SaveAll();
+                if (Open.Count == 0)
+                {
+                    BrowserLibrary.SaveAll();
+                    Downloads.Closing();
+                }
                 SaveSession(includeClosing: !IsPrivate && !Open.Any(w => !w.IsPrivate) ? this : null);
                 foreach (var t in _tabs) t.Close();
             };
@@ -494,7 +499,7 @@ namespace Kudubrowse.Views
         private void OnDownloadsChanged() => Dispatcher.BeginInvoke(new Action(() =>
         {
             var progress = Downloads.Progress();
-            _downloads.Visibility = Downloads.Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            _downloads.Visibility = Downloads.ShowButton ? Visibility.Visible : Visibility.Collapsed;
             _downloads.Content = progress == null ? (object)Ui.Icon("IconImport", 16) : Ui.Row(Ui.Icon("IconImport", 16), Ui.Text(progress, 11.5).Margin(4, 0, 0, 0));
         }));
 

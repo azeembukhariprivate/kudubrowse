@@ -136,6 +136,34 @@ namespace Kudubrowse.Core
             set => SetBool("RestoreTabs", value);
         }
     
+        /// <summary>Where downloads go (empty: Windows' Downloads folder).</summary>
+        public static string DownloadFolder
+        {
+            get => Get("DownloadFolder", string.Empty);
+            set => Set("DownloadFolder", value);
+        }
+
+        /// <summary>Ask where to save each download, instead of putting it in the downloads folder.</summary>
+        public static bool AskWhereToSave
+        {
+            get => GetBool("AskWhereToSave", false);
+            set => SetBool("AskWhereToSave", value);
+        }
+
+        /// <summary>Put downloads in folders by type (Pictures, Documents, Programs...) inside the downloads folder.</summary>
+        public static bool SortDownloads
+        {
+            get => GetBool("SortDownloads", false);
+            set => SetBool("SortDownloads", value);
+        }
+
+        /// <summary>Fetch big files in pieces at the same time, when the site allows it.</summary>
+        public static bool FastDownloads
+        {
+            get => GetBool("FastDownloads", true);
+            set => SetBool("FastDownloads", value);
+        }
+
         /// <summary>Reading mode's text size in pixels, and its colours (light, sepia or dark).</summary>
         public static int ReadingSize
         {

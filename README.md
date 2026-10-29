@@ -34,7 +34,12 @@
 - **Reading mode** (F9): just the article as clean text, in light, sepia or dark, at the text size you like.
 - **A picture of the whole page**, not just the part on screen (Ctrl+Shift+S), and **saving a page as PDF**.
 - **Private windows** (Ctrl+Shift+N): no history is kept, and sites' cookies are forgotten when the window closes.
-- **Downloads** in the browser's own list (Ctrl+J), with Open and Show in folder. Files that can run programs ask before opening.
+- **A download manager** (Ctrl+J):
+  - **Big files come faster**: files over 20 MB are fetched in up to six pieces at the same time when the site allows it, with your login for that site, and get the same "from the internet" mark and virus check as other downloads.
+  - **Pause and carry on**, even after closing the browser or restarting the PC; **try again** when a download stops part way, from where it stopped when the site allows it. Dropped connections are tried again by themselves.
+  - **The list is kept** for next time (not for private windows), with the speed and the time left while files arrive.
+  - **Choose where files go**: a folder of your own, ask each time, or **sorted into folders by type** (Pictures, Music, Videos, Documents, Archives, Programs). A file already there is never replaced.
+  - Files that can run programs ask before opening.
 - **Clear a site's cookies and data** from the shield button, or the history and every room's site data from Settings.
 - **Default browser**: can be chosen in Windows' Default apps, and links clicked in other apps open as a new tab in the browser that's already open.
 - **What KUDUBROWSE can do** (in the menu and the About window) lists all of this, with a "Try it" button for each.
@@ -54,6 +59,7 @@ Requires Windows 10 or 11. Pages are shown by Microsoft Edge WebView2, the engin
 KUDUBROWSE itself collects nothing and has no account. Apart from the sites you visit, it only connects to:
 
 - the block lists' websites, every few days, to fetch new copies of the lists;
+- the sites you download big files from, to fetch them in pieces (with only that site's own cookies);
 - Pwned Passwords, only when you press *Check for leaks* (5 characters of each scrambled password are sent);
 - the search engine you chose, when you search from the address bar;
 - GitHub, to check for a newer version (can be turned off in Settings).
@@ -68,7 +74,7 @@ dotnet build src/KUDUBROWSE/KUDUBROWSE.csproj -c Release -o out/KUDUBROWSE
 out\KUDUBROWSE\KUDUBROWSE.exe --self-test        (Windows only)
 ```
 
-The tests check the address bar, saving tabs (with their rooms and groups), the ad blocker (with made-up rules and the real lists, when the build has downloaded them into `src/KUDUBROWSE/Lists`), bookmarks, history, suggestions, reading Chrome's bookmarks and history (from a made-up Chrome folder in `tests/KUDUBROWSE.Tests/Fixtures`), passwords and the leak check, rooms, and the one-running-copy hand-over. `--self-test` opens the real browser with test pages it makes itself, using its own profile, and uses it: addresses, links, back and forward, pop-ups, closed tabs, zoom, blocking, history, bookmarks, bringing things from Chrome, saving and filling passwords, rooms and private windows, downloads, sleeping tabs, tab groups, side by side, reading mode, the whole-page picture and PDF, the default browser, tabs coming back and every window in both themes; it writes `self-test.log` and exits. To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and compile `installer/KUDUBROWSE.iss`.
+The tests check the address bar, saving tabs (with their rooms and groups), the ad blocker (with made-up rules and the real lists, when the build has downloaded them into `src/KUDUBROWSE/Lists`), bookmarks, history, suggestions, the download manager (against a small web server on the computer that serves files in pieces, slowly, or dropping the connection), reading Chrome's bookmarks and history (from a made-up Chrome folder in `tests/KUDUBROWSE.Tests/Fixtures`), passwords and the leak check, rooms, and the one-running-copy hand-over. `--self-test` opens the real browser with test pages it makes itself, using its own profile, and uses it: addresses, links, back and forward, pop-ups, closed tabs, zoom, blocking, history, bookmarks, bringing things from Chrome, saving and filling passwords, rooms and private windows, downloads (a big file in pieces, paused and carried on, the site's cookies, the "from the internet" mark, sorting, trying again after a restart), sleeping tabs, tab groups, side by side, reading mode, the whole-page picture and PDF, the default browser, tabs coming back and every window in both themes; it writes `self-test.log` and exits. To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and compile `installer/KUDUBROWSE.iss`.
 
 ### Shared code
 

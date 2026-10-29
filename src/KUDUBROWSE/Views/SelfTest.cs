@@ -42,6 +42,10 @@ namespace Kudubrowse.Views
             PasswordStore.Reload();
             BrowserRooms.Reload();
             Downloads.Folder = Path.Combine(_temp, "downloads");
+            Downloads.ListFile = Path.Combine(_temp, "downloads.json");
+            Downloads.Reload();
+            var savedDownloads = (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads);
+            (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads) = (false, false, true);
             Verify.AutoAnswer = true;
             var savedOffer = Settings.OfferToSavePasswords;
             Settings.OfferToSavePasswords = true;
@@ -451,6 +455,85 @@ namespace Kudubrowse.Views
                         main.Select(keep.Last());
                     }
                 });
+                await Step("Download manager: big files in pieces, pause and carry on, sorting, trying again, kept for next time", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    using (var server = new TestServer())
+                    {
+                        try
+                        {
+                            var big = TestServer.Made(26 * 1024 * 1024);
+                            var bigItem = server.Add("big.bin", new TestServer.Item { Body = big, SlowMs = 20, Disposition = "attachment; filename=\"big.bin\"" });
+                            var photo = TestServer.Made(200000, 4);
+                            server.Add("photo.png", new TestServer.Item { Body = photo, Type = "image/png", Disposition = "attachment; filename=\"photo.png\"" });
+                            var plain = TestServer.Made(3 * 1024 * 1024, 6);
+                            server.Add("plain.zip", new TestServer.Item { Body = plain, Parts = false, Type = "application/zip", Disposition = "attachment; filename=\"plain.zip\"" });
+                            server.Add("files.html", "<!doctype html><title>Download files</title><a id='big' href='/big.bin'>Big</a> <a id='photo' href='/photo.png'>Photo</a>");
+                            var tab = main.NewTab(server.Url("files.html"), true);
+                            await Wait(() => tab.Title == "Download files" && !tab.IsLoading && tab.View?.CoreWebView2 != null, 20, "the files page");
+                            await tab.View.CoreWebView2.ExecuteScriptAsync("document.cookie = 'session=kudu; path=/'");
+
+                            // A big file: the browser fetches it in pieces at once, with the site's cookies; paused and carried on.
+                            await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('big').click()");
+                            await Wait(() => Downloads.Items.Any(i => i.FileName == "big.bin"), 20, "the big download to start");
+                            var item = Downloads.Items.First(i => i.FileName == "big.bin");
+                            Expect(item.Record.Own, "fetched by the browser itself");
+                            await Wait(() => item.Received > 2 * 1024 * 1024 || item.Done, 30, "some of it to arrive");
+                            Expect(!item.Done, "still arriving when paused");
+                            item.Pause();
+                            await Wait(() => item.Paused, 10, "the pause");
+                            Expect(item.Record.InPieces, "in pieces: " + item.Record.Pieces?.Count);
+                            Expect(File.Exists(item.Record.PartFile), "what arrived is kept");
+                            var dw = DownloadsWindow.Show(main);
+                            OffScreen(dw);
+                            Pump();
+                            Screenshots.One(dw, "Downloads, paused");
+                            bigItem.SlowMs = 0;
+                            item.CarryOn();
+                            await Wait(() => item.Done || item.Failed, 60, "the big download to finish");
+                            Expect(item.Done, "finished: " + item.Record.Error);
+                            Expect(File.ReadAllBytes(item.Path).SequenceEqual(big), "the file is exactly the site's");
+                            Expect(AttachmentServices.HasMark(item.Path), "marked as from the internet, like the engine's downloads");
+                            Expect(server.CookiesSeen.Any(c => c.StartsWith("/big.bin") && c.Contains("session=kudu")), "the site's cookies were sent");
+
+                            // Sorted by type.
+                            Settings.SortDownloads = true;
+                            await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('photo').click()");
+                            await Wait(() => Downloads.Items.Any(i => i.FileName == "photo.png" && i.Done), 20, "the picture");
+                            var pic = Downloads.Items.First(i => i.FileName == "photo.png");
+                            Expect(Path.GetDirectoryName(pic.Path) == Path.Combine(Downloads.Folder, "Pictures"), "in the Pictures folder: " + pic.Path);
+                            Expect(!pic.Record.Own, "small files are left to the engine");
+                            Settings.SortDownloads = false;
+
+                            // Kept for next time, and a download that stopped when the browser closed can be tried again.
+                            Downloads.SaveNow();
+                            var kept = DownloadList.Load(Downloads.ListFile);
+                            Expect(kept.Any(r => r.FileName == "big.bin" && r.State == DownloadState.Done), "the list is kept");
+                            kept.Insert(0, new DownloadRecord { Url = server.Url("plain.zip"), File = Path.Combine(Downloads.Folder, "plain.zip"), State = DownloadState.Running });
+                            DownloadList.Save(Downloads.ListFile, kept);
+                            Downloads.Reload();
+                            var stopped = Downloads.Items.First(i => i.FileName == "plain.zip");
+                            Expect(stopped.Failed && !stopped.ThisSession, "comes back as not finished");
+                            stopped.CarryOn();
+                            await Wait(() => stopped.Done || (stopped.Failed && stopped.Record.Own), 30, "trying again");
+                            Expect(stopped.Done, "finished when tried again: " + stopped.Record.Error);
+                            Expect(File.ReadAllBytes(stopped.Path).SequenceEqual(plain), "whole");
+                            dw.Close();
+                            dw = DownloadsWindow.Show(main);
+                            OffScreen(dw);
+                            Pump();
+                            Expect(dw.ItemCount >= 4, "all in the list: " + dw.ItemCount);
+                            Screenshots.One(dw, "Downloads");
+                            dw.Close();
+                        }
+                        finally
+                        {
+                            Settings.SortDownloads = false;
+                            foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                            main.Select(keep.Last());
+                        }
+                    }
+                });
                 await Step("Tab groups and two pages side by side", async () =>
                 {
                     var keep = main.Tabs.ToList();
@@ -600,6 +683,7 @@ namespace Kudubrowse.Views
                 });
             }
 
+            (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads) = savedDownloads;
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
             Settings.OfferToSavePasswords = savedOffer;

@@ -66,7 +66,7 @@ namespace Kudubrowse.Views
             new Feature("IconPicture", "Screenshot of the whole page", "Saves the whole page as a picture, not just the part on screen.", "Ctrl+Shift+S", async m => await m.SaveScreenshot()),
             new Feature("IconFile", "Save a page as PDF", "Keeps a page as a PDF file, with its links.", "Menu › Save the page as PDF", async m => await m.SavePdf()),
             new Feature("IconEye", "Private windows", "Nothing is kept: no history, and sites' cookies go when the window closes.", "Ctrl+Shift+N", m => m.NewPrivateWindow()),
-            new Feature("IconDown", "Downloads", "See your downloads in one list; files that can run programs ask before opening.", "Ctrl+J", m => DownloadsWindow.Show(m)),
+            new Feature("IconDown", "Download manager", "Big files come faster in pieces at once; pause and carry on (even after closing the browser), try again, and sort files into folders by type.", "Ctrl+J", m => DownloadsWindow.Show(m)),
             new Feature("IconUndo", "Reopen closed tabs", "Bring back a tab you closed by mistake.", "Ctrl+Shift+T", m => m.ReopenClosedTab()),
             new Feature("IconRefresh", "Your tabs come back", "The tabs you had open are there next time, and load when you click them."),
             new Feature("IconMonitor", "Zoom, print and full screen", "Make pages bigger or smaller, print them, or fill the screen.", "Ctrl+plus, Ctrl+P, F11")
