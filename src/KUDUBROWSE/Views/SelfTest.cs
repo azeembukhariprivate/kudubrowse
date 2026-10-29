@@ -37,7 +37,10 @@ namespace Kudubrowse.Views
             var savedAllowed = Settings.AllowedSites;
             var savedBlocking = (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups);
             Settings.AllowedSites = new List<string>();
-            Settings.BlockAds = Settings.HideCookieBanners = Settings.BlockPopups = true;
+            Settings.BlockAds = Settings.HideCookieBanners = true;
+            // The early steps open windows with clicks made by a script, which pop-up blocking (rightly) stops;
+            // it's switched on for the blocking step.
+            Settings.BlockPopups = false;
             Blocker.SettingsChanged();
             var savedTheme = Settings.Theme;
             var savedRestore = Settings.RestoreTabs;
@@ -144,6 +147,8 @@ namespace Kudubrowse.Views
                     var keep = main.Tabs.ToList();
                     try
                     {
+                        Settings.BlockPopups = true;
+                        Blocker.SettingsChanged();
                         Blocker.UseRules("||ads.kudutest.invalid^\n||tracker.kudutest.invalid^\n##.ad-box\nkudutest.example##.promo");
                         Page("ads.html", "Page with ads",
                             "<img id='ad' src='https://ads.kudutest.invalid/banner.png'><script src='https://tracker.kudutest.invalid/t.js'></script>" +
