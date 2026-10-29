@@ -158,7 +158,7 @@ namespace Kudubrowse.Views
                         await Task.Delay(800);
                         Expect(tab.Blocked >= 2, "the ad and the tracker blocked (blocked: " + tab.Blocked + ")");
                         var probe = await tab.View.CoreWebView2.ExecuteScriptAsync(
-                            "JSON.stringify({ guarded: window.open.toString().indexOf('userActivation') >= 0, active: navigator.userActivation && navigator.userActivation.isActive, webview: !!(window.chrome && window.chrome.webview) })");
+                            "JSON.stringify({ guarded: window.open.toString().indexOf('lastInput') >= 0, active: navigator.userActivation && navigator.userActivation.isActive, webview: !!(window.chrome && window.chrome.webview) })");
                         Note("pop-up check: " + probe + $", blocked {tab.PopupsBlocked}, tabs {main.Tabs.Count} (before {before})");
                         Expect(tab.PopupsBlocked == 1 && main.Tabs.Count == before, $"the pop-up blocked (counted {tab.PopupsBlocked}, tabs {main.Tabs.Count} instead of {before}, page: {probe})");
                         Expect(await Display(tab, ".ad-box") == "none", "the general hiding rule");

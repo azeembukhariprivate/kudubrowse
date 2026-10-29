@@ -181,8 +181,9 @@ namespace Kudubrowse.Views
         public const string PopupMessage = "kudubrowse:popup";
 
         /// <summary>
-        /// Added to every page and frame before it starts: window.open only works straight after a real click or key
-        /// press (the page's "user activation"); otherwise it's a pop-up the page opened by itself, and it's stopped.
+        /// Added to every page and frame before it starts: window.open only works within 5 seconds of a real click, tap
+        /// or key press on the page; otherwise it's a pop-up the page opened by itself, and it's stopped. (The engine's
+        /// own "user activation" can't be used: opening a page from the address bar counts as one.)
         /// </summary>
         public static string PopupScript()
         {
@@ -192,10 +193,11 @@ namespace Kudubrowse.Views
                    "const a = location.ancestorOrigins;" +
                    "let h = location.hostname; try { if (a && a.length) h = new URL(a[a.length - 1]).hostname; } catch (e) {}" +
                    "if (allowed.some(d => h === d || h.endsWith('.' + d))) return;" +
+                   "let lastInput = -1e9;" +
+                   "for (const t of ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'click']) addEventListener(t, e => { if (e.isTrusted) lastInput = performance.now(); }, true);" +
                    "const open = window.open;" +
                    "window.open = function () {" +
-                   "  const ua = navigator.userActivation;" +
-                   "  if (ua && !ua.isActive) { try { window.chrome.webview.postMessage('" + PopupMessage + "'); } catch (e) {} return null; }" +
+                   "  if (performance.now() - lastInput > 5000) { try { window.chrome.webview.postMessage('" + PopupMessage + "'); } catch (e) {} return null; }" +
                    "  return open.apply(this, arguments);" +
                    "};" +
                    "})();";
