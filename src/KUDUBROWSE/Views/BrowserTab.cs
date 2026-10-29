@@ -144,6 +144,7 @@ namespace Kudubrowse.Views
             core.Settings.AreDefaultContextMenusEnabled = true;
             core.DocumentTitleChanged += (s, e) =>
             {
+                BrowserLibrary.History.SetTitle(core.Source, core.DocumentTitle);
                 Title = string.IsNullOrWhiteSpace(core.DocumentTitle) ? AddressBar.Display(core.Source) : core.DocumentTitle;
                 Refresh();
             };
@@ -188,6 +189,8 @@ namespace Kudubrowse.Views
             Blocker.Changed += OnBlockerChanged;
             core.NavigationCompleted += (s, e) =>
             {
+                // Pages opened are kept in the history (only ordinary web pages).
+                if (e.IsSuccess) BrowserLibrary.History.Add(core.Source, core.DocumentTitle);
                 IsLoading = false;
                 Refresh();
             };

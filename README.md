@@ -7,7 +7,7 @@ account and without anything about you being collected.
 >
 > 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
 > 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
-> 3. Passwords, and bringing everything over from Chrome
+> 3. ✅ Bookmarks, history, suggestions, bringing bookmarks and history from Chrome, default browser; passwords next
 > 4. Rooms (separate logins), reading mode, screenshots, and the installer
 >
 > Version 1.0 will be released when all four are done and tested.
@@ -24,6 +24,10 @@ Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
 - Ads and trackers are blocked, cookie banners hidden and pop-ups that pages open by themselves stopped, using the
   public EasyList, EasyPrivacy and EasyList Cookie List (fetched again every few days). The shield button shows how
   much was blocked and can switch blocking off for a site.
+- Bookmarks (the star, a bookmarks bar with folders), history by day, both searchable (Ctrl+H, Ctrl+Shift+O).
+- The address bar suggests bookmarks and pages you visit often as you type.
+- "Bring bookmarks and history from Chrome" (Chrome's files are only read), and a welcome window the first time.
+- Can be chosen as the default browser in Windows' Default apps.
 
 The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
 

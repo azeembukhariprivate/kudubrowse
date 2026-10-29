@@ -19,6 +19,7 @@ namespace Kudubrowse.Tests
             Test("Only ordinary web pages and files are reopened", OnlySafeTabsReopen);
             Test("Closed tabs can be reopened newest first, up to a limit", ClosedTabsReopen);
             BlockingTests.Run(Test);
+            LibraryTests.Run(Test);
             Console.WriteLine();
             Console.WriteLine($"{_passed} passed, {_failed} failed");
             return _failed == 0 ? 0 : 1;

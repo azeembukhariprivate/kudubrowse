@@ -28,10 +28,14 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    parts (general CSS added at document creation, site rules at DOMContentLoaded). Lists come with the app (the build
    downloads them; not in git) and are fetched again every 4 days into `%LocalAppData%\KUDUBROWSE\Lists`.
    Pop-ups not started by a click are blocked; the shield button allows a site (its registrable domain).
-3. Passwords (saved encrypted for the Windows user, Windows Hello to view or copy, strong-password suggestions,
-   leak check that sends only part of a hash, can be turned off) and "Bring everything from Chrome" (bookmarks,
-   history, open tabs best-effort, passwords via Chrome's export file, deleted afterwards), bookmarks and history
-   pages, address-bar suggestions, being the default browser.
+3a. Done (0.3): bookmarks (`Core/Library/Bookmarks.cs`, bookmarks.json), history (`History.cs`, history.txt, 90 days),
+   address-bar suggestions (`Suggestions.cs`), Chrome import (`ChromeImport.cs`: Bookmarks JSON; History via our own
+   read-only `SqliteReader.cs`; tests use `tests/KUDUBROWSE.Tests/Fixtures/ChromeUserData`, made by
+   `tools/make-chrome-fixture.py`), default-browser registration (`Core/ShellIntegration.cs`, HKCU only; Windows makes the
+   person choose), welcome window. Open tabs from Chrome were left out (Chrome's session files aren't documented).
+3b. Next: passwords (saved encrypted for the Windows user, Windows Hello to view or copy, strong-password suggestions,
+   leak check that sends only part of a hash, can be turned off), and passwords from Chrome via its export file
+   (deleted afterwards).
 4. Rooms (WebView2 profiles), private windows, tab groups, sleeping tabs, side-by-side pages, reading mode
    (Mozilla Readability), full-page screenshot and PDF, downloads, one running copy, installer. Then release 1.0.
 

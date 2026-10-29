@@ -16,4 +16,9 @@
     <Compile Include="..\..\src\KUDUBROWSE\Core\**\*.cs" Exclude="..\..\src\KUDUBROWSE\Core\ThemeManager.cs" LinkBase="Core" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- A made-up Chrome profile (tools/make-chrome-fixture.py) -->
+    <None Remove="Fixtures\**" />
+  </ItemGroup>
+
 </Project>

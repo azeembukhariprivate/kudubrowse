@@ -25,7 +25,7 @@ namespace Kudubrowse.Views
         private static StringBuilder _log;
         private static string _temp;
 
-        public static async Task<int> Run()
+        public static async Task<int> Run(string chrome)
         {
             Running = true;
             _log = new StringBuilder();
@@ -34,6 +34,11 @@ namespace Kudubrowse.Views
             Web.ProfileFolder = Path.Combine(_temp, "profile");
             Session.DefaultFile = Path.Combine(_temp, "session.txt");
             Core.Blocking.BlockLists.DownloadFolder = Path.Combine(_temp, "lists");
+            BrowserLibrary.Folder = Path.Combine(_temp, "library");
+            BrowserLibrary.Reload();
+            if (chrome != null) Core.Library.ChromeImport.UserDataFolder = Path.GetFullPath(chrome);
+            Core.Library.History.KeepFor = TimeSpan.FromDays(36500); // the made-up Chrome history is old
+            var wasRegistered = ShellIntegration.IsRegistered;
             var savedAllowed = Settings.AllowedSites;
             var savedBlocking = (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups);
             Settings.AllowedSites = new List<string>();
@@ -191,6 +196,79 @@ namespace Kudubrowse.Views
                         foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
                         main.Select(keep.Last());
                     }
+                });
+                await Step("History, bookmarks, the bookmarks bar and suggestions", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        var tab = main.NewTab(select: true);
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/second.html");
+                        await Wait(() => tab.Title == "Second page" && !tab.IsLoading, 20, "the second page");
+                        await Wait(() => BrowserLibrary.History.Search("kudutest.example/second").Count == 1, 10, "the page in the history");
+                        Expect(BrowserLibrary.History.Search("second").First().Title == "Second page", "its title in the history");
+                        var panel = main.ShowBookmarkPanel();
+                        Pump();
+                        Screenshots.All("Bookmark added");
+                        panel.IsOpen = false;
+                        Pump();
+                        Expect(BrowserLibrary.Bookmarks.Contains("https://kudutest.example/second.html"), "bookmarked");
+                        Expect(main.BarVisible, "the bookmarks bar shows");
+                        var s = main.TypeInAddress("kudutest");
+                        Pump();
+                        Screenshots.All("Suggestions");
+                        main.CloseSuggestions();
+                        Expect(s.Count >= 2 && s[0].Url == "https://kudutest.example/second.html", "the bookmark suggested first (got " + string.Join(", ", s.Select(x => x.Url)) + ")");
+                        var lib = LibraryWindow.Show(main, false);
+                        OffScreen(lib);
+                        Pump();
+                        lib.Search("second");
+                        Expect(lib.ItemCount >= 2, "the history window lists the page under its day");
+                        Screenshots.One(lib, "History");
+                        LibraryWindow.Show(main, true);
+                        Pump();
+                        Expect(lib.ShowingBookmarks && lib.ItemCount == 1, "the bookmarks list");
+                        Screenshots.One(lib, "Bookmarks");
+                        lib.Close();
+                        BrowserLibrary.SaveAll();
+                        BrowserLibrary.Reload();
+                        Expect(BrowserLibrary.History.Search("second").Count == 1 && BrowserLibrary.Bookmarks.Contains("https://kudutest.example/second.html"), "both kept after closing");
+                    }
+                    finally
+                    {
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
+                await Step("Bring bookmarks and history from Chrome", async () =>
+                {
+                    Expect(chrome != null, "a made-up Chrome profile (--chrome folder)");
+                    var w = new ImportWindow(main);
+                    OffScreen(w);
+                    w.Show();
+                    Pump();
+                    Screenshots.One(w, w.Title);
+                    await w.Run();
+                    Note(ImportWindow.LastResult);
+                    Expect(ImportWindow.LastResult.Contains("4 bookmarks added") && ImportWindow.LastResult.Contains("3001 pages added"), "everything brought over: " + ImportWindow.LastResult);
+                    Expect(BrowserLibrary.Bookmarks.Bar.Children.Any(b => b.Title == "Kerala Tourism"), "Chrome's bar on our bar");
+                    await w.Run();
+                    Expect(ImportWindow.LastResult.Contains("0 bookmarks added") && ImportWindow.LastResult.Contains("0 pages added"), "nothing twice: " + ImportWindow.LastResult);
+                    Screenshots.One(w, w.Title + " done");
+                    w.Close();
+                    ShowAndClose(new WelcomeWindow(main));
+                });
+                await Step("Can be chosen as the default browser", () =>
+                {
+                    ShellIntegration.Register();
+                    Expect(ShellIntegration.IsRegistered, "known to Windows as a browser");
+                    Expect((ShellIntegration.OpenCommand() ?? string.Empty).Contains(Path.GetFileName(AppInfo.ExePath)) && ShellIntegration.OpenCommand().EndsWith("\"%1\""), "opens links with " + ShellIntegration.OpenCommand());
+                    ShellIntegration.Unregister();
+                    Expect(!ShellIntegration.IsRegistered, "removed again");
+                    if (wasRegistered) ShellIntegration.Register();
+                    return Task.CompletedTask;
                 });
                 await Step("Tabs come back next time", async () =>
                 {

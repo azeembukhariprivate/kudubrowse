@@ -101,6 +101,20 @@ namespace Kudubrowse.Core
             set => Set("AllowedSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
         }
 
+        /// <summary>Show the bookmarks bar under the address bar.</summary>
+        public static bool ShowBookmarksBar
+        {
+            get => GetBool("ShowBookmarksBar", true);
+            set => SetBool("ShowBookmarksBar", value);
+        }
+
+        /// <summary>The welcome window (bring things from Chrome, default browser) has been shown.</summary>
+        public static bool WelcomeShown
+        {
+            get => GetBool("WelcomeShown", false);
+            set => SetBool("WelcomeShown", value);
+        }
+
         /// <summary>Open the tabs from last time when KUDUBROWSE starts.</summary>
         public static bool RestoreTabs
         {

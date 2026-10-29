@@ -2,7 +2,7 @@
 ; Installs for the current Windows user only, so installing never asks for administrator rights.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.0"
+  #define MyAppVersion "0.3.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\out\KUDUBROWSE"
@@ -51,7 +51,11 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; Tasks: desktopicon
 
 [Run]
+Filename: "{app}\{#MyAppExe}"; Parameters: "--register"; Flags: runhidden waituntilterminated
 Filename: "{app}\{#MyAppExe}"; Description: "Open KUDUBROWSE now"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{app}\{#MyAppExe}"; Parameters: "--unregister"; Flags: runhidden waituntilterminated; RunOnceId: "KUDUBROWSEUnregister"
 
 [UninstallDelete]
 ; Saved tabs and the browser profile (cookies, site data, cache).

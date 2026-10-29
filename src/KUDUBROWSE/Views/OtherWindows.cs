@@ -105,6 +105,19 @@ namespace Kudubrowse.Views
                 root.Children.Add(sites);
             }
 
+            root.Children.Add(Ui.Heading("Default browser", 14).Margin(0, 16, 0, 4));
+            root.Children.Add(Ui.Subtle(ShellIntegration.IsDefault
+                ? AppInfo.Name + " is your default browser: links you click in other apps open here."
+                : "Make " + AppInfo.Name + " the browser that opens links from other apps. Windows asks you to choose it in its own settings.", 12.5));
+            if (!ShellIntegration.IsDefault)
+            {
+                var makeDefault = Ui.Small(Ui.Button("Make it my default browser", "IconGlobe", "SecondaryButton"));
+                makeDefault.HorizontalAlignment = HorizontalAlignment.Left;
+                makeDefault.Margin = new Thickness(0, 8, 0, 0);
+                makeDefault.Click += (s, e) => ShellIntegration.OpenDefaultAppsSettings();
+                root.Children.Add(makeDefault);
+            }
+
             root.Children.Add(Ui.Heading("Starting", 14).Margin(0, 16, 0, 4));
             var restore = new CheckBox { Content = "Open the tabs from last time", IsChecked = Settings.RestoreTabs };
             restore.Click += (s, e) => Settings.RestoreTabs = restore.IsChecked == true;
@@ -201,6 +214,59 @@ namespace Kudubrowse.Views
             var path = Path.Combine(Path.GetDirectoryName(AppInfo.ExePath) ?? string.Empty, name);
             if (File.Exists(path)) AppInfo.OpenFile(path);
             else AppInfo.OpenUrl(AppInfo.RepoUrl);
+        }
+    }
+
+    /// <summary>Shown the first time: bring things over from Chrome, choose a search engine, make it the default browser.</summary>
+    public sealed class WelcomeWindow : Window
+    {
+        public static void ShowOnce(Window owner)
+        {
+            Settings.WelcomeShown = true;
+            new WelcomeWindow(owner).ShowDialog();
+        }
+
+        public WelcomeWindow(Window owner)
+        {
+            Width = 560;
+            SizeToContent = SizeToContent.Height;
+            ResizeMode = ResizeMode.NoResize;
+            ShowInTaskbar = false;
+            Dialogs.Prepare(this, "Welcome · " + AppInfo.Name, owner);
+            var root = new StackPanel { Margin = new Thickness(28, 24, 28, 22) };
+            var header = Ui.Row(LogoTile.Create(52), Ui.Column(Ui.Heading("Welcome to " + AppInfo.Name, 20), Ui.Subtle("Three quick things to get started. All of them can be done later from the menu.", 12.5)).Margin(14, 0, 0, 0));
+            ((FrameworkElement)header.Children[1]).VerticalAlignment = VerticalAlignment.Center;
+            root.Children.Add(header);
+
+            Border Card(string title, string text, UIElement action) =>
+                Ui.Card(Ui.Column(Ui.Heading(title, 14), Ui.Subtle(text, 12.5).Margin(0, 4, 0, 10), action), 16).Margin(0, 14, 0, 0) as Border;
+
+            var bring = Ui.Small(Ui.Button("Bring bookmarks and history from Chrome", "IconImport", "PrimaryButton"));
+            bring.HorizontalAlignment = HorizontalAlignment.Left;
+            bring.Click += (s, e) => new ImportWindow(this).ShowDialog();
+            root.Children.Add(Card("1. Moving from Chrome?", "Your bookmarks and the pages you visited come across. Chrome's files are only read.", bring));
+
+            var engines = new WrapPanel();
+            foreach (var engine in SearchEngines.All)
+            {
+                var chip = new RadioButton { Content = engine.Name, GroupName = "welcome-engine", IsChecked = SearchEngines.Find(Settings.SearchEngine) == engine }.Styled("ChipRadio");
+                chip.Checked += (s, e) => Settings.SearchEngine = engine.Id;
+                engines.Children.Add(chip);
+            }
+            root.Children.Add(Card("2. Search with", "Words you type in the address bar are searched for with:", engines));
+
+            var makeDefault = Ui.Small(Ui.Button("Make it my default browser", "IconGlobe", "SecondaryButton"));
+            makeDefault.HorizontalAlignment = HorizontalAlignment.Left;
+            makeDefault.Click += (s, e) => ShellIntegration.OpenDefaultAppsSettings();
+            root.Children.Add(Card("3. Open links here", "Windows asks you to pick " + AppInfo.Name + " in its Default apps settings; this opens them.", makeDefault));
+
+            var done = Ui.Button("Start browsing", null, "PrimaryButton");
+            done.IsDefault = true;
+            done.IsCancel = true;
+            done.Click += (s, e) => Close();
+            done.HorizontalAlignment = HorizontalAlignment.Right;
+            root.Children.Add(done.Margin(0, 18, 0, 0));
+            Content = root;
         }
     }
 }

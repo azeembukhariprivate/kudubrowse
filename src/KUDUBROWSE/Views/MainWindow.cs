@@ -13,7 +13,7 @@ using Microsoft.Web.WebView2.Core;
 namespace Kudubrowse.Views
 {
     /// <summary>A browser window: the tab strip, the toolbar with the address bar, and the page of the selected tab.</summary>
-    public sealed class MainWindow : Window
+    public sealed partial class MainWindow : Window
     {
         /// <summary>Every open browser window, so the tabs of all of them are saved together.</summary>
         public static readonly List<MainWindow> Open = new List<MainWindow>();
@@ -81,6 +81,10 @@ namespace Kudubrowse.Views
                     e.Handled = true;
                 }
             };
+            _address.PreviewKeyDown += (s, e) =>
+            {
+                if (SuggestionKey(e.Key)) e.Handled = true;
+            };
             _address.KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Enter)
@@ -101,6 +105,7 @@ namespace Kudubrowse.Views
             _address.Background = Brushes.Transparent;
             _address.Padding = new Thickness(6, 0, 10, 0);
             addressGrid.Children.Add(_address.At(0, 1));
+            InitLibrary(addressGrid);
             var addressBox = new Border { Child = addressGrid, CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(1), Margin = new Thickness(6, 0, 6, 0) }
                 .Res(Border.BackgroundProperty, "InputBg").Res(Border.BorderBrushProperty, "InputBorder");
 
@@ -143,10 +148,12 @@ namespace Kudubrowse.Views
             _chrome = new Grid();
             _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _chrome.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             _chrome.Children.Add(stripBar.At(0, 0));
             _chrome.Children.Add(toolbarBar.At(1, 0));
-            _chrome.Children.Add(_pages.At(2, 0));
+            _chrome.Children.Add(_bar.At(2, 0));
+            _chrome.Children.Add(_pages.At(3, 0));
             Content = _chrome;
 
             PreviewKeyDown += OnKey;
@@ -162,6 +169,7 @@ namespace Kudubrowse.Views
                 if (Open.Count > 1)
                     foreach (var t in _tabs) RecentlyClosed.Add(t.ToSaved());
                 Open.Remove(this);
+                if (Open.Count == 0) BrowserLibrary.SaveAll();
                 SaveSession(includeClosing: Open.Count == 0 ? this : null);
                 foreach (var t in _tabs) t.Close();
             };
@@ -363,7 +371,8 @@ namespace Kudubrowse.Views
         {
             var t = Current;
             if (t == null) return;
-            if (!_address.IsKeyboardFocusWithin) _address.Text = AddressBar.Display(t.Url);
+            if (!_address.IsKeyboardFocusWithin) SetAddressText(AddressBar.Display(t.Url));
+            UpdateStar();
             _back.IsEnabled = t.CanGoBack;
             _forward.IsEnabled = t.CanGoForward;
             _reload.Content = Ui.Label(t.IsLoading ? "IconClose" : "IconRefresh", null);
@@ -470,6 +479,12 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Print...", Print, "Ctrl+P"));
             menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));
             menu.Items.Add(new Separator());
+            menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
+            menu.Items.Add(Item("Bookmarks", () => LibraryWindow.Show(this, true), "Ctrl+Shift+O"));
+            var barItem = Item(Settings.ShowBookmarksBar ? "Hide the bookmarks bar" : "Show the bookmarks bar", ToggleBookmarksBar, "Ctrl+Shift+B");
+            menu.Items.Add(barItem);
+            menu.Items.Add(Item("Bring bookmarks and history from Chrome...", () => new ImportWindow(this).ShowDialog()));
+            menu.Items.Add(new Separator());
             menu.Items.Add(Item("Settings", () => new SettingsWindow(this).ShowDialog()));
             menu.Items.Add(Item("About " + AppInfo.Name, () => About.Show(this)));
             menu.Items.Add(new Separator());
@@ -513,6 +528,7 @@ namespace Kudubrowse.Views
             }
             _chrome.RowDefinitions[0].Height = on ? new GridLength(0) : GridLength.Auto;
             _chrome.RowDefinitions[1].Height = on ? new GridLength(0) : GridLength.Auto;
+            _chrome.RowDefinitions[2].Height = on ? new GridLength(0) : GridLength.Auto;
         }
 
         // ================================================================ keyboard
@@ -540,6 +556,10 @@ namespace Kudubrowse.Views
             else if (ctrl && (key == Key.D0 || key == Key.NumPad0)) { if (Current != null) Current.Zoom = 1; }
             else if (ctrl && key == Key.P) Print();
             else if (key == Key.F11) SetFullScreen(!_fullScreen);
+            else if (ctrl && shift && key == Key.B) ToggleBookmarksBar();
+            else if (ctrl && shift && key == Key.O) LibraryWindow.Show(this, true);
+            else if (ctrl && key == Key.H) LibraryWindow.Show(this, false);
+            else if (ctrl && key == Key.D) ShowBookmarkPanel();
             else if (key == Key.Escape && _fullScreen) SetFullScreen(false);
             else if (key == Key.Escape && Current?.IsLoading == true && !_address.IsKeyboardFocusWithin) Current.Stop();
             else handled = false;
