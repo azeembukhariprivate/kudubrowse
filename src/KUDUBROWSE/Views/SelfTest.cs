@@ -499,7 +499,9 @@ namespace Kudubrowse.Views
 
                             // Sorted by type.
                             Settings.SortDownloads = true;
-                            await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('photo').click()");
+                            // Opened by its address: a second download started by a page script (not a real click) is held back
+                            // by the engine's guard against pages starting many downloads.
+                            main.Go(server.Url("photo.png"));
                             await Wait(() => Downloads.Items.Any(i => i.FileName == "photo.png" && i.Done), 20, "the picture");
                             var pic = Downloads.Items.First(i => i.FileName == "photo.png");
                             Expect(Path.GetDirectoryName(pic.Path) == Path.Combine(Downloads.Folder, "Pictures"), "in the Pictures folder: " + pic.Path);
