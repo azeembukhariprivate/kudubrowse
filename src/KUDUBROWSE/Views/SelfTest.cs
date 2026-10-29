@@ -477,7 +477,8 @@ namespace Kudubrowse.Views
                             await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('big').click()");
                             await Wait(() => Downloads.Items.Any(i => i.FileName == "big.bin"), 20, "the big download to start");
                             var item = Downloads.Items.First(i => i.FileName == "big.bin");
-                            Expect(item.Record.Own, "fetched by the browser itself");
+                            Note("big file: " + Downloads.LastChoice);
+                            Expect(item.Record.Own, "fetched by the browser itself, not " + Downloads.LastChoice);
                             await Wait(() => item.Received > 2 * 1024 * 1024 || item.Done, 30, "some of it to arrive");
                             Expect(!item.Done, "still arriving when paused");
                             item.Pause();

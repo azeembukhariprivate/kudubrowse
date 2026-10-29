@@ -252,7 +252,14 @@ namespace Kudubrowse.Views
     public static class Downloads
     {
         private static List<DownloadItem> _items;
-        private static readonly HttpClient Http = FastDownloader.CreateClient();
+        private static readonly HttpClient Http = MakeClient();
+
+        private static HttpClient MakeClient()
+        {
+            // .NET allows only 2 connections to a site by default; the pieces need up to 6 at once.
+            System.Net.ServicePointManager.DefaultConnectionLimit = Math.Max(System.Net.ServicePointManager.DefaultConnectionLimit, 32);
+            return FastDownloader.CreateClient();
+        }
         private static DispatcherTimer _saveTimer;
         private static string _userAgent;
 
@@ -267,6 +274,9 @@ namespace Kudubrowse.Views
         }
 
         public static event Action Changed;
+
+        /// <summary>Why the last download was fetched the way it was (shown by the self-test).</summary>
+        public static string LastChoice { get; private set; }
 
         /// <summary>For the self-test: where files go, and its own list file.</summary>
         public static string Folder { get; set; }
@@ -338,6 +348,7 @@ namespace Kudubrowse.Views
                 };
 
                 // Big files: fetched in pieces by the browser itself, when the site allows parts and it's the same file.
+                LastChoice = "the engine: " + (Settings.FastDownloads ? record.Total + " bytes" : "faster downloads are off");
                 if (Settings.FastDownloads && record.Total >= DownloadRules.FastFrom &&
                     Uri.TryCreate(op.Uri, UriKind.Absolute, out var uri) && (uri.Scheme == "https" || uri.Scheme == "http"))
                 {
@@ -346,13 +357,16 @@ namespace Kudubrowse.Views
                     {
                         using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                             check = await Downloader(record).Check(timeout.Token);
+                        LastChoice = "the engine: the site " + (check.InParts ? "has " + check.Total + " bytes, not " + record.Total : "doesn't allow parts");
                     }
-                    catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException || ex is DownloadException || ex is IOException ||
-                                               ex is InvalidOperationException)
+                    catch (Exception ex)
                     {
+                        // Whatever went wrong asking the site, the engine fetches it as usual.
+                        LastChoice = "the engine: asking the site failed: " + ex.GetType().Name + ": " + ex.Message;
                     }
                     if (check != null && check.InParts && check.Total == record.Total)
                     {
+                        LastChoice = "the browser itself";
                         e.Cancel = true;
                         var own = new DownloadItem(record);
                         Add(own);
