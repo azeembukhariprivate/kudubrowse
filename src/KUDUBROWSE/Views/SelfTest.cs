@@ -138,8 +138,12 @@ namespace Kudubrowse.Views
                     Expect(again.Tabs[0].View == null, "tabs not shown yet wait until they're clicked");
                     await Wait(() => again.Current.Title == "Second page", 20, "the selected tab to load");
                     again.Select(again.Tabs[0]);
-                    await Wait(() => again.Tabs[0].Title == "First page" && again.Tabs[0].View != null, 20, "the other tab to load when clicked");
+                    await Wait(() => again.Tabs[0].View?.CoreWebView2 != null && !again.Tabs[0].IsLoading && again.Tabs[0].Url.EndsWith("first.html"), 20,
+                        "the other tab to load when clicked");
+                    // Closing a window while a page is still starting mustn't cause an error.
+                    var starting = again.NewTab(Session.Load().Tabs[1].Url, true);
                     again.Close();
+                    await Task.Delay(1500);
                 });
                 await Step("Dark theme", async () =>
                 {

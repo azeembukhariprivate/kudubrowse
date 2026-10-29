@@ -24,6 +24,7 @@ namespace Kudubrowse.Views
         private readonly TextBlock _title = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, FontSize = 12.5 };
         private Task _ready;
         private string _pending;
+        private bool _closed;
 
         public BrowserTab(string url = null, string title = null)
         {
@@ -109,8 +110,17 @@ namespace Kudubrowse.Views
         private async Task Create()
         {
             var env = await Web.Environment;
-            await View.EnsureCoreWebView2Async(env);
-            var core = View.CoreWebView2;
+            var view = View;
+            try
+            {
+                await view.EnsureCoreWebView2Async(env);
+            }
+            catch (Exception) when (_closed)
+            {
+                return; // The tab (or its window) was closed while the page was still starting.
+            }
+            if (_closed) return;
+            var core = view.CoreWebView2;
             core.Settings.IsStatusBarEnabled = true;
             core.Settings.AreDefaultContextMenusEnabled = true;
             core.DocumentTitleChanged += (s, e) =>
@@ -222,6 +232,7 @@ namespace Kudubrowse.Views
 
         public void Close()
         {
+            _closed = true;
             try { View?.Dispose(); }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ObjectDisposedException) { }
             View = null;
