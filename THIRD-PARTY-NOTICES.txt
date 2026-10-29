@@ -1,0 +1,7 @@
+KUDUBROWSE uses these parts made by others:
+
+Microsoft Edge WebView2 SDK (Microsoft.Web.WebView2)
+  Copyright (C) Microsoft Corporation. All rights reserved.
+  Licensed under the BSD 3-Clause licence: https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.2903.40/License
+  The web pages are shown by the Microsoft Edge WebView2 Runtime that comes with Windows; it is Microsoft's and is
+  kept up to date by Windows.

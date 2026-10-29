@@ -1,0 +1,73 @@
+# KUDUBROWSE
+
+A private everyday web browser for Windows, built on Microsoft's WebView2 (Edge's engine): tabs, ad and tracker
+blocking, passwords, importing from Chrome, rooms with separate logins.
+Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari.
+
+## Working with Azeem (the owner)
+
+- **Branches:** work on `main` and push to `main`. Ask before creating any other branch.
+- **New features:** first say what you understood, and ask your doubts and suggestions, one question at a time.
+  Only start building when Azeem says "build".
+- **Step by step:** Azeem asked for this app to be built one step at a time, stopping after each step to report,
+  to keep the work small. Don't run ahead to the next step without being asked.
+- **Look:** keep the app's current look. No redesigns unless asked.
+- **About window credit:** "Made by Azeem, with Claude and ♥" (the heart in the accent colour). Keep it.
+- **Commits:** author `Azeem Bukhari <12558389+azeembukhariprivate@users.noreply.github.com>`. Clear messages that say
+  what changed and why. Don't put AI model names or versions in commits, code or docs.
+- **Words:** the app's text, README and release notes use plain everyday words, not technical jargon.
+- **Before pushing:** build and run the tests locally, and re-read the diff. After pushing, watch the GitHub Actions
+  build until it's green; fix failures, never skip or disable a test to get green.
+
+## The plan (agreed with Azeem)
+
+1. Done (0.1): window, tabs, address bar with search engines, back/forward, new-window links as tabs, closed tabs,
+   tabs restored next time (loaded when clicked), zoom, print, full screen, settings, about.
+2. Ad and tracker blocking: our own code reading EasyList/EasyPrivacy (updated automatically), cookie banners,
+   pop-up tabs, a shield button per site with an allow switch.
+3. Passwords (saved encrypted for the Windows user, Windows Hello to view or copy, strong-password suggestions,
+   leak check that sends only part of a hash, can be turned off) and "Bring everything from Chrome" (bookmarks,
+   history, open tabs best-effort, passwords via Chrome's export file, deleted afterwards), bookmarks and history
+   pages, address-bar suggestions, being the default browser.
+4. Rooms (WebView2 profiles), private windows, tab groups, sleeping tabs, side-by-side pages, reading mode
+   (Mozilla Readability), full-page screenshot and PDF, downloads, one running copy, installer. Then release 1.0.
+
+Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
+
+## How the app is built
+
+- .NET Framework 4.8 WPF app. The screens are built in C# (no XAML compiler); the themes (`Themes/Light.xaml`,
+  `Dark.xaml`, `Styles.xaml`) are XAML loaded at startup as embedded resources, using resource keys such as `Accent`,
+  `Text`, `SurfaceBg`. Use the helpers in `Controls/Ui.cs` and existing keys rather than hard-coded colours.
+- Pages are WebView2 controls (`Views/BrowserTab.cs`), one per tab, made the first time a tab is shown. All tabs share
+  one engine and profile (`Views/Web.cs`, `%LocalAppData%\KUDUBROWSE\Profiles\Default`).
+- Logic that doesn't need Windows lives in `Core/` (address bar, session) and is tested by `tests/KUDUBROWSE.Tests`
+  (a .NET 8 console program).
+- `KUDUBROWSE.exe --self-test` drives the real browser on Windows with test pages it makes itself, using its own
+  profile and session file (GitHub Actions runs it, keeping screenshots as a build download). Add a self-test step
+  for new screens and features.
+- Settings live in `HKEY_CURRENT_USER\Software\KUDUBROWSE`. The Inno Setup installer (`installer/KUDUBROWSE.iss`)
+  installs per user, without administrator rights.
+- The browser itself collects nothing. Never add anything that sends data about the user.
+
+```
+dotnet run --project tests/KUDUBROWSE.Tests -c Release
+dotnet build src/KUDUBROWSE/KUDUBROWSE.csproj -c Release -o out/KUDUBROWSE
+out\KUDUBROWSE\KUDUBROWSE.exe --self-test        (Windows only)
+```
+
+## Shared code (kudu-common)
+
+The files listed in `.kudu-common` (the look and controls in `Controls/`, `Core/Admin.cs`, `AppInfo.cs`, `Args.cs`,
+`ThemeManager.cs`, `Unelevated.cs`, `UpdateChecker.cs`, `Views/Dialogs.cs`, `Views/Screenshots.cs`, ...) are copied from
+[kudu-common](https://github.com/azeembukhariprivate/kudu-common) and start with a comment saying so.
+**Don't edit them here**: change them in kudu-common, then run `python sync.py ../kudubrowse` there and commit both
+repos. The build fails when a copy differs from kudu-common. App-specific details go in `Core/AppDetails.cs`.
+
+## Releasing (from 1.0)
+
+1. Raise `<Version>` in `src/KUDUBROWSE/KUDUBROWSE.csproj` (and `MyAppVersion` in `installer/KUDUBROWSE.iss`).
+2. Commit and push to `main`.
+3. GitHub Actions (`.github/workflows/build.yml`, Windows) tests and builds the app. When no release exists yet for that
+   version it creates the `v` tag and publishes the installer and portable zip on the Releases page, plus a copy named
+   `KUDUBROWSE-setup.exe`.

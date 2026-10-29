@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Checks KUDUBROWSE's parts that don't need Windows: the address bar, saving and reopening tabs.
+       Runs on any OS with: dotnet run, project tests/KUDUBROWSE.Tests -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\KUDUBROWSE\Core\**\*.cs" Exclude="..\..\src\KUDUBROWSE\Core\ThemeManager.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>

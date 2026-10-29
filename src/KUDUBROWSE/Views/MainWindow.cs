@@ -1,0 +1,504 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using Kudubrowse.Controls;
+using Kudubrowse.Core;
+using Microsoft.Web.WebView2.Core;
+
+namespace Kudubrowse.Views
+{
+    /// <summary>A browser window: the tab strip, the toolbar with the address bar, and the page of the selected tab.</summary>
+    public sealed class MainWindow : Window
+    {
+        /// <summary>Every open browser window, so the tabs of all of them are saved together.</summary>
+        public static readonly List<MainWindow> Open = new List<MainWindow>();
+        public static readonly ClosedTabs RecentlyClosed = new ClosedTabs();
+
+        private readonly List<BrowserTab> _tabs = new List<BrowserTab>();
+        private readonly StackPanel _strip = new StackPanel { Orientation = Orientation.Horizontal };
+        private readonly Grid _pages = new Grid();
+        private readonly Border _newTabPage;
+        private readonly TextBox _address = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center, FontSize = 13.5 };
+        private readonly Glyph _addressIcon = Ui.Icon("IconGlobe", 15);
+        private readonly TextBox _newTabSearch = new TextBox { MinHeight = 46, FontSize = 16, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(14, 0, 14, 0) };
+        private readonly Button _back, _forward, _reload, _newTabButton;
+        private readonly Grid _chrome;
+        private readonly DispatcherTimer _saveTimer;
+        private bool _fullScreen;
+        private WindowState _stateBeforeFullScreen;
+
+        public MainWindow()
+        {
+            Width = 1280;
+            Height = 820;
+            MinWidth = 480;
+            MinHeight = 320;
+            Dialogs.Prepare(this, AppInfo.Name);
+            Open.Add(this);
+
+            _back = ToolButton("IconArrowLeft", "Back (Alt+Left)", (s, e) => Current?.GoBack());
+            _forward = ToolButton("IconArrowRight", "Forward (Alt+Right)", (s, e) => Current?.GoForward());
+            _reload = ToolButton("IconRefresh", "Reload (F5)", (s, e) =>
+            {
+                if (Current?.IsLoading == true) Current.Stop();
+                else Current?.Reload();
+            });
+            var menu = ToolButton("IconMore", "Menu", null);
+            menu.Click += (s, e) => ShowMenu(menu);
+            _newTabButton = ToolButton("IconPlus", "New tab (Ctrl+T)", (s, e) => NewTab(select: true));
+            _newTabButton.Margin = new Thickness(4, 6, 0, 0);
+            _newTabButton.VerticalAlignment = VerticalAlignment.Center;
+
+            // Tab strip.
+            var stripRow = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Star());
+            stripRow.Children.Add(_strip.At(0, 0));
+            stripRow.Children.Add(_newTabButton.At(0, 1));
+            stripRow.SizeChanged += (s, e) => SizeTabs();
+            var stripBar = new Border { Child = stripRow, Padding = new Thickness(8, 0, 8, 0) }.Res(Border.BackgroundProperty, "SurfaceAltBg");
+
+            // Toolbar with the address bar.
+            System.Windows.Automation.AutomationProperties.SetName(_address, "Address and search bar");
+            _address.GotKeyboardFocus += (s, e) => Dispatcher.BeginInvoke(new Action(_address.SelectAll), DispatcherPriority.Input);
+            _address.PreviewMouseLeftButtonDown += (s, e) =>
+            {
+                if (!_address.IsKeyboardFocusWithin)
+                {
+                    _address.Focus();
+                    e.Handled = true;
+                }
+            };
+            _address.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter)
+                {
+                    Go(_address.Text);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    UpdateToolbar();
+                    _address.SelectAll();
+                    e.Handled = true;
+                }
+            };
+            var addressGrid = Ui.Columns(Ui.Auto, Ui.Star());
+            addressGrid.Children.Add(_addressIcon.Margin(12, 0, 0, 0).At(0, 0));
+            _address.BorderThickness = new Thickness(0);
+            _address.Background = Brushes.Transparent;
+            _address.Padding = new Thickness(6, 0, 10, 0);
+            addressGrid.Children.Add(_address.At(0, 1));
+            var addressBox = new Border { Child = addressGrid, CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(1), Margin = new Thickness(6, 0, 6, 0) }
+                .Res(Border.BackgroundProperty, "InputBg").Res(Border.BorderBrushProperty, "InputBorder");
+
+            var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto);
+            toolbar.Children.Add(_back.At(0, 0));
+            toolbar.Children.Add(_forward.At(0, 1));
+            toolbar.Children.Add(_reload.At(0, 2));
+            toolbar.Children.Add(addressBox.At(0, 3));
+            toolbar.Children.Add(menu.At(0, 4));
+            var toolbarBar = new Border { Child = toolbar, Padding = new Thickness(8, 6, 8, 6), BorderThickness = new Thickness(0, 0, 0, 1) }
+                .Res(Border.BackgroundProperty, "SurfaceBg").Res(Border.BorderBrushProperty, "BorderBrush");
+
+            // The page shown for a new tab: the logo and a search box.
+            System.Windows.Automation.AutomationProperties.SetName(_newTabSearch, "Search or type a web address");
+            _newTabSearch.KeyDown += (s, e) =>
+            {
+                if (e.Key != Key.Enter) return;
+                Go(_newTabSearch.Text);
+                e.Handled = true;
+            };
+            var hint = Ui.Subtle("Search with " + SearchEngines.Find(Settings.SearchEngine).Name + " or type a web address", 12.5, false);
+            _newTabSearch.TextChanged += (s, e) => hint.Visibility = _newTabSearch.Text.Length == 0 ? Visibility.Visible : Visibility.Hidden;
+            hint.IsHitTestVisible = false;
+            hint.Margin = new Thickness(16, 0, 0, 0);
+            hint.VerticalAlignment = VerticalAlignment.Center;
+            var searchHost = new Grid();
+            searchHost.Children.Add(_newTabSearch);
+            searchHost.Children.Add(hint);
+            var logo = LogoTile.Create(72);
+            logo.HorizontalAlignment = HorizontalAlignment.Center;
+            var newTabContent = Ui.Column(logo, Ui.Text(AppInfo.Name, 26, bold: true).Margin(0, 14, 0, 22), searchHost);
+            ((FrameworkElement)newTabContent.Children[1]).HorizontalAlignment = HorizontalAlignment.Center;
+            newTabContent.Width = 560;
+            newTabContent.VerticalAlignment = VerticalAlignment.Center;
+            newTabContent.Margin = new Thickness(0, 0, 0, 120);
+            _newTabPage = new Border { Child = newTabContent }.Res(Border.BackgroundProperty, "WindowBg");
+            _pages.Children.Add(_newTabPage);
+
+            _chrome = new Grid();
+            _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _chrome.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _chrome.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            _chrome.Children.Add(stripBar.At(0, 0));
+            _chrome.Children.Add(toolbarBar.At(1, 0));
+            _chrome.Children.Add(_pages.At(2, 0));
+            Content = _chrome;
+
+            PreviewKeyDown += OnKey;
+            _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _saveTimer.Tick += (s, e) =>
+            {
+                _saveTimer.Stop();
+                SaveSession();
+            };
+            Closing += (s, e) =>
+            {
+                // The last window's tabs are kept for next time; tabs of an extra window that's closed are put in "closed tabs".
+                if (Open.Count > 1)
+                    foreach (var t in _tabs) RecentlyClosed.Add(t.ToSaved());
+                Open.Remove(this);
+                SaveSession(includeClosing: Open.Count == 0 ? this : null);
+                foreach (var t in _tabs) t.Close();
+            };
+        }
+
+        public BrowserTab Current { get; private set; }
+        public IReadOnlyList<BrowserTab> Tabs => _tabs;
+        public string AddressText => _address.Text;
+
+        private static Button ToolButton(string icon, string tip, RoutedEventHandler click)
+        {
+            var b = Ui.Button(null, icon, "GhostButton", click);
+            b.ToolTip = tip;
+            b.Width = 36;
+            b.MinWidth = 36;
+            b.Height = 34;
+            b.Padding = new Thickness(0);
+            return b;
+        }
+
+        /// <summary>Opens the window with the tabs from last time, and the address it was started with.</summary>
+        public void Start(string address)
+        {
+            if (Settings.RestoreTabs)
+            {
+                var (saved, selected) = Session.Load();
+                foreach (var t in saved) AddTab(new BrowserTab(t.Url, t.Title), _tabs.Count, false);
+                if (_tabs.Count > 0) Select(_tabs[selected]);
+            }
+            if (!string.IsNullOrWhiteSpace(address))
+            {
+                var url = AddressBar.Resolve(address, SearchEngines.Find(Settings.SearchEngine));
+                if (url != null) NewTab(url, true);
+            }
+            if (_tabs.Count == 0) NewTab(select: true);
+        }
+
+        // ================================================================ tabs
+
+        public BrowserTab NewTab(string url = null, bool select = true, BrowserTab after = null)
+        {
+            var tab = new BrowserTab(url);
+            var index = after != null ? _tabs.IndexOf(after) + 1 : _tabs.Count;
+            AddTab(tab, index, select);
+            if (!string.IsNullOrEmpty(url) && select) tab.Navigate(url);
+            if (select && string.IsNullOrEmpty(url)) FocusNewTabSearch();
+            return tab;
+        }
+
+        private void AddTab(BrowserTab tab, int index, bool select)
+        {
+            index = Math.Max(0, Math.Min(index, _tabs.Count));
+            _tabs.Insert(index, tab);
+            _strip.Children.Insert(index, tab.Header);
+            tab.Changed += t =>
+            {
+                if (t == Current) UpdateToolbar();
+                ScheduleSave();
+            };
+            tab.Selected += Select;
+            tab.CloseClicked += CloseTab;
+            tab.ViewCreated += t =>
+            {
+                t.View.Visibility = t == Current ? Visibility.Visible : Visibility.Hidden;
+                _pages.Children.Add(t.View);
+            };
+            tab.NewWindowRequested += OnNewWindow;
+            tab.PageClosed += CloseTab;
+            tab.FullScreenChanged += (t, on) => SetFullScreen(on);
+            tab.Header.ContextMenu = TabMenu(tab);
+            SizeTabs();
+            if (select) Select(tab);
+            ScheduleSave();
+        }
+
+        public void Select(BrowserTab tab)
+        {
+            if (tab == null) return;
+            Current = tab;
+            foreach (var t in _tabs)
+            {
+                t.SetActive(t == tab);
+                if (t.View != null) t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Hidden;
+            }
+            tab.LoadIfNeeded();
+            _newTabPage.Visibility = tab.IsBlank && tab.View == null ? Visibility.Visible : Visibility.Collapsed;
+            UpdateToolbar();
+            if (tab.IsBlank && tab.View == null) FocusNewTabSearch();
+            else tab.View?.Focus();
+            ScheduleSave();
+        }
+
+        public void CloseTab(BrowserTab tab)
+        {
+            var index = _tabs.IndexOf(tab);
+            if (index < 0) return;
+            RecentlyClosed.Add(tab.ToSaved());
+            _tabs.RemoveAt(index);
+            _strip.Children.Remove(tab.Header);
+            if (tab.View != null) _pages.Children.Remove(tab.View);
+            tab.Close();
+            if (_tabs.Count == 0)
+            {
+                // Closing the last tab closes the window, as in other browsers.
+                Close();
+                return;
+            }
+            if (tab == Current) Select(_tabs[Math.Min(index, _tabs.Count - 1)]);
+            SizeTabs();
+            ScheduleSave();
+        }
+
+        public void ReopenClosedTab()
+        {
+            var saved = RecentlyClosed.TakeLatest();
+            if (saved != null) NewTab(saved.Url, true, Current);
+        }
+
+        private void CloseOtherTabs(BrowserTab keep)
+        {
+            foreach (var t in _tabs.Where(t => t != keep).ToList()) CloseTab(t);
+        }
+
+        private async void OnNewWindow(BrowserTab opener, CoreWebView2NewWindowRequestedEventArgs e)
+        {
+            // Links that open a new window (and pop-ups like "Sign in with ...") open in a new tab next to this one,
+            // still connected to the page that opened them.
+            var deferral = e.GetDeferral();
+            try
+            {
+                var tab = new BrowserTab(e.Uri);
+                AddTab(tab, _tabs.IndexOf(opener) + 1, true);
+                await tab.EnsureView();
+                e.NewWindow = tab.View.CoreWebView2;
+                e.Handled = true;
+            }
+            finally
+            {
+                deferral.Complete();
+            }
+        }
+
+        private ContextMenu TabMenu(BrowserTab tab)
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(Item("Reload", () => tab.Reload()));
+            menu.Items.Add(Item("Duplicate", () => NewTab(tab.Url, true, tab)));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Close tab", () => CloseTab(tab), "Ctrl+W"));
+            menu.Items.Add(Item("Close other tabs", () => CloseOtherTabs(tab)));
+            menu.Items.Add(Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T"));
+            return menu;
+        }
+
+        private static MenuItem Item(string text, Action act, string keys = null)
+        {
+            var item = new MenuItem { Header = text, InputGestureText = keys ?? string.Empty };
+            item.Click += (s, e) => act();
+            return item;
+        }
+
+        /// <summary>Tabs share the strip's width, between 90 and 240 pixels each.</summary>
+        private void SizeTabs()
+        {
+            if (_tabs.Count == 0) return;
+            var available = Math.Max(0, ActualWidth - 80);
+            var width = Math.Max(90, Math.Min(240, available / _tabs.Count));
+            foreach (var t in _tabs) t.Header.Width = width;
+        }
+
+        // ================================================================ address bar and toolbar
+
+        public void Go(string typed)
+        {
+            var url = AddressBar.Resolve(typed, SearchEngines.Find(Settings.SearchEngine));
+            if (url == null) return;
+            if (Current == null) NewTab(url, true);
+            else
+            {
+                _newTabPage.Visibility = Visibility.Collapsed;
+                Current.Navigate(url);
+                Current.View?.Focus();
+            }
+            _newTabSearch.Text = string.Empty;
+        }
+
+        private void UpdateToolbar()
+        {
+            var t = Current;
+            if (t == null) return;
+            if (!_address.IsKeyboardFocusWithin) _address.Text = AddressBar.Display(t.Url);
+            _back.IsEnabled = t.CanGoBack;
+            _forward.IsEnabled = t.CanGoForward;
+            _reload.Content = Ui.Label(t.IsLoading ? "IconClose" : "IconRefresh", null);
+            _reload.ToolTip = t.IsLoading ? "Stop (Esc)" : "Reload (F5)";
+            _addressIcon.SetResourceReference(Glyph.DataProperty, AddressBar.IsSecure(t.Url) ? "IconLock" : "IconGlobe");
+            _addressIcon.ToolTip = t.IsBlank ? null : AddressBar.IsSecure(t.Url) ? "The connection to this site is private (https)" : "The connection to this site isn't private";
+            Title = (t.IsBlank ? "New tab" : t.Title) + " - " + AppInfo.Name;
+            if (t.View != null) _newTabPage.Visibility = Visibility.Collapsed;
+        }
+
+        private void FocusNewTabSearch() =>
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _newTabSearch.Focus();
+                Keyboard.Focus(_newTabSearch);
+            }), DispatcherPriority.Input);
+
+        public void FocusAddress()
+        {
+            _address.Focus();
+            _address.SelectAll();
+        }
+
+        private void ShowMenu(Button anchor)
+        {
+            var menu = new ContextMenu { PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            menu.Items.Add(Item("New tab", () => NewTab(select: true), "Ctrl+T"));
+            menu.Items.Add(Item("New window", NewWindow, "Ctrl+N"));
+            var reopen = Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T");
+            reopen.IsEnabled = RecentlyClosed.Count > 0;
+            menu.Items.Add(reopen);
+            menu.Items.Add(new Separator());
+            var zoom = new MenuItem { Header = $"Zoom ({Math.Round((Current?.Zoom ?? 1) * 100)}%)" };
+            zoom.Items.Add(Item("Bigger", () => ZoomBy(1.1), "Ctrl++"));
+            zoom.Items.Add(Item("Smaller", () => ZoomBy(1 / 1.1), "Ctrl+-"));
+            zoom.Items.Add(Item("Normal size", () => { if (Current != null) Current.Zoom = 1; }, "Ctrl+0"));
+            menu.Items.Add(zoom);
+            menu.Items.Add(Item("Print...", Print, "Ctrl+P"));
+            menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Settings", () => new SettingsWindow(this).ShowDialog()));
+            menu.Items.Add(Item("About " + AppInfo.Name, () => About.Show(this)));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Close window", Close));
+            menu.IsOpen = true;
+        }
+
+        public void NewWindow()
+        {
+            var w = new MainWindow();
+            w.Show();
+            w.NewTab(select: true);
+        }
+
+        private void ZoomBy(double factor)
+        {
+            if (Current?.View != null) Current.Zoom = Current.Zoom * factor;
+        }
+
+        private void Print()
+        {
+            try { Current?.View?.CoreWebView2?.ShowPrintUI(CoreWebView2PrintDialogKind.Browser); }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is NotImplementedException) { }
+        }
+
+        private void SetFullScreen(bool on)
+        {
+            if (on == _fullScreen) return;
+            _fullScreen = on;
+            if (on)
+            {
+                _stateBeforeFullScreen = WindowState;
+                WindowStyle = WindowStyle.None;
+                if (WindowState == WindowState.Maximized) WindowState = WindowState.Normal; // so the task bar is covered too
+                WindowState = WindowState.Maximized;
+            }
+            else
+            {
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                WindowState = _stateBeforeFullScreen;
+            }
+            _chrome.RowDefinitions[0].Height = on ? new GridLength(0) : GridLength.Auto;
+            _chrome.RowDefinitions[1].Height = on ? new GridLength(0) : GridLength.Auto;
+        }
+
+        // ================================================================ keyboard
+
+        private void OnKey(object sender, KeyEventArgs e)
+        {
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            var ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            var shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+            var alt = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
+            var handled = true;
+            if (ctrl && shift && key == Key.T) ReopenClosedTab();
+            else if (ctrl && key == Key.T) NewTab(select: true);
+            else if (ctrl && key == Key.N) NewWindow();
+            else if (ctrl && (key == Key.W || key == Key.F4)) { if (Current != null) CloseTab(Current); }
+            else if (ctrl && key == Key.Tab) SelectBy(shift ? -1 : 1);
+            else if (ctrl && (key == Key.PageDown || key == Key.PageUp)) SelectBy(key == Key.PageDown ? 1 : -1);
+            else if (ctrl && key >= Key.D1 && key <= Key.D9) SelectNumber(key - Key.D1);
+            else if ((ctrl && key == Key.L) || (alt && key == Key.D) || key == Key.F6) FocusAddress();
+            else if (key == Key.F5 || (ctrl && key == Key.R)) Current?.Reload();
+            else if (alt && key == Key.Left) Current?.GoBack();
+            else if (alt && key == Key.Right) Current?.GoForward();
+            else if (ctrl && (key == Key.OemPlus || key == Key.Add)) ZoomBy(1.1);
+            else if (ctrl && (key == Key.OemMinus || key == Key.Subtract)) ZoomBy(1 / 1.1);
+            else if (ctrl && (key == Key.D0 || key == Key.NumPad0)) { if (Current != null) Current.Zoom = 1; }
+            else if (ctrl && key == Key.P) Print();
+            else if (key == Key.F11) SetFullScreen(!_fullScreen);
+            else if (key == Key.Escape && _fullScreen) SetFullScreen(false);
+            else if (key == Key.Escape && Current?.IsLoading == true && !_address.IsKeyboardFocusWithin) Current.Stop();
+            else handled = false;
+            if (handled) e.Handled = true;
+        }
+
+        private void SelectBy(int step)
+        {
+            if (_tabs.Count == 0) return;
+            var i = (_tabs.IndexOf(Current) + step + _tabs.Count) % _tabs.Count;
+            Select(_tabs[i]);
+        }
+
+        /// <summary>Ctrl+1 to Ctrl+8 pick that tab; Ctrl+9 picks the last one.</summary>
+        private void SelectNumber(int n)
+        {
+            if (_tabs.Count == 0) return;
+            Select(n == 8 ? _tabs[_tabs.Count - 1] : _tabs[Math.Min(n, _tabs.Count - 1)]);
+        }
+
+        // ================================================================ saving the tabs
+
+        private void ScheduleSave()
+        {
+            _saveTimer.Stop();
+            _saveTimer.Start();
+        }
+
+        /// <summary>Saves the tabs of every window (the window being closed last included) for next time.</summary>
+        private static void SaveSession(MainWindow includeClosing = null)
+        {
+            var windows = Open.ToList();
+            if (includeClosing != null) windows.Add(includeClosing);
+            var tabs = new List<SavedTab>();
+            var selected = 0;
+            foreach (var w in windows)
+            {
+                if (w == windows[0] && w.Current != null) selected = w._tabs.Where(t => !t.IsBlank).ToList().IndexOf(w.Current);
+                tabs.AddRange(w._tabs.Select(t => t.ToSaved()));
+            }
+            Session.Save(tabs, Math.Max(0, selected));
+        }
+
+        private void SaveSession() => SaveSession(null);
+
+        /// <summary>Saves the tabs of every window now.</summary>
+        public static void SaveAll() => SaveSession(null);
+    }
+}
