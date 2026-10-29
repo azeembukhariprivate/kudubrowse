@@ -451,6 +451,101 @@ namespace Kudubrowse.Views
                         main.Select(keep.Last());
                     }
                 });
+                await Step("Tab groups and two pages side by side", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        var a = keep[0];
+                        var b = keep[1];
+                        var c = main.NewTab(second, true);
+                        await Wait(() => c.Title == "Second page", 20, "a third tab");
+                        var g = main.AddToGroup(a, null, "Reading");
+                        main.AddToGroup(c, g);
+                        Expect(main.Tabs.ToList().IndexOf(c) == main.Tabs.ToList().IndexOf(a) + 1, "grouped tabs sit together");
+                        Expect(a.Group == g && c.Group == g && b.Group == null, "in the group");
+                        MainWindow.SaveAll();
+                        var saved = Session.Load().Tabs;
+                        Expect(saved.Count(t => t.Group == "Reading" && t.GroupColor == g.Color) == 2, "the group is kept for next time");
+                        main.Select(c);
+                        main.ToggleGroup(g);
+                        Expect(g.Collapsed && main.Current == b, "folding the group moves to a tab outside it");
+                        Expect(a.Header.Visibility == Visibility.Collapsed && c.Header.Visibility == Visibility.Collapsed, "its tabs are folded away");
+                        Screenshots.All("Tab group folded");
+                        main.ToggleGroup(g);
+                        Expect(a.Header.Visibility == Visibility.Visible, "unfolded");
+
+                        main.Select(a);
+                        await Wait(() => a.View != null, 20, "the first tab's page");
+                        main.ShowSideBySide(b);
+                        await Wait(() => b.View != null, 20, "the second tab's page");
+                        Pump();
+                        Expect(main.IsSplit && main.SplitPartner == b, "two pages side by side");
+                        Expect(a.View.Visibility == Visibility.Visible && b.View.Visibility == Visibility.Visible, "both shown");
+                        Expect(System.Windows.Controls.Grid.GetColumn(a.View) != System.Windows.Controls.Grid.GetColumn(b.View), "next to each other");
+                        Expect(a.View.ActualWidth > 100 && b.View.ActualWidth > 100, "each has room");
+                        main.Select(b);
+                        Expect(main.IsSplit && main.SplitPartner == a, "picking the other half keeps both");
+                        Screenshots.All("Side by side");
+                        main.Select(c);
+                        Expect(!main.IsSplit, "picking another tab ends it");
+                        main.Select(a);
+                        Expect(b.View.Visibility == Visibility.Hidden, "one page again");
+                    }
+                    finally
+                    {
+                        main.EndSideBySide();
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        foreach (var t in keep) main.RemoveFromGroup(t);
+                        main.Select(keep.Last());
+                    }
+                });
+                await Step("Reading mode, whole-page screenshot and PDF", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        var text = string.Concat(Enumerable.Range(1, 12).Select(i =>
+                            $"<p>Paragraph {i} of the test article. The backwaters of Kerala are a chain of lagoons and lakes lying parallel to the Arabian Sea coast, " +
+                            "linked by canals, rivers and inlets. Houseboats drift slowly past paddy fields, coconut groves and small villages along the water.</p>"));
+                        var article = Page("article.html", "A test article", "<nav><a href='#'>Home</a> <a href='#'>News</a></nav><article><h2>On the water</h2>" + text +
+                            "</article><div style='height:2600px'></div><footer>The end of the page</footer>");
+                        var tab = main.NewTab(select: true);
+                        main.Go(article);
+                        await Wait(() => tab.Title == "A test article" && !tab.IsLoading, 20, "the article");
+                        Expect(await main.ToggleReadingMode() == "open", "reading mode opens on an article");
+                        Expect(await tab.View.CoreWebView2.ExecuteScriptAsync("!!document.getElementById('kudubrowse-reader')") == "true", "shown over the page");
+                        await Capture(main, "reading mode");
+                        Expect(await main.ToggleReadingMode() == "closed", "and closes again");
+                        Expect(await tab.View.CoreWebView2.ExecuteScriptAsync("!!document.getElementById('kudubrowse-reader')") == "false", "gone from the page");
+
+                        var png = await main.SaveScreenshot(Path.Combine(_temp, "whole page.png"));
+                        Expect(png != null && File.Exists(png), "screenshot saved");
+                        var bytes = File.ReadAllBytes(png);
+                        Expect(bytes.Length > 24 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G', "a PNG picture");
+                        var height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+                        Note("screenshot height " + height);
+                        Expect(height > 2600, "the whole page, not just the part on screen (" + height + " pixels tall)");
+                        Directory.CreateDirectory(Screenshots.Folder);
+                        File.Copy(png, Path.Combine(Screenshots.Folder, "web whole page.png"), true);
+
+                        var pdf = await main.SavePdf(Path.Combine(_temp, "page.pdf"));
+                        Expect(pdf != null && File.Exists(pdf), "PDF saved");
+                        Expect(Encoding.ASCII.GetString(File.ReadAllBytes(pdf), 0, 5) == "%PDF-", "a PDF file");
+                    }
+                    finally
+                    {
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
+                await Step("What KUDUBROWSE can do", () =>
+                {
+                    var f = new FeaturesWindow(main);
+                    Expect(f.TryButtons >= 15, "\"Try it\" buttons, found " + f.TryButtons);
+                    ShowAndClose(f);
+                    return Task.CompletedTask;
+                });
                 await Step("Can be chosen as the default browser", () =>
                 {
                     ShellIntegration.Register();
@@ -492,6 +587,7 @@ namespace Kudubrowse.Views
                     Screenshots.All("Dark theme");
                     ShowAndClose(new SettingsWindow(main));
                     ShowAndClose(About.Build(main));
+                    ShowAndClose(new FeaturesWindow(main));
                     ThemeManager.Apply(ThemeMode.Light);
                     await Task.CompletedTask;
                 });

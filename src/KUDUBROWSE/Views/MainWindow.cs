@@ -125,6 +125,7 @@ namespace Kudubrowse.Views
             _address.Padding = new Thickness(6, 0, 10, 0);
             addressGrid.Children.Add(_address.At(0, 1));
             InitLibrary(addressGrid);
+            InitExtras(addressGrid);
             var addressBox = new Border { Child = addressGrid, CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(1), Margin = new Thickness(6, 0, 6, 0) }
                 .Res(Border.BackgroundProperty, "InputBg").Res(Border.BorderBrushProperty, "InputBorder");
 
@@ -234,7 +235,18 @@ namespace Kudubrowse.Views
             if (Settings.RestoreTabs)
             {
                 var (saved, selected) = Session.Load();
-                foreach (var t in saved) AddTab(new BrowserTab(t.Url, t.Title, t.Room), _tabs.Count, false);
+                var groups = new Dictionary<string, TabGroup>();
+                foreach (var t in saved)
+                {
+                    var tab = new BrowserTab(t.Url, t.Title, t.Room);
+                    if (t.Group != null)
+                    {
+                        var key = t.Group + "|" + t.GroupColor;
+                        if (!groups.TryGetValue(key, out var g)) groups[key] = g = new TabGroup { Name = t.Group, Color = t.GroupColor };
+                        tab.Group = g;
+                    }
+                    AddTab(tab, _tabs.Count, false);
+                }
                 if (_tabs.Count > 0) Select(_tabs[selected]);
             }
             if (!string.IsNullOrWhiteSpace(address))
@@ -249,7 +261,7 @@ namespace Kudubrowse.Views
 
         public BrowserTab NewTab(string url = null, bool select = true, BrowserTab after = null, string room = null)
         {
-            var tab = new BrowserTab(url, null, room ?? (after ?? Current)?.Room, IsPrivate);
+            var tab = new BrowserTab(url, null, room ?? (after ?? Current)?.Room, IsPrivate) { Group = after?.Group };
             var index = after != null ? _tabs.IndexOf(after) + 1 : _tabs.Count;
             AddTab(tab, index, select);
             if (!string.IsNullOrEmpty(url) && select) tab.Navigate(url);
@@ -261,7 +273,6 @@ namespace Kudubrowse.Views
         {
             index = Math.Max(0, Math.Min(index, _tabs.Count));
             _tabs.Insert(index, tab);
-            _strip.Children.Insert(index, tab.Header);
             tab.Changed += t =>
             {
                 if (t == Current) UpdateToolbar();
@@ -273,7 +284,9 @@ namespace Kudubrowse.Views
             {
                 t.View.Visibility = t == Current ? Visibility.Visible : Visibility.Hidden;
                 _pages.Children.Add(t.View);
+                Layout();
             };
+            WatchFocus(tab);
             tab.NewWindowRequested += OnNewWindow;
             WatchPasswords(tab);
             tab.PageClosed += CloseTab;
@@ -283,7 +296,7 @@ namespace Kudubrowse.Views
                 if (t == Current) UpdateShield();
             };
             tab.Header.ContextMenu = TabMenu(tab);
-            SizeTabs();
+            RebuildStrip();
             if (select) Select(tab);
             ScheduleSave();
         }
@@ -291,12 +304,14 @@ namespace Kudubrowse.Views
         public void Select(BrowserTab tab)
         {
             if (tab == null) return;
+            // Picking the other half of two pages side by side keeps both shown; picking another tab ends it.
+            if (_splitPartner != null && tab != Current)
+                _splitPartner = tab == _splitPartner ? Current : null;
+            var previous = Current;
             Current = tab;
-            foreach (var t in _tabs)
-            {
-                t.SetActive(t == tab);
-                if (t.View != null) t.View.Visibility = t == tab ? Visibility.Visible : Visibility.Hidden;
-            }
+            foreach (var t in _tabs) t.SetActive(t == tab);
+            Layout();
+            if (tab.Group?.Collapsed == true || previous?.Group?.Collapsed == true) RebuildStrip();
             tab.LoadIfNeeded();
             UpdateSaveBar();
             _newTabPage.Visibility = tab.IsBlank && tab.View == null ? Visibility.Visible : Visibility.Collapsed;
@@ -312,7 +327,7 @@ namespace Kudubrowse.Views
             if (index < 0) return;
             if (!IsPrivate) RecentlyClosed.Add(tab.ToSaved());
             _tabs.RemoveAt(index);
-            _strip.Children.Remove(tab.Header);
+            if (tab == _splitPartner) _splitPartner = null;
             if (tab.View != null) _pages.Children.Remove(tab.View);
             tab.Close();
             if (_tabs.Count == 0)
@@ -321,8 +336,16 @@ namespace Kudubrowse.Views
                 Close();
                 return;
             }
-            if (tab == Current) Select(_tabs[Math.Min(index, _tabs.Count - 1)]);
-            SizeTabs();
+            if (tab == Current)
+            {
+                // The other half of two pages side by side takes over; otherwise the next tab.
+                var next = _splitPartner ?? _tabs[Math.Min(index, _tabs.Count - 1)];
+                _splitPartner = null;
+                Current = null;
+                Select(next);
+            }
+            else Layout();
+            RebuildStrip();
             ScheduleSave();
         }
 
@@ -352,7 +375,7 @@ namespace Kudubrowse.Views
             try
             {
                 // Same room as the page that opened it (the engine needs that, and so do sign-in windows).
-                var tab = new BrowserTab(e.Uri, null, opener.Room, opener.IsPrivate);
+                var tab = new BrowserTab(e.Uri, null, opener.Room, opener.IsPrivate) { Group = opener.Group };
                 AddTab(tab, _tabs.IndexOf(opener) + 1, true);
                 await tab.EnsureView();
                 e.NewWindow = tab.View.CoreWebView2;
@@ -367,6 +390,14 @@ namespace Kudubrowse.Views
         private ContextMenu TabMenu(BrowserTab tab)
         {
             var menu = new ContextMenu();
+            menu.Opened += (s, e) => FillTabMenu(menu, tab);
+            menu.Items.Add(new MenuItem());
+            return menu;
+        }
+
+        private void FillTabMenu(ContextMenu menu, BrowserTab tab)
+        {
+            menu.Items.Clear();
             menu.Items.Add(Item("Reload", () => tab.Reload()));
             menu.Items.Add(Item("Duplicate", () => NewTab(tab.Url, true, tab)));
             if (!IsPrivate)
@@ -389,11 +420,15 @@ namespace Kudubrowse.Views
                 move.Items.Add(new MenuItem());
                 menu.Items.Add(move);
             }
+            menu.Items.Add(GroupMenu(tab));
+            if (IsSplit && (tab == Current || tab == _splitPartner))
+                menu.Items.Add(Item("Stop showing side by side", EndSideBySide));
+            else if (tab != Current)
+                menu.Items.Add(Item("Show side by side with this tab", () => ShowSideBySide(tab)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Close tab", () => CloseTab(tab), "Ctrl+W"));
             menu.Items.Add(Item("Close other tabs", () => CloseOtherTabs(tab)));
             menu.Items.Add(Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T"));
-            return menu;
         }
 
         private static MenuItem Item(string text, Action act, string keys = null)
@@ -406,9 +441,11 @@ namespace Kudubrowse.Views
         /// <summary>Tabs share the strip's width, between 90 and 240 pixels each.</summary>
         private void SizeTabs()
         {
-            if (_tabs.Count == 0) return;
-            var available = Math.Max(0, ActualWidth - 80);
-            var width = Math.Max(90, Math.Min(240, available / _tabs.Count));
+            var shown = _tabs.Count(t => t.Header.Visibility == Visibility.Visible);
+            if (shown == 0) return;
+            var chips = _strip.Children.OfType<FrameworkElement>().Where(c => !_tabs.Any(t => t.Header == c)).Sum(c => c.ActualWidth > 0 ? c.ActualWidth + 8 : 80);
+            var available = Math.Max(0, ActualWidth - 80 - chips);
+            var width = Math.Max(90, Math.Min(240, available / shown));
             foreach (var t in _tabs) t.Header.Width = width;
         }
 
@@ -581,6 +618,9 @@ namespace Kudubrowse.Views
             zoom.Items.Add(Item("Normal size", () => { if (Current != null) Current.Zoom = 1; }, "Ctrl+0"));
             menu.Items.Add(zoom);
             menu.Items.Add(Item("Print...", Print, "Ctrl+P"));
+            menu.Items.Add(Item("Reading mode", async () => await ToggleReadingMode(), "F9"));
+            menu.Items.Add(Item("Screenshot of the whole page...", async () => await SaveScreenshot(), "Ctrl+Shift+S"));
+            menu.Items.Add(Item("Save the page as PDF...", async () => await SavePdf()));
             menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
@@ -592,6 +632,7 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Bring bookmarks and history from Chrome...", () => new ImportWindow(this).ShowDialog()));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Settings", () => new SettingsWindow(this).ShowDialog()));
+            menu.Items.Add(Item("What " + AppInfo.Name + " can do", () => FeaturesWindow.Show(this)));
             menu.Items.Add(Item("About " + AppInfo.Name, () => About.Show(this)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Close window", Close));
@@ -671,6 +712,8 @@ namespace Kudubrowse.Views
             else if (ctrl && (key == Key.OemMinus || key == Key.Subtract)) ZoomBy(1 / 1.1);
             else if (ctrl && (key == Key.D0 || key == Key.NumPad0)) { if (Current != null) Current.Zoom = 1; }
             else if (ctrl && key == Key.P) Print();
+            else if (key == Key.F9) _ = ToggleReadingMode();
+            else if (ctrl && shift && key == Key.S) _ = SaveScreenshot();
             else if (key == Key.F11) SetFullScreen(!_fullScreen);
             else if (ctrl && shift && key == Key.B) ToggleBookmarksBar();
             else if (ctrl && shift && key == Key.O) LibraryWindow.Show(this, true);

@@ -12,11 +12,15 @@ namespace Kudubrowse.Core
         public string Title { get; set; }
         /// <summary>The room the tab is in (null or "Default" for the first room).</summary>
         public string Room { get; set; }
+        /// <summary>The tab group it's in (null for none), and the group's colour.</summary>
+        public string Group { get; set; }
+        public string GroupColor { get; set; }
     }
 
     /// <summary>
     /// The open tabs, kept in %LocalAppData%\KUDUBROWSE\session.txt so they come back after closing or a crash.
-    /// One line per tab: the address, a tab character, then the title. The first line says which tab was selected.
+    /// One line per tab: the address, the title, the room and the tab group ("name|colour"), between tab characters.
+    /// The first line says which tab was selected.
     /// </summary>
     public static class Session
     {
@@ -34,7 +38,8 @@ namespace Kudubrowse.Core
             foreach (var t in tabs)
             {
                 if (string.IsNullOrEmpty(t.Url) || t.Url == "about:blank") continue;
-                sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\t').Append(t.Room ?? Rooms.DefaultId).Append('\n');
+                sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\t').Append(t.Room ?? Rooms.DefaultId)
+                  .Append('\t').Append(string.IsNullOrEmpty(t.Group) ? string.Empty : Clean(t.Group).Replace('|', ' ') + "|" + Clean(t.GroupColor)).Append('\n');
             }
             try
             {
@@ -68,12 +73,19 @@ namespace Kudubrowse.Core
                         continue;
                     }
                     if (!IsSafeToReopen(parts[0])) continue;
-                    tabs.Add(new SavedTab
+                    var tab = new SavedTab
                     {
                         Url = parts[0],
                         Title = parts.Length >= 2 ? parts[1] : string.Empty,
                         Room = parts.Length >= 3 && Rooms.ValidId(parts[2]) ? parts[2] : Rooms.DefaultId
-                    });
+                    };
+                    var group = parts.Length >= 4 ? parts[3].Split('|') : new string[0];
+                    if (group.Length == 2 && group[0].Trim().Length > 0)
+                    {
+                        tab.Group = group[0].Trim();
+                        tab.GroupColor = IsColor(group[1]) ? group[1] : Rooms.Colors[1];
+                    }
+                    tabs.Add(tab);
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -86,6 +98,8 @@ namespace Kudubrowse.Core
         /// <summary>Only ordinary web pages and files come back; never script or data addresses.</summary>
         public static bool IsSafeToReopen(string url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "file");
+
+        private static bool IsColor(string s) => s.Length == 7 && s[0] == '#' && s.Skip(1).All(Uri.IsHexDigit);
 
         private static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }

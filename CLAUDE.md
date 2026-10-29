@@ -44,8 +44,13 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    history), downloads (`Views/Downloads.cs`, our own list instead of the engine's), sleeping tabs (TrySuspendAsync after
    10 minutes hidden), clearing a site's or all data (`BrowserRooms.ClearData` uses a hidden controller per room), one
    running copy (`Core/SingleInstance.cs`: a mutex and a named pipe per user; the second start hands its arguments over).
-4b. Next: tab groups, side-by-side pages, reading mode (Mozilla Readability), full-page screenshot and PDF, installer
-   checks. Then release 1.0.
+4b. Done (0.6): tab groups (`TabGroup` in `Views/MainWindow.Extras.cs`; saved as a 4th session column "name|colour"),
+   side-by-side pages (`_pages` gets 3 columns and a GridSplitter; clicking into a half makes it current), reading mode
+   (`Assets/Readability.js` 0.6.0, Apache-2.0, embedded; `Views/ReadingScript.cs` shows it in a closed shadow root over
+   the page and strips anything that could run), whole-page screenshot (DevTools `Page.captureScreenshot`) and PDF
+   (`PrintToPdfAsync`), "What KUDUBROWSE can do" (`Views/FeaturesWindow.cs`, menu and About), installer checks
+   (WebView2 present; uninstalling asks before removing the person's data; CI installs and uninstalls).
+   Next: release 1.0.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

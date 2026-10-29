@@ -275,8 +275,15 @@ namespace Kudubrowse.Views
             var close = Ui.Button("Close", null, "PrimaryButton");
             close.IsCancel = true;
             close.IsDefault = true;
-            window = Dialogs.Dialog(owner, "About " + AppInfo.Name, content, 580, updates, close);
+            var features = Ui.Button("What it can do");
+            features.ToolTip = "What makes " + AppInfo.Name + " different, and its best everyday features";
+            window = Dialogs.Dialog(owner, "About " + AppInfo.Name, content, 580, features, updates, close);
             close.Click += (s, e) => window.Close();
+            features.Click += (s, e) =>
+            {
+                window.Close();
+                FeaturesWindow.Show(owner as MainWindow ?? MainWindow.LastActive);
+            };
             updates.Click += async (s, e) =>
             {
                 updates.IsEnabled = false;

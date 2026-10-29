@@ -135,5 +135,22 @@ namespace Kudubrowse.Core
             get => GetBool("RestoreTabs", true);
             set => SetBool("RestoreTabs", value);
         }
+    
+        /// <summary>Reading mode's text size in pixels, and its colours (light, sepia or dark).</summary>
+        public static int ReadingSize
+        {
+            get => int.TryParse(Get("ReadingSize", "20"), out var n) && n >= 14 && n <= 32 ? n : 20;
+            set => Set("ReadingSize", Math.Max(14, Math.Min(32, value)).ToString());
+        }
+
+        public static string ReadingTheme
+        {
+            get
+            {
+                var t = Get("ReadingTheme", "light");
+                return t == "sepia" || t == "dark" ? t : "light";
+            }
+            set => Set("ReadingTheme", value);
+        }
     }
 }

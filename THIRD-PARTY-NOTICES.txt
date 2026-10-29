@@ -18,3 +18,8 @@ Block lists: EasyList, EasyPrivacy and EasyList Cookie List (src/KUDUBROWSE/List
   the Creative Commons Attribution-ShareAlike 3.0 Unported licence; KUDUBROWSE uses them under the latter:
   https://creativecommons.org/licenses/by-sa/3.0/
   The lists are used as they are; KUDUBROWSE's own code reads them.
+
+Reading mode: Readability.js 0.6.0 by Mozilla (src/KUDUBROWSE/Assets/Readability.js, used as it is)
+  Copyright (c) 2010 Arc90 Inc. Licensed under the Apache License, Version 2.0:
+  https://www.apache.org/licenses/LICENSE-2.0
+  Source: https://github.com/mozilla/readability

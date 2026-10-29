@@ -8,10 +8,10 @@ account and without anything about you being collected.
 > 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
 > 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
 > 3. ✅ Bookmarks, history, suggestions, passwords, bringing everything from Chrome, default browser
-> 4. ✅ Rooms (separate logins), private windows, downloads, sleeping tabs, one running copy; next: tab groups,
+> 4. ✅ Rooms (separate logins), private windows, downloads, sleeping tabs, one running copy, tab groups,
 >    side-by-side pages, reading mode, screenshots and PDF, and the installer
 >
-> Version 1.0 will be released when all four are done and tested.
+> Version 1.0 comes next, once this last part has been checked.
 
 Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
 
@@ -39,6 +39,14 @@ Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
 - Tabs not looked at for 10 minutes go to sleep and wake when clicked; a site's cookies and data can be cleared from
   the shield button.
 - Links clicked in other apps open as a new tab in the browser that's already open.
+- Tab groups: put tabs in a named, coloured group and fold it away to just its name (right-click a tab).
+- Two pages side by side in one window, with a line between them you can drag (right-click a tab).
+- Reading mode (F9): just the article as clean text, in light, sepia or dark, with the text size you like.
+- A picture of the whole page, not just the part on screen (Ctrl+Shift+S), and saving a page as PDF.
+- "What KUDUBROWSE can do" (in the menu and the About window) lists what makes it different and its best everyday
+  features, each with a "Try it" button.
+- The installer checks the Edge engine is there, and uninstalling asks before removing your bookmarks, history and
+  passwords.
 
 The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
 

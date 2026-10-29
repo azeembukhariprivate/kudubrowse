@@ -50,6 +50,8 @@ namespace Kudubrowse.Views
             grid.Children.Add(_blankIcon.At(0, 0));
             grid.Children.Add(_title.Margin(6, 0, 4, 0).At(0, 1));
             grid.Children.Add(close.At(0, 2));
+            Grid.SetColumnSpan(_groupLine, 3);
+            grid.Children.Add(_groupLine);
             Header = new Border
             {
                 Child = grid,
@@ -78,18 +80,26 @@ namespace Kudubrowse.Views
         /// <summary>A private tab keeps nothing: no history, and its site data goes when the private window closes.</summary>
         public bool IsPrivate { get; }
 
-        /// <summary>A coloured line on top of the tab shows its room (none for the first room); private tabs are dark purple.</summary>
+        /// <summary>The tab group it's in, if any.</summary>
+        public TabGroup Group { get; set; }
+
+        /// <summary>
+        /// A coloured line on top of the tab shows its room (none for the first room; private tabs are dark purple),
+        /// and one underneath shows its tab group.
+        /// </summary>
         public void ShowRoom()
         {
             var room = BrowserRooms.All.Find(Room);
             var color = IsPrivate ? "#5B21B6" : room.IsDefault ? null : room.Color;
             Header.BorderThickness = new Thickness(0, color == null ? 0 : 3, 0, 0);
             Header.BorderBrush = color == null ? null : new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+            _groupLine.Background = Group == null ? null : new SolidColorBrush((Color)ColorConverter.ConvertFromString(Group.Color));
             _roomName = IsPrivate ? "Private" : room.IsDefault ? null : room.Name;
             Refresh();
         }
 
         private string _roomName;
+        private readonly Border _groupLine = new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(-6, 0, 0, 0), CornerRadius = new CornerRadius(1.5), IsHitTestVisible = false };
         /// <summary>The page, once the tab has been shown.</summary>
         public WebView2 View { get; private set; }
 
@@ -154,6 +164,11 @@ namespace Kudubrowse.Views
                     break;
                 case "login":
                     LoginSent?.Invoke(this, source, Text("username"), Text("password"));
+                    break;
+                case "reading":
+                    // Reading mode's text size and colours, kept for next time (both are checked when stored).
+                    Settings.ReadingSize = (int)Num("size");
+                    Settings.ReadingTheme = Text("theme");
                     break;
             }
         }
@@ -228,7 +243,7 @@ namespace Kudubrowse.Views
             core.Reload();
         }
 
-        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room };
+        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room, Group = Group?.Name, GroupColor = Group?.Color };
 
         public void SetActive(bool active)
         {

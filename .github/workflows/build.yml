@@ -101,7 +101,7 @@ jobs:
           if (Test-Path $key) { Write-Host "WebView2 Runtime $((Get-ItemProperty $key).pv)" }
           else { choco install webview2-runtime -y --no-progress }
 
-      - name: Self-test the browser (typing addresses, links, back and forward, new tabs and pop-ups, closed tabs, zoom, blocking ads and pop-ups, allowing a site, history, bookmarks, suggestions, bringing things from Chrome, default browser, tabs coming back, both themes)
+      - name: Self-test the browser (typing addresses, links, back and forward, new tabs and pop-ups, closed tabs, zoom, blocking ads and pop-ups, allowing a site, history, bookmarks, suggestions, bringing things from Chrome, passwords, rooms, private windows, downloads, sleeping tabs, tab groups, side by side, reading mode, whole-page screenshot and PDF, default browser, tabs coming back, both themes)
         shell: pwsh
         timeout-minutes: 10
         run: |
@@ -144,6 +144,27 @@ jobs:
           }
           & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" "/DSourceDir=$PWD\out\KUDUBROWSE" "/O$PWD\artifacts" installer\KUDUBROWSE.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check the installer (installs without administrator rights, can be the default browser, uninstalls and keeps the person's things)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "kudubrowse-install"
+          $setup = Start-Process "artifacts/KUDUBROWSE-${{ steps.ver.outputs.version }}-setup.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=`"$dir`"" -PassThru -Wait
+          if ($setup.ExitCode -ne 0) { throw "Setup ended with $($setup.ExitCode)" }
+          foreach ($f in 'KUDUBROWSE.exe', 'Microsoft.Web.WebView2.Core.dll', 'THIRD-PARTY-NOTICES.txt', 'Lists\easylist.txt') {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "$f wasn't installed" }
+          }
+          if (-not (Test-Path "HKCU:\Software\Clients\StartMenuInternet\KUDUBROWSE")) { throw "not offered as a browser in Windows' Default apps" }
+          $data = Join-Path $env:LOCALAPPDATA "KUDUBROWSE"
+          New-Item -ItemType Directory -Force $data | Out-Null
+          Set-Content (Join-Path $data "installer-check.txt") "the person's things"
+          $un = Start-Process (Join-Path $dir "unins000.exe") -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru -Wait
+          for ($i = 0; $i -lt 60 -and (Test-Path (Join-Path $dir "KUDUBROWSE.exe")); $i++) { Start-Sleep -Seconds 1 }
+          if (Test-Path (Join-Path $dir "KUDUBROWSE.exe")) { throw "not uninstalled" }
+          if (Test-Path "HKCU:\Software\Clients\StartMenuInternet\KUDUBROWSE") { throw "still offered as a browser after uninstalling" }
+          if (-not (Test-Path (Join-Path $data "installer-check.txt"))) { throw "uninstalling removed the person's things without asking" }
+          Remove-Item (Join-Path $data "installer-check.txt")
+          Write-Host "Installed, registered, uninstalled; the person's things were kept."
 
       - name: Upload build files
         uses: actions/upload-artifact@v6
