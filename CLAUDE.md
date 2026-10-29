@@ -50,7 +50,7 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    the page and strips anything that could run), whole-page screenshot (DevTools `Page.captureScreenshot`) and PDF
    (`PrintToPdfAsync`), "What KUDUBROWSE can do" (`Views/FeaturesWindow.cs`, menu and About), installer checks
    (WebView2 present; uninstalling asks before removing the person's data; CI installs and uninstalls).
-   Next: release 1.0.
+   Released as 1.0.0 (README with the download button, docs/logo*.png from docs/logo.svg).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 
@@ -84,7 +84,7 @@ The files listed in `.kudu-common` (the look and controls in `Controls/`, `Core/
 **Don't edit them here**: change them in kudu-common, then run `python sync.py ../kudubrowse` there and commit both
 repos. The build fails when a copy differs from kudu-common. App-specific details go in `Core/AppDetails.cs`.
 
-## Releasing (from 1.0)
+## Releasing
 
 1. Raise `<Version>` in `src/KUDUBROWSE/KUDUBROWSE.csproj` (and `MyAppVersion` in `installer/KUDUBROWSE.iss`).
 2. Commit and push to `main`.

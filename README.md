@@ -1,63 +1,66 @@
-# KUDUBROWSE
+<p align="center">
+  <img src="docs/logo-512.png" alt="KUDUBROWSE logo" width="128">
+</p>
 
-A private everyday web browser for Windows 10 and 11: every site works like it does in Chrome or Edge, without an
-account and without anything about you being collected.
+<h1 align="center">KUDUBROWSE</h1>
 
-> **Being built.** KUDUBROWSE is being made step by step and isn't ready to download yet.
->
-> 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
-> 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
-> 3. ✅ Bookmarks, history, suggestions, passwords, bringing everything from Chrome, default browser
-> 4. ✅ Rooms (separate logins), private windows, downloads, sleeping tabs, one running copy, tab groups,
->    side-by-side pages, reading mode, screenshots and PDF, and the installer
->
-> Version 1.0 comes next, once this last part has been checked.
+<p align="center">A private everyday web browser for Windows. Every site works as it does in Chrome or Edge, with ads, trackers, cookie banners and pop-ups blocked, a built-in password manager, and rooms that keep your logins apart. No account, and nothing about you is collected. Free and open source.</p>
 
-Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
+<p align="center">
+  <a href="https://github.com/azeembukhariprivate/kudubrowse/releases/latest/download/KUDUBROWSE-setup.exe"><img src="https://img.shields.io/badge/Download-KUDUBROWSE%20for%20Windows-0E8C7E?style=for-the-badge" alt="Download KUDUBROWSE for Windows"></a>
+  <br>
+  <sub>The installer for Windows 10 and 11, always the latest version · <a href="https://github.com/azeembukhariprivate/kudubrowse/releases/latest">portable zip and what's new</a></sub>
+</p>
 
-## What works so far
+---
 
-- Tabs: open, close, reopen closed tabs (Ctrl+Shift+T), switch with Ctrl+Tab or Ctrl+1 to Ctrl+9.
-- Type a web address or words to search for (Google, Bing, DuckDuckGo, Brave Search or Startpage).
-- Links that open a new window open in a new tab next to the page.
-- The tabs you had open come back next time; they load when you first click them, so starting stays quick.
-- Zoom, print, full screen (F11), light and dark look.
-- Ads and trackers are blocked, cookie banners hidden and pop-ups that pages open by themselves stopped, using the
-  public EasyList, EasyPrivacy and EasyList Cookie List (fetched again every few days). The shield button shows how
-  much was blocked and can switch blocking off for a site.
-- Bookmarks (the star, a bookmarks bar with folders), history by day, both searchable (Ctrl+H, Ctrl+Shift+O).
-- The address bar suggests bookmarks and pages you visit often as you type.
-- "Bring bookmarks and history from Chrome" (Chrome's files are only read), and a welcome window the first time.
-- Can be chosen as the default browser in Windows' Default apps.
-- Passwords: offered to save when you sign in, filled when you pick a login from the list next to the box, strong ones
-  suggested when you sign up. They're encrypted for your Windows account; showing or copying one asks for Windows Hello
-  (or your Windows password). "Check for leaks" sends only 5 characters of a scrambled code of each password.
-  Passwords come from Chrome through the file Chrome exports, which is deleted afterwards.
-- Rooms: tabs in different rooms (Personal, Work, any you add) keep their logins and site data apart, shown by a
-  coloured line on the tab. Private windows (Ctrl+Shift+N) keep no history and forget sites' cookies when closed.
-- Downloads in the browser's own list (Ctrl+J); files that can run programs ask before opening.
-- Tabs not looked at for 10 minutes go to sleep and wake when clicked; a site's cookies and data can be cleared from
-  the shield button.
-- Links clicked in other apps open as a new tab in the browser that's already open.
-- Tab groups: put tabs in a named, coloured group and fold it away to just its name (right-click a tab).
-- Two pages side by side in one window, with a line between them you can drag (right-click a tab).
-- Reading mode (F9): just the article as clean text, in light, sepia or dark, with the text size you like.
-- A picture of the whole page, not just the part on screen (Ctrl+Shift+S), and saving a page as PDF.
-- "What KUDUBROWSE can do" (in the menu and the About window) lists what makes it different and its best everyday
-  features, each with a "Try it" button.
-- The installer checks the Edge engine is there, and uninstalling asks before removing your bookmarks, history and
-  passwords.
+## What makes it different
 
-The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
+- **Rooms**: keep separate logins side by side, like your personal and work email, each in its own room with its own colour. Sites in one room can't see the cookies and logins of another. Start with Personal and Work, and add as many as you like.
+- **No account, nothing collected**: KUDUBROWSE sends nothing about you anywhere. Your tabs, history, bookmarks and passwords stay on your PC.
+- **Ads, trackers, cookie banners and pop-ups blocked**, built in, with nothing to add. It uses the public EasyList, EasyPrivacy and EasyList Cookie List, fetched again every few days. The shield button shows what was stopped on the page, and lets a site off if it doesn't work properly.
+- **Passwords filled only when you pick them**: a saved login goes into a page only after you choose it from the browser's own list next to the box, so a page can't take your passwords. They're locked to your Windows account, and showing or copying one asks for Windows Hello (or your Windows password) first.
+- **Leaked password check**: finds saved passwords that have turned up in known data leaks. Only the first 5 characters of a scrambled copy of each password are sent, never the password itself.
+- **Moving from Chrome**: brings over your bookmarks and history, and your passwords from the file Chrome saves them to (the file is deleted afterwards). Chrome's own files are only read, never changed.
+- **Sleeping tabs**: tabs you haven't looked at for 10 minutes rest and use almost no processor and less memory. They wake up when you click them; tabs playing sound stay awake.
 
-## Shared code
+## Everyday features
 
-The look and controls and a few helpers come from [kudu-common](https://github.com/azeembukhariprivate/kudu-common);
-the build checks that they match.
+- **Tabs**: open, close and reopen closed tabs (Ctrl+Shift+T), switch with Ctrl+Tab or Ctrl+1 to Ctrl+9. The tabs you had open come back next time and load when you first click them, so starting stays quick.
+- **Tab groups**: put tabs in a named, coloured group and fold it away to just its name (right-click a tab).
+- **Two pages side by side** in one window, with a line between them you can drag (right-click a tab).
+- **The address bar**: type an address or words to search for, with Google, Bing, DuckDuckGo, Brave Search or Startpage. It suggests pages from your bookmarks and history as you type.
+- **Bookmarks** (the star, Ctrl+D) with folders and a bookmarks bar, and **history** by day, kept for 90 days. Both can be searched (Ctrl+Shift+O, Ctrl+H).
+- **Reading mode** (F9): just the article as clean text, in light, sepia or dark, at the text size you like.
+- **A picture of the whole page**, not just the part on screen (Ctrl+Shift+S), and **saving a page as PDF**.
+- **Private windows** (Ctrl+Shift+N): no history is kept, and sites' cookies are forgotten when the window closes.
+- **Downloads** in the browser's own list (Ctrl+J), with Open and Show in folder. Files that can run programs ask before opening.
+- **Clear a site's cookies and data** from the shield button, or the history and every room's site data from Settings.
+- **Default browser**: can be chosen in Windows' Default apps, and links clicked in other apps open as a new tab in the browser that's already open.
+- **What KUDUBROWSE can do** (in the menu and the About window) lists all of this, with a "Try it" button for each.
+- Zoom, print, full screen (F11), and light and dark looks that follow Windows.
 
-## Build it yourself
+## Download
 
-You need the [.NET SDK](https://dotnet.microsoft.com/download) (8 or newer).
+**[Download the installer](https://github.com/azeembukhariprivate/kudubrowse/releases/latest/download/KUDUBROWSE-setup.exe)** (`KUDUBROWSE-setup.exe`, always the latest version), or get any of these from the [Releases page](https://github.com/azeembukhariprivate/kudubrowse/releases/latest):
+
+- `KUDUBROWSE-x.y.z-setup.exe` installs KUDUBROWSE for your Windows account (no administrator rights needed to install).
+- `KUDUBROWSE-x.y.z-portable.zip` runs without installing: unzip it anywhere and open `KUDUBROWSE.exe`.
+
+Requires Windows 10 or 11. Pages are shown by Microsoft Edge WebView2, the engine that is part of Windows 10 and 11 and is kept up to date by Windows (on older copies of Windows 10 it can be [installed for free from Microsoft](https://go.microsoft.com/fwlink/p/?LinkId=2124703); the installer tells you if it's missing). Uninstalling asks before removing your bookmarks, history, passwords and settings.
+
+## Privacy
+
+KUDUBROWSE itself collects nothing and has no account. Apart from the sites you visit, it only connects to:
+
+- the block lists' websites, every few days, to fetch new copies of the lists;
+- Pwned Passwords, only when you press *Check for leaks* (5 characters of each scrambled password are sent);
+- the search engine you chose, when you search from the address bar;
+- GitHub, to check for a newer version (can be turned off in Settings).
+
+## Build from source
+
+You need the [.NET SDK](https://dotnet.microsoft.com/download) (8 or later). The screens are built in C# and the themes are loaded at startup, so the project builds with `dotnet` on any operating system; the app itself runs on Windows.
 
 ```
 dotnet run --project tests/KUDUBROWSE.Tests -c Release
@@ -65,6 +68,23 @@ dotnet build src/KUDUBROWSE/KUDUBROWSE.csproj -c Release -o out/KUDUBROWSE
 out\KUDUBROWSE\KUDUBROWSE.exe --self-test        (Windows only)
 ```
 
-## Licence
+The tests check the address bar, saving tabs (with their rooms and groups), the ad blocker (with made-up rules and the real lists, when the build has downloaded them into `src/KUDUBROWSE/Lists`), bookmarks, history, suggestions, reading Chrome's bookmarks and history (from a made-up Chrome folder in `tests/KUDUBROWSE.Tests/Fixtures`), passwords and the leak check, rooms, and the one-running-copy hand-over. `--self-test` opens the real browser with test pages it makes itself, using its own profile, and uses it: addresses, links, back and forward, pop-ups, closed tabs, zoom, blocking, history, bookmarks, bringing things from Chrome, saving and filling passwords, rooms and private windows, downloads, sleeping tabs, tab groups, side by side, reading mode, the whole-page picture and PDF, the default browser, tabs coming back and every window in both themes; it writes `self-test.log` and exits. To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and compile `installer/KUDUBROWSE.iss`.
 
-[MIT](LICENSE) · Made by Azeem, with Claude and ♥
+### Shared code
+
+Some files (the look, dialogs, the update check, administrator helpers) are shared by the KUDU apps and come from
+[kudu-common](https://github.com/azeembukhariprivate/kudu-common); each starts with a comment saying so, and `.kudu-common`
+lists them. You don't need kudu-common to build this app, but change those files there, not here: the build checks that
+they match.
+
+## Publishing a new version
+
+1. Change `<Version>` in `src/KUDUBROWSE/KUDUBROWSE.csproj` (and `MyAppVersion` in `installer/KUDUBROWSE.iss`).
+2. Commit and push to `main`.
+3. GitHub Actions tests and builds the app. When no release exists yet for that version, it creates the `v` tag and publishes the installer and portable zip on the Releases page. Pushes that keep the same version only build.
+
+## License
+
+[MIT](LICENSE) · Made by Azeem, with Claude and ♥. See [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+
+KUDUBROWSE is not affiliated with Microsoft or Google. Edge, WebView2 and Windows are names of Microsoft Corporation; Chrome is a name of Google LLC.
