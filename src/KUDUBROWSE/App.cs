@@ -30,6 +30,7 @@ namespace Kudubrowse
             Startup += (s, e) =>
             {
                 Init();
+                Blocker.Start();
                 var main = new MainWindow();
                 MainWindow = main;
                 main.Show();

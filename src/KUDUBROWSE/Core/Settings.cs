@@ -73,6 +73,34 @@ namespace Kudubrowse.Core
             set => Set("SearchEngine", value);
         }
 
+        /// <summary>Block ads and trackers (EasyList and EasyPrivacy).</summary>
+        public static bool BlockAds
+        {
+            get => GetBool("BlockAds", true);
+            set => SetBool("BlockAds", value);
+        }
+
+        /// <summary>Hide cookie banners (EasyList Cookie List).</summary>
+        public static bool HideCookieBanners
+        {
+            get => GetBool("HideCookieBanners", true);
+            set => SetBool("HideCookieBanners", value);
+        }
+
+        /// <summary>Block new tabs and windows that pages open by themselves (not after a click).</summary>
+        public static bool BlockPopups
+        {
+            get => GetBool("BlockPopups", true);
+            set => SetBool("BlockPopups", value);
+        }
+
+        /// <summary>Sites where nothing is blocked (their own domain, such as example.co.uk).</summary>
+        public static List<string> AllowedSites
+        {
+            get => Get("AllowedSites", string.Empty).Split('\n').Where(p => p.Length > 0).ToList();
+            set => Set("AllowedSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
+        }
+
         /// <summary>Open the tabs from last time when KUDUBROWSE starts.</summary>
         public static bool RestoreTabs
         {

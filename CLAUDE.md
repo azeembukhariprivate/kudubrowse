@@ -23,8 +23,11 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
 
 1. Done (0.1): window, tabs, address bar with search engines, back/forward, new-window links as tabs, closed tabs,
    tabs restored next time (loaded when clicked), zoom, print, full screen, settings, about.
-2. Ad and tracker blocking: our own code reading EasyList/EasyPrivacy (updated automatically), cookie banners,
-   pop-up tabs, a shield button per site with an allow switch.
+2. Done (0.2): ad and tracker blocking. `Core/Blocking/FilterEngine.cs` + `NetworkRule.cs` read the lists (rules it
+   can't follow exactly are left out); `Views/Blocker.cs` checks every request (WebResourceRequested) and hides page
+   parts (general CSS added at document creation, site rules at DOMContentLoaded). Lists come with the app (the build
+   downloads them; not in git) and are fetched again every 4 days into `%LocalAppData%\KUDUBROWSE\Lists`.
+   Pop-ups not started by a click are blocked; the shield button allows a site (its registrable domain).
 3. Passwords (saved encrypted for the Windows user, Windows Hello to view or copy, strong-password suggestions,
    leak check that sends only part of a hash, can be turned off) and "Bring everything from Chrome" (bookmarks,
    history, open tabs best-effort, passwords via Chrome's export file, deleted afterwards), bookmarks and history

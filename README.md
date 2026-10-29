@@ -6,7 +6,7 @@ account and without anything about you being collected.
 > **Being built.** KUDUBROWSE is being made step by step and isn't ready to download yet.
 >
 > 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
-> 2. Blocking ads and trackers
+> 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
 > 3. Passwords, and bringing everything over from Chrome
 > 4. Rooms (separate logins), reading mode, screenshots, and the installer
 >
@@ -21,6 +21,9 @@ Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
 - Links that open a new window open in a new tab next to the page.
 - The tabs you had open come back next time; they load when you first click them, so starting stays quick.
 - Zoom, print, full screen (F11), light and dark look.
+- Ads and trackers are blocked, cookie banners hidden and pop-ups that pages open by themselves stopped, using the
+  public EasyList, EasyPrivacy and EasyList Cookie List (fetched again every few days). The shield button shows how
+  much was blocked and can switch blocking off for a site.
 
 The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
 

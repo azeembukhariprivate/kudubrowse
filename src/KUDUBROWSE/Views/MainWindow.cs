@@ -26,7 +26,9 @@ namespace Kudubrowse.Views
         private readonly TextBox _address = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center, FontSize = 13.5 };
         private readonly Glyph _addressIcon = Ui.Icon("IconGlobe", 15);
         private readonly TextBox _newTabSearch = new TextBox { MinHeight = 46, FontSize = 16, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(14, 0, 14, 0) };
-        private readonly Button _back, _forward, _reload, _newTabButton;
+        private readonly Button _back, _forward, _reload, _newTabButton, _shield;
+        private readonly TextBlock _shieldCount = new TextBlock { FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        private readonly Glyph _shieldIcon = Ui.Icon("IconShield", 16);
         private readonly Grid _chrome;
         private readonly DispatcherTimer _saveTimer;
         private bool _fullScreen;
@@ -49,6 +51,13 @@ namespace Kudubrowse.Views
                 else Current?.Reload();
             });
             var menu = ToolButton("IconMore", "Menu", null);
+            _shield = ToolButton(null, "Ads and trackers blocked on this page", null);
+            _shield.Content = Ui.Row(_shieldIcon, _shieldCount);
+            _shield.Width = double.NaN;
+            _shield.MinWidth = 40;
+            _shield.Padding = new Thickness(8, 0, 8, 0);
+            _shield.Click += (s, e) => ShowShield();
+            System.Windows.Automation.AutomationProperties.SetName(_shield, "Blocking on this site");
             menu.Click += (s, e) => ShowMenu(menu);
             _newTabButton = ToolButton("IconPlus", "New tab (Ctrl+T)", (s, e) => NewTab(select: true));
             _newTabButton.Margin = new Thickness(4, 6, 0, 0);
@@ -95,12 +104,13 @@ namespace Kudubrowse.Views
             var addressBox = new Border { Child = addressGrid, CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(1), Margin = new Thickness(6, 0, 6, 0) }
                 .Res(Border.BackgroundProperty, "InputBg").Res(Border.BorderBrushProperty, "InputBorder");
 
-            var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto);
+            var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto, Ui.Auto);
             toolbar.Children.Add(_back.At(0, 0));
             toolbar.Children.Add(_forward.At(0, 1));
             toolbar.Children.Add(_reload.At(0, 2));
             toolbar.Children.Add(addressBox.At(0, 3));
-            toolbar.Children.Add(menu.At(0, 4));
+            toolbar.Children.Add(_shield.At(0, 4));
+            toolbar.Children.Add(menu.At(0, 5));
             var toolbarBar = new Border { Child = toolbar, Padding = new Thickness(8, 6, 8, 6), BorderThickness = new Thickness(0, 0, 0, 1) }
                 .Res(Border.BackgroundProperty, "SurfaceBg").Res(Border.BorderBrushProperty, "BorderBrush");
 
@@ -163,7 +173,7 @@ namespace Kudubrowse.Views
 
         private static Button ToolButton(string icon, string tip, RoutedEventHandler click)
         {
-            var b = Ui.Button(null, icon, "GhostButton", click);
+            var b = Ui.Button(null, icon ?? "IconShield", "GhostButton", click);
             b.ToolTip = tip;
             b.Width = 36;
             b.MinWidth = 36;
@@ -221,6 +231,10 @@ namespace Kudubrowse.Views
             tab.NewWindowRequested += OnNewWindow;
             tab.PageClosed += CloseTab;
             tab.FullScreenChanged += (t, on) => SetFullScreen(on);
+            tab.BlockedChanged += t =>
+            {
+                if (t == Current) UpdateShield();
+            };
             tab.Header.ContextMenu = TabMenu(tab);
             SizeTabs();
             if (select) Select(tab);
@@ -279,6 +293,13 @@ namespace Kudubrowse.Views
         {
             // Links that open a new window (and pop-ups like "Sign in with ...") open in a new tab next to this one,
             // still connected to the page that opened them.
+            // Pages that open a window by themselves (not after a click) are usually pop-up ads.
+            if (Settings.BlockPopups && !e.IsUserInitiated && !opener.SiteAllowed)
+            {
+                e.Handled = true;
+                opener.CountBlockedPopup();
+                return;
+            }
             var deferral = e.GetDeferral();
             try
             {
@@ -351,6 +372,71 @@ namespace Kudubrowse.Views
             _addressIcon.ToolTip = t.IsBlank ? null : AddressBar.IsSecure(t.Url) ? "The connection to this site is private (https)" : "The connection to this site isn't private";
             Title = (t.IsBlank ? "New tab" : t.Title) + " - " + AppInfo.Name;
             if (t.View != null) _newTabPage.Visibility = Visibility.Collapsed;
+            UpdateShield();
+        }
+
+        private void UpdateShield()
+        {
+            var t = Current;
+            if (t == null) return;
+            var on = Settings.BlockAds || Settings.HideCookieBanners;
+            var count = t.Blocked + t.PopupsBlocked;
+            _shieldCount.Text = on && !t.SiteAllowed && count > 0 ? (count > 99 ? "99+" : count.ToString()) : string.Empty;
+            _shieldIcon.Opacity = on && !t.SiteAllowed ? 1 : 0.4;
+            _shield.ToolTip = !on ? "Blocking is switched off" : t.SiteAllowed ? "Blocking is off for this site" : $"{count} blocked on this page";
+        }
+
+        /// <summary>The shield's panel: what was blocked, and a switch to allow the site.</summary>
+        public System.Windows.Controls.Primitives.Popup ShowShield()
+        {
+            var t = Current;
+            var site = t == null ? string.Empty : Core.Blocking.Domains.Registrable(t.PageHost);
+            var panel = new StackPanel { Width = 300 };
+            panel.Children.Add(Ui.Row(Ui.Icon("IconShield", 18), Ui.Heading("Ads and trackers", 15).Margin(8, 0, 0, 0)));
+            var on = Settings.BlockAds || Settings.HideCookieBanners;
+            if (!on)
+                panel.Children.Add(Ui.Subtle("Blocking is switched off in Settings.", 12.5).Margin(0, 8, 0, 0));
+            else if (string.IsNullOrEmpty(site))
+                panel.Children.Add(Ui.Subtle("Nothing to block on this page.", 12.5).Margin(0, 8, 0, 0));
+            else
+            {
+                panel.Children.Add(Ui.Text(t.SiteAllowed ? "Nothing is blocked on " + site : $"{t.Blocked} blocked on this page", 13.5, bold: true).Margin(0, 10, 0, 0));
+                if (t.PopupsBlocked > 0 && !t.SiteAllowed)
+                    panel.Children.Add(Ui.Subtle(t.PopupsBlocked == 1 ? "1 pop-up blocked" : $"{t.PopupsBlocked} pop-ups blocked", 12.5).Margin(0, 2, 0, 0));
+                var toggle = new CheckBox { Content = "Block on " + site, IsChecked = !t.SiteAllowed }.Styled("Switch");
+                toggle.Margin = new Thickness(0, 12, 0, 0);
+                toggle.Click += (s, e) =>
+                {
+                    Blocker.SetAllowed(t.PageHost, toggle.IsChecked != true);
+                    t.Reload();
+                };
+                panel.Children.Add(toggle);
+                panel.Children.Add(Ui.Subtle("Switch it off if the site doesn't work properly, or to support it with its ads. The page reloads.", 11.5).Margin(0, 4, 0, 0));
+            }
+            var popup = new System.Windows.Controls.Primitives.Popup
+            {
+                PlacementTarget = _shield,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+                StaysOpen = false,
+                AllowsTransparency = true
+            };
+            panel.Children.Add(Ui.Link("Blocking settings", (s, e) =>
+            {
+                popup.IsOpen = false;
+                new SettingsWindow(this).ShowDialog();
+            }).Margin(0, 12, 0, 0));
+            ((FrameworkElement)panel.Children[panel.Children.Count - 1]).HorizontalAlignment = HorizontalAlignment.Left;
+            popup.Child = new Border
+            {
+                Child = panel,
+                Padding = new Thickness(18, 16, 18, 16),
+                CornerRadius = new CornerRadius(10),
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 4, 8, 8),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 16, ShadowDepth = 2, Opacity = 0.25 }
+            }.Res(Border.BackgroundProperty, "SurfaceBg").Res(Border.BorderBrushProperty, "BorderBrush");
+            popup.IsOpen = true;
+            return popup;
         }
 
         private void FocusNewTabSearch() =>

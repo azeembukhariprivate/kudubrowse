@@ -30,5 +30,8 @@ Thumbs.db
 # Editors
 .vscode/
 
+# Block lists downloaded by the build (they're fetched fresh each time)
+src/KUDUBROWSE/Lists/
+
 # Test data downloaded by the tests
 samples-cache/

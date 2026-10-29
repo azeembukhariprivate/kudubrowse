@@ -33,6 +33,12 @@ namespace Kudubrowse.Views
             Directory.CreateDirectory(_temp);
             Web.ProfileFolder = Path.Combine(_temp, "profile");
             Session.DefaultFile = Path.Combine(_temp, "session.txt");
+            Core.Blocking.BlockLists.DownloadFolder = Path.Combine(_temp, "lists");
+            var savedAllowed = Settings.AllowedSites;
+            var savedBlocking = (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups);
+            Settings.AllowedSites = new List<string>();
+            Settings.BlockAds = Settings.HideCookieBanners = Settings.BlockPopups = true;
+            Blocker.SettingsChanged();
             var savedTheme = Settings.Theme;
             var savedRestore = Settings.RestoreTabs;
             Settings.RestoreTabs = true;
@@ -52,6 +58,17 @@ namespace Kudubrowse.Views
                 Note("WebView2 " + version);
                 Expect(version != null, "WebView2 runtime");
                 return Task.CompletedTask;
+            });
+
+            await Step("The block lists that come with the app load", async () =>
+            {
+                await Task.Run(Blocker.Load);
+                Note($"{Blocker.RuleCount} blocking rules, {Blocker.HidingCount} hiding rules");
+                Expect(Blocker.RuleCount > 20000, "the real lists (found " + Blocker.RuleCount + " rules)");
+                Expect(Blocker.ShouldBlock("https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js", "news.example.com",
+                    Microsoft.Web.WebView2.Core.CoreWebView2WebResourceContext.Script), "a well-known ad script is blocked");
+                Expect(!Blocker.ShouldBlock("https://news.example.com/app.js", "news.example.com",
+                    Microsoft.Web.WebView2.Core.CoreWebView2WebResourceContext.Script), "the site's own script is not");
             });
 
             var first = Page("first.html", "First page", "<a id='next' href='second.html'>Second page</a> <button id='pop' onclick=\"window.open('popup.html')\">Open a window</button>");
@@ -122,6 +139,44 @@ namespace Kudubrowse.Views
                     main.Current.Zoom = 1;
                     await Task.CompletedTask;
                 });
+                await Step("Ads, trackers and pop-ups are blocked", async () =>
+                {
+                    Blocker.UseRules("||ads.kudutest.invalid^\n||tracker.kudutest.invalid^\n##.ad-box\nkudutest.example##.promo");
+                    Page("ads.html", "Page with ads",
+                        "<img id='ad' src='https://ads.kudutest.invalid/banner.png'><script src='https://tracker.kudutest.invalid/t.js'></script>" +
+                        "<div class='ad-box'>An ad</div><div class='promo'>A promotion</div><div class='content'>The article</div>" +
+                        "<script>setTimeout(() => window.open('https://kudutest.example/second.html'), 100)</script>");
+                    var tab = main.NewTab(select: true);
+                    await tab.EnsureView();
+                    tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                    var before = main.Tabs.Count;
+                    main.Go("https://kudutest.example/ads.html");
+                    await Wait(() => tab.Title == "Page with ads" && !tab.IsLoading, 20, "the page with ads");
+                    await Task.Delay(800);
+                    Expect(tab.Blocked >= 2, "the ad and the tracker blocked (blocked: " + tab.Blocked + ")");
+                    Expect(tab.PopupsBlocked == 1 && main.Tabs.Count == before, "the pop-up blocked");
+                    Expect(await Display(tab, ".ad-box") == "none", "the general hiding rule");
+                    Expect(await Display(tab, ".promo") == "none", "the site's own hiding rule");
+                    Expect(await Display(tab, ".content") != "none", "the article still shown");
+                    await Capture(main, "ads blocked");
+                    var shield = main.ShowShield();
+                    Pump();
+                    Screenshots.All("Shield");
+                    shield.IsOpen = false;
+
+                    // Allow the site: nothing is blocked after reloading.
+                    Blocker.SetAllowed(tab.PageHost, true);
+                    Expect(Settings.AllowedSites.Contains("kudutest.example"), "the site is in the allowed list");
+                    tab.Reload();
+                    await Wait(() => !tab.IsLoading && main.Tabs.Count == before + 1, 20, "the reload, and the pop-up opening this time");
+                    await Task.Delay(500);
+                    Expect(tab.Blocked == 0, "nothing blocked on an allowed site");
+                    Expect(await Display(tab, ".ad-box") != "none", "nothing hidden on an allowed site");
+                    main.CloseTab(main.Current);
+                    Blocker.SetAllowed("kudutest.example", false);
+                    main.Select(tab);
+                    main.CloseTab(tab);
+                });
                 await Step("Tabs come back next time", async () =>
                 {
                     MainWindow.SaveAll();
@@ -167,6 +222,8 @@ namespace Kudubrowse.Views
 
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
+            Settings.AllowedSites = savedAllowed;
+            (Settings.BlockAds, Settings.HideCookieBanners, Settings.BlockPopups) = savedBlocking;
             _log.AppendLine(Errors.Count == 0 ? "SELF-TEST PASSED" : $"SELF-TEST FAILED ({Errors.Count})");
             try { File.WriteAllText(Path.Combine(Path.GetDirectoryName(AppInfo.ExePath) ?? ".", "self-test.log"), _log.ToString()); }
             catch { /* read-only folder */ }
@@ -174,6 +231,12 @@ namespace Kudubrowse.Views
             try { Directory.Delete(_temp, true); }
             catch { /* ignore */ }
             return Errors.Count == 0 ? 0 : 1;
+        }
+
+        private static async Task<string> Display(BrowserTab tab, string selector)
+        {
+            var json = await tab.View.CoreWebView2.ExecuteScriptAsync($"getComputedStyle(document.querySelector('{selector}')).display");
+            return json.Trim('"');
         }
 
         /// <summary>Writes a test page and returns its path.</summary>

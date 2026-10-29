@@ -1,9 +1,11 @@
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using Kudubrowse.Controls;
 using Kudubrowse.Core;
+using Kudubrowse.Core.Blocking;
 
 namespace Kudubrowse.Views
 {
@@ -45,6 +47,63 @@ namespace Kudubrowse.Views
                 engines.Children.Add(chip);
             }
             root.Children.Add(engines);
+
+            root.Children.Add(Ui.Heading("Ads and trackers", 14).Margin(0, 16, 0, 4));
+            CheckBox Option(string text, bool value, Action<bool> save)
+            {
+                var box = new CheckBox { Content = text, IsChecked = value };
+                box.Click += (s, e) =>
+                {
+                    save(box.IsChecked == true);
+                    Blocker.SettingsChanged();
+                };
+                root.Children.Add(box);
+                return box;
+            }
+            Option("Block ads and trackers", Settings.BlockAds, v => Settings.BlockAds = v);
+            Option("Hide cookie banners", Settings.HideCookieBanners, v => Settings.HideCookieBanners = v).Margin = new Thickness(0, 6, 0, 0);
+            Option("Block pop-ups that pages open by themselves", Settings.BlockPopups, v => Settings.BlockPopups = v).Margin = new Thickness(0, 6, 0, 0);
+            var listInfo = Ui.Subtle(string.Empty, 12);
+            void UpdateListInfo()
+            {
+                var fetched = BlockLists.LastFetched;
+                listInfo.Text = $"Uses the public EasyList, EasyPrivacy and EasyList Cookie List ({Blocker.RuleCount:N0} rules), fetched again every few days. " +
+                                (fetched == null ? "Using the copy that came with " + AppInfo.Name + "." : "Last fetched " + fetched.Value.ToLocalTime().ToString("d MMM yyyy") + ".");
+            }
+            UpdateListInfo();
+            root.Children.Add(listInfo.Margin(0, 8, 0, 0));
+            var update = Ui.Small(Ui.Button("Update the lists now", "IconRefresh", "SecondaryButton"));
+            update.HorizontalAlignment = HorizontalAlignment.Left;
+            update.Margin = new Thickness(0, 8, 0, 0);
+            update.Click += async (s, e) =>
+            {
+                update.IsEnabled = false;
+                var n = await Blocker.UpdateNow();
+                update.IsEnabled = true;
+                UpdateListInfo();
+                if (n == 0) Dialogs.Info(this, "Couldn't fetch the lists right now. The copy already here is still used.");
+            };
+            root.Children.Add(update);
+
+            var allowed = Settings.AllowedSites;
+            if (allowed.Count > 0)
+            {
+                root.Children.Add(Ui.Text("Allowed sites (nothing blocked there):", 12.5).Margin(0, 12, 0, 4));
+                var sites = new WrapPanel();
+                foreach (var site in allowed)
+                {
+                    var chip = Ui.Small(Ui.Button(site, "IconClose", "SecondaryButton"));
+                    chip.ToolTip = "Block on " + site + " again";
+                    chip.Margin = new Thickness(0, 0, 6, 6);
+                    chip.Click += (s, e) =>
+                    {
+                        Blocker.SetAllowed(site, false);
+                        sites.Children.Remove(chip);
+                    };
+                    sites.Children.Add(chip);
+                }
+                root.Children.Add(sites);
+            }
 
             root.Children.Add(Ui.Heading("Starting", 14).Margin(0, 16, 0, 4));
             var restore = new CheckBox { Content = "Open the tabs from last time", IsChecked = Settings.RestoreTabs };

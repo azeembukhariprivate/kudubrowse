@@ -5,3 +5,9 @@ Microsoft Edge WebView2 SDK (Microsoft.Web.WebView2)
   Licensed under the BSD 3-Clause licence: https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.2903.40/License
   The web pages are shown by the Microsoft Edge WebView2 Runtime that comes with Windows; it is Microsoft's and is
   kept up to date by Windows.
+
+Block lists: EasyList, EasyPrivacy and EasyList Cookie List (src/KUDUBROWSE/Lists, and fetched again every few days)
+  By the EasyList authors (https://easylist.to/). Dual licensed under the GNU General Public License version 3 and
+  the Creative Commons Attribution-ShareAlike 3.0 Unported licence; KUDUBROWSE uses them under the latter:
+  https://creativecommons.org/licenses/by-sa/3.0/
+  The lists are used as they are; KUDUBROWSE's own code reads them.

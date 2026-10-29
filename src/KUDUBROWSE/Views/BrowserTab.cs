@@ -25,6 +25,9 @@ namespace Kudubrowse.Views
         private Task _ready;
         private string _pending;
         private bool _closed;
+        private CoreWebView2Environment _env;
+        private string _mainUrl;
+        private string _hidingScriptId;
 
         public BrowserTab(string url = null, string title = null)
         {
@@ -73,6 +76,14 @@ namespace Kudubrowse.Views
         public bool IsLoading { get; private set; }
         public bool IsActive { get; private set; }
         public bool IsBlank => string.IsNullOrEmpty(Url) || Url == "about:blank";
+        /// <summary>The host of the page shown (or being opened).</summary>
+        public string PageHost { get; private set; } = string.Empty;
+        /// <summary>Blocking is switched off for this site (from the shield button).</summary>
+        public bool SiteAllowed { get; private set; }
+        /// <summary>Ads, trackers and cookie banners blocked on this page.</summary>
+        public int Blocked { get; private set; }
+        /// <summary>Pop-ups this page tried to open by itself.</summary>
+        public int PopupsBlocked { get; private set; }
         public bool CanGoBack => View?.CoreWebView2?.CanGoBack == true;
         public bool CanGoForward => View?.CoreWebView2?.CanGoForward == true;
 
@@ -87,6 +98,14 @@ namespace Kudubrowse.Views
         /// <summary>The page asked to close itself (window.close).</summary>
         public event Action<BrowserTab> PageClosed;
         public event Action<BrowserTab, bool> FullScreenChanged;
+        /// <summary>Something more was blocked on the page.</summary>
+        public event Action<BrowserTab> BlockedChanged;
+
+        public void CountBlockedPopup()
+        {
+            PopupsBlocked++;
+            BlockedChanged?.Invoke(this);
+        }
 
         public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title };
 
@@ -109,7 +128,7 @@ namespace Kudubrowse.Views
 
         private async Task Create()
         {
-            var env = await Web.Environment;
+            var env = _env = await Web.Environment;
             var view = View;
             try
             {
@@ -137,8 +156,29 @@ namespace Kudubrowse.Views
             core.NavigationStarting += (s, e) =>
             {
                 IsLoading = true;
+                _mainUrl = e.Uri;
+                PageHost = HostOf(e.Uri);
+                SiteAllowed = Blocker.IsAllowed(PageHost);
+                if (!e.IsRedirected)
+                {
+                    Blocked = 0;
+                    PopupsBlocked = 0;
+                }
                 Refresh();
+                BlockedChanged?.Invoke(this);
             };
+            // Blocking: every request is checked before it's sent; the page's hiding rules go in once it's read.
+            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All, CoreWebView2WebResourceRequestSourceKinds.All);
+            core.WebResourceRequested += OnRequest;
+            core.DOMContentLoaded += async (s, e) =>
+            {
+                var script = Blocker.SiteScript(PageHost);
+                if (script == null || _closed) return;
+                try { await core.ExecuteScriptAsync(script); }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
+            };
+            await UpdateHidingScript();
+            Blocker.Changed += OnBlockerChanged;
             core.NavigationCompleted += (s, e) =>
             {
                 IsLoading = false;
@@ -155,6 +195,43 @@ namespace Kudubrowse.Views
                 core.Navigate(url);
             }
         }
+
+        private void OnRequest(object sender, CoreWebView2WebResourceRequestedEventArgs e)
+        {
+            if (!Blocker.Ready || SiteAllowed) return;
+            var uri = e.Request.Uri;
+            // The page itself is never blocked, only what it asks for.
+            if (e.ResourceContext == CoreWebView2WebResourceContext.Document && uri == _mainUrl) return;
+            if (!Blocker.ShouldBlock(uri, PageHost, e.ResourceContext)) return;
+            e.Response = _env.CreateWebResourceResponse(null, 403, "Blocked", string.Empty);
+            Blocked++;
+            BlockedChanged?.Invoke(this);
+        }
+
+        private async void OnBlockerChanged()
+        {
+            if (_closed || View?.CoreWebView2 == null) return;
+            SiteAllowed = Blocker.IsAllowed(PageHost);
+            await UpdateHidingScript();
+        }
+
+        /// <summary>Puts the current general hiding rules into every page this tab opens from now on.</summary>
+        private async Task UpdateHidingScript()
+        {
+            var core = View?.CoreWebView2;
+            if (core == null) return;
+            try
+            {
+                if (_hidingScriptId != null) core.RemoveScriptToExecuteOnDocumentCreated(_hidingScriptId);
+                _hidingScriptId = null;
+                var script = Blocker.DocumentScript();
+                if (script != null) _hidingScriptId = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
+        }
+
+        public static string HostOf(string url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https") ? u.Host.ToLowerInvariant() : string.Empty;
 
         private async Task LoadFavicon()
         {
@@ -233,6 +310,7 @@ namespace Kudubrowse.Views
         public void Close()
         {
             _closed = true;
+            Blocker.Changed -= OnBlockerChanged;
             try { View?.Dispose(); }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ObjectDisposedException) { }
             View = null;
