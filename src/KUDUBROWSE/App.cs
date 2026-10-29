@@ -36,17 +36,29 @@ namespace Kudubrowse
                 var i = Array.FindIndex(args, a => string.Equals(a, "--chrome", StringComparison.OrdinalIgnoreCase));
                 return app.RunSelfTest(i >= 0 && i < args.Length - 1 ? args[i + 1] : null);
             }
-            return app.Run(args.FirstOrDefault(a => !a.StartsWith("--")));
+            // One running copy: a second start (a link clicked in another app) hands its address to the first.
+            var one = new SingleInstance();
+            if (!one.IsFirst)
+            {
+                AllowSetForegroundWindow(-1); // so the running copy may come to the front
+                if (SingleInstance.Send(one.PipeName, args.Length == 0 ? new[] { "--new-window" } : args)) return 0;
+            }
+            using (one) return app.Run(args.FirstOrDefault(a => !a.StartsWith("--")), one);
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool AllowSetForegroundWindow(int processId);
     }
 
     public sealed class App : Application
     {
-        public int Run(string address)
+        public int Run(string address, SingleInstance one)
         {
             Startup += (s, e) =>
             {
                 Init();
+                ShutdownMode = ShutdownMode.OnExplicitShutdown; // the browser closes when its last window does (MainWindow.Closed)
+                if (one.IsFirst) one.Listen(a => Dispatcher.BeginInvoke(new Action(() => OpenFromOutside(a))));
                 Blocker.Start();
                 var main = new MainWindow();
                 MainWindow = main;
@@ -57,6 +69,27 @@ namespace Kudubrowse
                 if (!Settings.WelcomeShown) main.Dispatcher.BeginInvoke(new Action(() => WelcomeWindow.ShowOnce(main)), DispatcherPriority.ApplicationIdle);
             };
             return Run();
+        }
+
+        /// <summary>An address (or a request for a window) handed over by a second start of the browser.</summary>
+        public static void OpenFromOutside(string[] args)
+        {
+            var address = args.FirstOrDefault(a => !a.StartsWith("--"));
+            var w = Views.MainWindow.LastActive;
+            if (w == null)
+            {
+                w = new Views.MainWindow();
+                w.Show();
+                if (address == null) w.NewTab(select: true);
+            }
+            else if (address == null) w.NewWindow();
+            if (address != null)
+            {
+                var url = AddressBar.Resolve(address, SearchEngines.Find(Settings.SearchEngine));
+                if (url != null) w.NewTab(url, true);
+            }
+            if (w.WindowState == WindowState.Minimized) w.WindowState = WindowState.Normal;
+            w.Activate();
         }
 
         public int RunSelfTest(string chrome)

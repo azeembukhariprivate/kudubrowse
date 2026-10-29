@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -135,6 +136,87 @@ namespace Kudubrowse.Views
             root.Children.Add(restore);
             root.Children.Add(Ui.Subtle("They load when you first click them, so starting stays quick.", 12).Margin(27, 0, 0, 0));
 
+            var sleep = new CheckBox { Content = "Put tabs to sleep when they haven't been looked at for 10 minutes", IsChecked = Settings.SleepTabs, Margin = new Thickness(0, 8, 0, 0) };
+            sleep.Click += (s, e) => Settings.SleepTabs = sleep.IsChecked == true;
+            root.Children.Add(sleep);
+            root.Children.Add(Ui.Subtle("Sleeping tabs use almost no processor and less memory; they wake up as soon as you click them. Tabs playing sound stay awake.", 12).Margin(27, 0, 0, 0));
+
+            root.Children.Add(Ui.Heading("Rooms", 14).Margin(0, 16, 0, 4));
+            root.Children.Add(Ui.Subtle("Each room keeps its own logins and site data, so you can be signed in to two accounts of the same site, or keep work and home apart. A coloured line on a tab shows its room.", 12.5));
+            var roomList = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            void FillRooms()
+            {
+                roomList.Children.Clear();
+                foreach (var r in BrowserRooms.All.All.ToList())
+                {
+                    var room = r;
+                    var g = Ui.Columns(Ui.Px(18), Ui.Star(), Ui.Auto, Ui.Auto);
+                    g.Margin = new Thickness(0, 2, 0, 2);
+                    g.Children.Add(new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(5), Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(r.Color)) }.At(0, 0));
+                    g.Children.Add(Ui.Text(r.Name + (r.IsDefault ? "  (the usual room)" : string.Empty), 13).At(0, 1));
+                    var rename = Ui.Small(Ui.Button("Rename"));
+                    rename.Click += (s, e) =>
+                    {
+                        var name = Dialogs.Ask(this, "Rename room", "Name", room.Name);
+                        if (name != null)
+                        {
+                            BrowserRooms.All.Rename(room, name);
+                            FillRooms();
+                        }
+                    };
+                    g.Children.Add(rename.At(0, 2));
+                    if (!r.IsDefault)
+                    {
+                        var remove = Ui.Small(Ui.Button("Remove"));
+                        remove.Margin = new Thickness(6, 0, 0, 0);
+                        remove.Click += async (s, e) =>
+                        {
+                            if (MainWindow.Open.SelectMany(w => w.Tabs).Any(t => t.Room == room.Id))
+                            {
+                                Dialogs.Info(this, "Close the tabs in \"" + room.Name + "\" first.");
+                                return;
+                            }
+                            if (!Dialogs.Confirm(this, "Remove the room \"" + room.Name + "\"? Its logins to sites and site data are deleted.")) return;
+                            await BrowserRooms.ClearData(this, room.Id);
+                            BrowserRooms.All.Remove(room);
+                            FillRooms();
+                        };
+                        g.Children.Add(remove.At(0, 3));
+                    }
+                    roomList.Children.Add(g);
+                }
+            }
+            FillRooms();
+            root.Children.Add(roomList);
+            var addRoom = Ui.Small(Ui.Button("Add a room", "IconPlus"));
+            addRoom.HorizontalAlignment = HorizontalAlignment.Left;
+            addRoom.Margin = new Thickness(0, 6, 0, 0);
+            addRoom.Click += (s, e) =>
+            {
+                var name = Dialogs.Ask(this, "New room", "Name of the room", string.Empty);
+                if (name == null) return;
+                BrowserRooms.All.Add(name);
+                FillRooms();
+            };
+            root.Children.Add(addRoom);
+
+            root.Children.Add(Ui.Heading("Clear browsing data", 14).Margin(0, 16, 0, 4));
+            root.Children.Add(Ui.Subtle("Deletes the history, and every room's cookies, logins to sites and saved site data. Bookmarks and saved passwords are kept.", 12.5));
+            var clearAll = Ui.Small(Ui.Button("Clear browsing data", "IconTrash"));
+            clearAll.HorizontalAlignment = HorizontalAlignment.Left;
+            clearAll.Margin = new Thickness(0, 8, 0, 0);
+            clearAll.Click += async (s, e) =>
+            {
+                if (!Dialogs.Confirm(this, "Clear the history and all site data? You'll be signed out of every site.")) return;
+                clearAll.IsEnabled = false;
+                BrowserLibrary.History.Clear();
+                BrowserLibrary.History.Save();
+                foreach (var r in BrowserRooms.All.All) await BrowserRooms.ClearData(this, r.Id);
+                clearAll.IsEnabled = true;
+                Dialogs.Info(this, "Browsing data cleared.");
+            };
+            root.Children.Add(clearAll);
+
             root.Children.Add(Ui.Heading("Updates", 14).Margin(0, 16, 0, 4));
             var updates = new CheckBox { Content = "Check for a new " + AppInfo.Name + " version when it starts", IsChecked = Settings.CheckForUpdates };
             updates.Click += (s, e) => Settings.CheckForUpdates = updates.IsChecked == true;
@@ -150,7 +232,9 @@ namespace Kudubrowse.Views
             closeButton.Click += (s, e) => Close();
             bottom.Children.Add(closeButton.At(0, 1));
             root.Children.Add(bottom.Margin(0, 14, 0, 0));
-            Content = root;
+            // A long list of settings: it scrolls when the screen isn't tall enough.
+            MaxHeight = SystemParameters.WorkArea.Height - 40;
+            Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         }
     }
 

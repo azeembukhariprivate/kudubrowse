@@ -29,13 +29,24 @@ namespace Kudubrowse.Views
         private readonly Button _back, _forward, _reload, _newTabButton, _shield;
         private readonly TextBlock _shieldCount = new TextBlock { FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly Glyph _shieldIcon = Ui.Icon("IconShield", 16);
+        private Button _downloads;
+        private DispatcherTimer _sleepTimer;
         private readonly Grid _chrome;
         private readonly DispatcherTimer _saveTimer;
         private bool _fullScreen;
         private WindowState _stateBeforeFullScreen;
 
-        public MainWindow()
+        /// <summary>The window used last (links from other apps open there).</summary>
+        public static MainWindow LastActive => Open.LastOrDefault(w => w._activatedAt == Open.Max(x => x._activatedAt)) ?? Open.FirstOrDefault();
+        private DateTime _activatedAt = DateTime.UtcNow;
+
+        /// <summary>A private window: its tabs keep no history and their site data goes when the window closes.</summary>
+        public bool IsPrivate { get; }
+
+        public MainWindow(bool isPrivate = false)
         {
+            IsPrivate = isPrivate;
+            Activated += (s, e) => _activatedAt = DateTime.UtcNow;
             Width = 1280;
             Height = 820;
             MinWidth = 480;
@@ -67,6 +78,14 @@ namespace Kudubrowse.Views
             var stripRow = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Star());
             stripRow.Children.Add(_strip.At(0, 0));
             stripRow.Children.Add(_newTabButton.At(0, 1));
+            if (isPrivate)
+            {
+                var badge = Ui.Chip("Private", Tone.Accent, "IconEye");
+                badge.HorizontalAlignment = HorizontalAlignment.Right;
+                badge.VerticalAlignment = VerticalAlignment.Center;
+                badge.ToolTip = "Nothing from this window is kept: no history, and sites' cookies go when it closes.";
+                stripRow.Children.Add(badge.Margin(0, 6, 4, 0).At(0, 2));
+            }
             stripRow.SizeChanged += (s, e) => SizeTabs();
             var stripBar = new Border { Child = stripRow, Padding = new Thickness(8, 0, 8, 0) }.Res(Border.BackgroundProperty, "SurfaceAltBg");
 
@@ -109,13 +128,21 @@ namespace Kudubrowse.Views
             var addressBox = new Border { Child = addressGrid, CornerRadius = new CornerRadius(17), BorderThickness = new Thickness(1), Margin = new Thickness(6, 0, 6, 0) }
                 .Res(Border.BackgroundProperty, "InputBg").Res(Border.BorderBrushProperty, "InputBorder");
 
-            var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto, Ui.Auto);
+            _downloads = ToolButton("IconImport", "Downloads (Ctrl+J)", (s, e) => DownloadsWindow.Show(this));
+            _downloads.Width = double.NaN;
+            _downloads.MinWidth = 36;
+            _downloads.Padding = new Thickness(8, 0, 8, 0);
+            _downloads.Visibility = Visibility.Collapsed;
+            Downloads.Changed += OnDownloadsChanged;
+            Closed += (s, e) => Downloads.Changed -= OnDownloadsChanged;
+            var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto, Ui.Auto, Ui.Auto);
             toolbar.Children.Add(_back.At(0, 0));
             toolbar.Children.Add(_forward.At(0, 1));
             toolbar.Children.Add(_reload.At(0, 2));
             toolbar.Children.Add(addressBox.At(0, 3));
             toolbar.Children.Add(_shield.At(0, 4));
-            toolbar.Children.Add(menu.At(0, 5));
+            toolbar.Children.Add(_downloads.At(0, 5));
+            toolbar.Children.Add(menu.At(0, 6));
             var toolbarBar = new Border { Child = toolbar, Padding = new Thickness(8, 6, 8, 6), BorderThickness = new Thickness(0, 0, 0, 1) }
                 .Res(Border.BackgroundProperty, "SurfaceBg").Res(Border.BorderBrushProperty, "BorderBrush");
 
@@ -159,6 +186,11 @@ namespace Kudubrowse.Views
             Content = _chrome;
 
             PreviewKeyDown += OnKey;
+            // Tabs not looked at for a while go to sleep.
+            _sleepTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _sleepTimer.Tick += async (s, e) => await SleepIdleTabs();
+            _sleepTimer.Start();
+            Closed += (s, e) => _sleepTimer.Stop();
             _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _saveTimer.Tick += (s, e) =>
             {
@@ -168,12 +200,16 @@ namespace Kudubrowse.Views
             Closing += (s, e) =>
             {
                 // The last window's tabs are kept for next time; tabs of an extra window that's closed are put in "closed tabs".
-                if (Open.Count > 1)
+                if (Open.Count > 1 && !IsPrivate)
                     foreach (var t in _tabs) RecentlyClosed.Add(t.ToSaved());
                 Open.Remove(this);
                 if (Open.Count == 0) BrowserLibrary.SaveAll();
-                SaveSession(includeClosing: Open.Count == 0 ? this : null);
+                SaveSession(includeClosing: !IsPrivate && !Open.Any(w => !w.IsPrivate) ? this : null);
                 foreach (var t in _tabs) t.Close();
+            };
+            Closed += (s, e) =>
+            {
+                if (Open.Count == 0 && !SelfTest.Running) Application.Current.Shutdown();
             };
         }
 
@@ -198,7 +234,7 @@ namespace Kudubrowse.Views
             if (Settings.RestoreTabs)
             {
                 var (saved, selected) = Session.Load();
-                foreach (var t in saved) AddTab(new BrowserTab(t.Url, t.Title), _tabs.Count, false);
+                foreach (var t in saved) AddTab(new BrowserTab(t.Url, t.Title, t.Room), _tabs.Count, false);
                 if (_tabs.Count > 0) Select(_tabs[selected]);
             }
             if (!string.IsNullOrWhiteSpace(address))
@@ -211,9 +247,9 @@ namespace Kudubrowse.Views
 
         // ================================================================ tabs
 
-        public BrowserTab NewTab(string url = null, bool select = true, BrowserTab after = null)
+        public BrowserTab NewTab(string url = null, bool select = true, BrowserTab after = null, string room = null)
         {
-            var tab = new BrowserTab(url);
+            var tab = new BrowserTab(url, null, room ?? (after ?? Current)?.Room, IsPrivate);
             var index = after != null ? _tabs.IndexOf(after) + 1 : _tabs.Count;
             AddTab(tab, index, select);
             if (!string.IsNullOrEmpty(url) && select) tab.Navigate(url);
@@ -274,7 +310,7 @@ namespace Kudubrowse.Views
         {
             var index = _tabs.IndexOf(tab);
             if (index < 0) return;
-            RecentlyClosed.Add(tab.ToSaved());
+            if (!IsPrivate) RecentlyClosed.Add(tab.ToSaved());
             _tabs.RemoveAt(index);
             _strip.Children.Remove(tab.Header);
             if (tab.View != null) _pages.Children.Remove(tab.View);
@@ -293,7 +329,7 @@ namespace Kudubrowse.Views
         public void ReopenClosedTab()
         {
             var saved = RecentlyClosed.TakeLatest();
-            if (saved != null) NewTab(saved.Url, true, Current);
+            if (saved != null) NewTab(saved.Url, true, Current, saved.Room);
         }
 
         private void CloseOtherTabs(BrowserTab keep)
@@ -315,7 +351,8 @@ namespace Kudubrowse.Views
             var deferral = e.GetDeferral();
             try
             {
-                var tab = new BrowserTab(e.Uri);
+                // Same room as the page that opened it (the engine needs that, and so do sign-in windows).
+                var tab = new BrowserTab(e.Uri, null, opener.Room, opener.IsPrivate);
                 AddTab(tab, _tabs.IndexOf(opener) + 1, true);
                 await tab.EnsureView();
                 e.NewWindow = tab.View.CoreWebView2;
@@ -332,6 +369,26 @@ namespace Kudubrowse.Views
             var menu = new ContextMenu();
             menu.Items.Add(Item("Reload", () => tab.Reload()));
             menu.Items.Add(Item("Duplicate", () => NewTab(tab.Url, true, tab)));
+            if (!IsPrivate)
+            {
+                var move = new MenuItem { Header = "Move to room" };
+                move.SubmenuOpened += (s, e) =>
+                {
+                    move.Items.Clear();
+                    foreach (var r in BrowserRooms.All.All.Where(r => r.Id != tab.Room))
+                    {
+                        var room = r;
+                        move.Items.Add(Item(r.Name, () =>
+                        {
+                            // A room has its own logins, so the page is opened afresh there.
+                            var moved = NewTab(tab.IsBlank ? null : tab.Url, true, tab, room.Id);
+                            CloseTab(tab);
+                        }));
+                    }
+                };
+                move.Items.Add(new MenuItem());
+                menu.Items.Add(move);
+            }
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Close tab", () => CloseTab(tab), "Ctrl+W"));
             menu.Items.Add(Item("Close other tabs", () => CloseOtherTabs(tab)));
@@ -383,10 +440,26 @@ namespace Kudubrowse.Views
             _reload.ToolTip = t.IsLoading ? "Stop (Esc)" : "Reload (F5)";
             _addressIcon.SetResourceReference(Glyph.DataProperty, AddressBar.IsSecure(t.Url) ? "IconLock" : "IconGlobe");
             _addressIcon.ToolTip = t.IsBlank ? null : AddressBar.IsSecure(t.Url) ? "The connection to this site is private (https)" : "The connection to this site isn't private";
-            Title = (t.IsBlank ? "New tab" : t.Title) + " - " + AppInfo.Name;
+            Title = (t.IsBlank ? "New tab" : t.Title) + " - " + AppInfo.Name + (IsPrivate ? " (private)" : string.Empty);
             if (t.View != null) _newTabPage.Visibility = Visibility.Collapsed;
             UpdateShield();
         }
+
+        public async System.Threading.Tasks.Task<int> SleepIdleTabs()
+        {
+            if (!Settings.SleepTabs) return 0;
+            var n = 0;
+            foreach (var t in _tabs.ToList())
+                if (await t.SleepIfIdle()) n++;
+            return n;
+        }
+
+        private void OnDownloadsChanged() => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var progress = Downloads.Progress();
+            _downloads.Visibility = Downloads.Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            _downloads.Content = progress == null ? (object)Ui.Icon("IconImport", 16) : Ui.Row(Ui.Icon("IconImport", 16), Ui.Text(progress, 11.5).Margin(4, 0, 0, 0));
+        }));
 
         private void UpdateShield()
         {
@@ -426,6 +499,16 @@ namespace Kudubrowse.Views
                 };
                 panel.Children.Add(toggle);
                 panel.Children.Add(Ui.Subtle("Switch it off if the site doesn't work properly, or to support it with its ads. The page reloads.", 11.5).Margin(0, 4, 0, 0));
+                var clearSite = Ui.Small(Ui.Button("Clear this site's cookies and data", "IconTrash"));
+                clearSite.HorizontalAlignment = HorizontalAlignment.Left;
+                clearSite.Margin = new Thickness(0, 12, 0, 0);
+                clearSite.ToolTip = "Signs you out of " + site + (t.Room == Rooms.DefaultId ? string.Empty : " in this room") + " and forgets what it stored on this PC.";
+                clearSite.Click += async (s, e) =>
+                {
+                    if (!Dialogs.Confirm(this, "Clear the cookies and data of " + site + "? You'll be signed out of it.")) return;
+                    await t.ClearSiteData();
+                };
+                panel.Children.Add(clearSite);
             }
             var popup = new System.Windows.Controls.Primitives.Popup
             {
@@ -471,6 +554,23 @@ namespace Kudubrowse.Views
             var menu = new ContextMenu { PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
             menu.Items.Add(Item("New tab", () => NewTab(select: true), "Ctrl+T"));
             menu.Items.Add(Item("New window", NewWindow, "Ctrl+N"));
+            menu.Items.Add(Item("New private window", () => NewPrivateWindow(), "Ctrl+Shift+N"));
+            if (!IsPrivate)
+            {
+                var inRoom = new MenuItem { Header = "New tab in a room" };
+                foreach (var r in BrowserRooms.All.All)
+                {
+                    var room = r;
+                    inRoom.Items.Add(Item(r.Name, () => NewTab(select: true, room: room.Id)));
+                }
+                inRoom.Items.Add(new Separator());
+                inRoom.Items.Add(Item("New room...", () =>
+                {
+                    var name = Dialogs.Ask(this, "New room", "Name of the room (for example Shopping, or a second email account)", string.Empty);
+                    if (name != null) NewTab(select: true, room: BrowserRooms.All.Add(name).Id);
+                }));
+                menu.Items.Add(inRoom);
+            }
             var reopen = Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T");
             reopen.IsEnabled = RecentlyClosed.Count > 0;
             menu.Items.Add(reopen);
@@ -486,6 +586,7 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
             menu.Items.Add(Item("Bookmarks", () => LibraryWindow.Show(this, true), "Ctrl+Shift+O"));
             menu.Items.Add(Item("Passwords", () => PasswordsWindow.Show(this)));
+            menu.Items.Add(Item("Downloads", () => DownloadsWindow.Show(this), "Ctrl+J"));
             var barItem = Item(Settings.ShowBookmarksBar ? "Hide the bookmarks bar" : "Show the bookmarks bar", ToggleBookmarksBar, "Ctrl+Shift+B");
             menu.Items.Add(barItem);
             menu.Items.Add(Item("Bring bookmarks and history from Chrome...", () => new ImportWindow(this).ShowDialog()));
@@ -502,6 +603,14 @@ namespace Kudubrowse.Views
             var w = new MainWindow();
             w.Show();
             w.NewTab(select: true);
+        }
+
+        public MainWindow NewPrivateWindow()
+        {
+            var w = new MainWindow(true);
+            w.Show();
+            w.NewTab(select: true);
+            return w;
         }
 
         private void ZoomBy(double factor)
@@ -548,6 +657,7 @@ namespace Kudubrowse.Views
             var handled = true;
             if (ctrl && shift && key == Key.T) ReopenClosedTab();
             else if (ctrl && key == Key.T) NewTab(select: true);
+            else if (ctrl && shift && key == Key.N) NewPrivateWindow();
             else if (ctrl && key == Key.N) NewWindow();
             else if (ctrl && (key == Key.W || key == Key.F4)) { if (Current != null) CloseTab(Current); }
             else if (ctrl && key == Key.Tab) SelectBy(shift ? -1 : 1);
@@ -565,6 +675,7 @@ namespace Kudubrowse.Views
             else if (ctrl && shift && key == Key.B) ToggleBookmarksBar();
             else if (ctrl && shift && key == Key.O) LibraryWindow.Show(this, true);
             else if (ctrl && key == Key.H) LibraryWindow.Show(this, false);
+            else if (ctrl && key == Key.J) DownloadsWindow.Show(this);
             else if (ctrl && key == Key.D) ShowBookmarkPanel();
             else if (key == Key.Escape && _fullScreen) SetFullScreen(false);
             else if (key == Key.Escape && Current?.IsLoading == true && !_address.IsKeyboardFocusWithin) Current.Stop();
@@ -597,8 +708,10 @@ namespace Kudubrowse.Views
         /// <summary>Saves the tabs of every window (the window being closed last included) for next time.</summary>
         private static void SaveSession(MainWindow includeClosing = null)
         {
-            var windows = Open.ToList();
+            // Private windows are never kept.
+            var windows = Open.Where(w => !w.IsPrivate).ToList();
             if (includeClosing != null) windows.Add(includeClosing);
+            if (windows.Count == 0) return;
             var tabs = new List<SavedTab>();
             var selected = 0;
             foreach (var w in windows)

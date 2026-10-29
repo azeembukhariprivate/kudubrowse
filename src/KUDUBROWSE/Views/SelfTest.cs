@@ -40,6 +40,8 @@ namespace Kudubrowse.Views
             Core.Library.History.KeepFor = TimeSpan.FromDays(36500); // the made-up Chrome history is old
             var wasRegistered = ShellIntegration.IsRegistered;
             PasswordStore.Reload();
+            BrowserRooms.Reload();
+            Downloads.Folder = Path.Combine(_temp, "downloads");
             Verify.AutoAnswer = true;
             var savedOffer = Settings.OfferToSavePasswords;
             Settings.OfferToSavePasswords = true;
@@ -333,6 +335,119 @@ namespace Kudubrowse.Views
                     finally
                     {
                         foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
+                await Step("Rooms keep logins apart; private windows keep nothing", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        async Task<BrowserTab> Open(MainWindow w, string room, string url)
+                        {
+                            var t = w.NewTab(select: true, room: room);
+                            await t.EnsureView();
+                            t.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                            w.Go(url);
+                            await Wait(() => t.Url.StartsWith(url) && !t.IsLoading, 20, "the page in room " + room);
+                            return t;
+                        }
+                        async Task<string> Cookie(BrowserTab t) => JsonText(await t.View.CoreWebView2.ExecuteScriptAsync("document.cookie"));
+
+                        var personal = await Open(main, Rooms.DefaultId, "https://kudutest.example/second.html");
+                        await personal.View.CoreWebView2.ExecuteScriptAsync("document.cookie = 'who=personal; max-age=3600; path=/'");
+                        var work = await Open(main, "room-1", "https://kudutest.example/second.html");
+                        Expect(await Cookie(work) == string.Empty, "the Work room doesn't see Personal's cookie (it saw \"" + await Cookie(work) + "\")");
+                        await work.View.CoreWebView2.ExecuteScriptAsync("document.cookie = 'who=work; max-age=3600; path=/'");
+                        Expect(await Cookie(personal) == "who=personal", "Personal keeps its own");
+                        Expect(work.Header.BorderThickness.Top > 0 && personal.Header.BorderThickness.Top == 0, "the Work tab shows its room's colour");
+                        Screenshots.All("Rooms");
+
+                        // A private window: no history, not kept for next time, and its cookies go when it closes.
+                        var priv = main.NewPrivateWindow();
+                        OffScreen(priv);
+                        var p = await Open(priv, Rooms.DefaultId, "https://kudutest.example/second.html?private=1");
+                        Expect(p.IsPrivate && priv.Title.Contains("(private)"), "a private tab");
+                        await p.View.CoreWebView2.ExecuteScriptAsync("document.cookie = 'who=secret; max-age=3600; path=/'");
+                        Expect(await Cookie(personal) == "who=personal", "the private window doesn't touch the normal one");
+                        Screenshots.One(priv, "Private window");
+                        Expect(BrowserLibrary.History.Search("private=1").Count == 0, "no history from the private window");
+                        MainWindow.SaveAll();
+                        Expect(!Session.Load().Tabs.Any(t => t.Url.Contains("private=1")), "private tabs aren't kept for next time");
+                        priv.Close();
+                        await Task.Delay(1500);
+                        var priv2 = main.NewPrivateWindow();
+                        OffScreen(priv2);
+                        var p2 = await Open(priv2, Rooms.DefaultId, "https://kudutest.example/second.html?private=2");
+                        Expect(await Cookie(p2) == string.Empty, "a new private window starts with nothing (it saw \"" + await Cookie(p2) + "\")");
+                        priv2.Close();
+
+                        // Clearing one site's data signs out of it.
+                        await personal.ClearSiteData();
+                        await Wait(() => !personal.IsLoading, 10, "the reload after clearing");
+                        Expect(await Cookie(personal) == string.Empty, "the site's cookie cleared");
+                        Expect(await Cookie(work) == "who=work", "other rooms untouched");
+                    }
+                    finally
+                    {
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
+                await Step("Downloads, sleeping tabs and one running copy", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        File.WriteAllText(Path.Combine(_temp, "notes.txt"), "Downloaded by the self-test.");
+                        Page("files.html", "Files", "<a id='dl' href='notes.txt' download>Download the notes</a>");
+                        var tab = main.NewTab(select: true);
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/files.html");
+                        await Wait(() => tab.Title == "Files" && !tab.IsLoading, 20, "the files page");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('dl').click()");
+                        await Wait(() => Downloads.Items.Any(i => i.Done && i.FileName.StartsWith("notes")), 20, "the download to finish");
+                        var item = Downloads.Items.First(i => i.Done);
+                        Expect(File.ReadAllText(item.Path) == "Downloaded by the self-test.", "the file arrived whole");
+                        Expect(item.Path.StartsWith(Downloads.Folder), "in the downloads folder");
+                        var dw = DownloadsWindow.Show(main);
+                        OffScreen(dw);
+                        Pump();
+                        Expect(dw.ItemCount == 1, "listed");
+                        Screenshots.One(dw, "Downloads");
+                        dw.Close();
+
+                        // Sleeping: a tab that isn't shown goes to sleep, and wakes when clicked.
+                        BrowserTab.SleepAfter = TimeSpan.Zero;
+                        var other = main.NewTab("https://kudutest.example/second.html", true);
+                        main.Select(tab);
+                        await Task.Delay(300);
+                        await main.SleepIdleTabs();
+                        Expect(keep.Concat(new[] { other }).Any(t => t.IsSleeping), "a hidden tab went to sleep");
+                        var sleeper = keep.Concat(new[] { other }).First(t => t.IsSleeping);
+                        main.Select(sleeper);
+                        Expect(!sleeper.IsSleeping, "woke up when shown");
+                        if (sleeper.View?.CoreWebView2 != null)
+                            Expect(await sleeper.View.CoreWebView2.ExecuteScriptAsync("1 + 1") == "2", "the woken page works");
+                        BrowserTab.SleepAfter = TimeSpan.FromMinutes(10);
+
+                        // One running copy: a second start hands its address over and a tab opens here.
+                        var pipe = "kudubrowse-selftest-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                        using (var one = new SingleInstance(pipe))
+                        {
+                            one.Listen(a => main.Dispatcher.BeginInvoke(new Action(() => App.OpenFromOutside(a))));
+                            await Task.Delay(300);
+                            var before = MainWindow.Open.Sum(w => w.Tabs.Count);
+                            Expect(SingleInstance.Send(pipe, new[] { "example.org" }), "the address handed over");
+                            await Wait(() => MainWindow.Open.Sum(w => w.Tabs.Count) == before + 1, 10, "a new tab for it");
+                            Expect(MainWindow.Open.SelectMany(w => w.Tabs).Any(t => t.Url == "https://example.org"), "opened at the address given");
+                        }
+                    }
+                    finally
+                    {
+                        foreach (var w in MainWindow.Open.ToList())
+                            foreach (var t in w.Tabs.Where(t => !keep.Contains(t)).ToList()) w.CloseTab(t);
                         main.Select(keep.Last());
                     }
                 });

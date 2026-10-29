@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,9 +30,11 @@ namespace Kudubrowse.Views
         private string _mainUrl;
         private string _hidingScriptId, _popupScriptId;
 
-        public BrowserTab(string url = null, string title = null)
+        public BrowserTab(string url = null, string title = null, string room = null, bool isPrivate = false)
         {
             Url = url ?? string.Empty;
+            Room = Rooms.ValidId(room) ? room : Rooms.DefaultId;
+            IsPrivate = isPrivate;
             Title = string.IsNullOrEmpty(title) ? (string.IsNullOrEmpty(url) ? "New tab" : AddressBar.Display(url)) : title;
 
             _blankIcon = Ui.Icon("IconGlobe", 15);
@@ -62,12 +65,31 @@ namespace Kudubrowse.Views
             {
                 if (e.ChangedButton == MouseButton.Middle) CloseClicked?.Invoke(this);
             };
+            ShowRoom();
             Header.MouseEnter += (s, e) => UpdateLook();
             Header.MouseLeave += (s, e) => UpdateLook();
             Refresh();
         }
 
         public Border Header { get; }
+
+        /// <summary>The room this tab is in (its logins and site data are kept apart from other rooms').</summary>
+        public string Room { get; }
+        /// <summary>A private tab keeps nothing: no history, and its site data goes when the private window closes.</summary>
+        public bool IsPrivate { get; }
+
+        /// <summary>A coloured line on top of the tab shows its room (none for the first room); private tabs are dark purple.</summary>
+        public void ShowRoom()
+        {
+            var room = BrowserRooms.All.Find(Room);
+            var color = IsPrivate ? "#5B21B6" : room.IsDefault ? null : room.Color;
+            Header.BorderThickness = new Thickness(0, color == null ? 0 : 3, 0, 0);
+            Header.BorderBrush = color == null ? null : new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+            _roomName = IsPrivate ? "Private" : room.IsDefault ? null : room.Name;
+            Refresh();
+        }
+
+        private string _roomName;
         /// <summary>The page, once the tab has been shown.</summary>
         public WebView2 View { get; private set; }
 
@@ -150,11 +172,69 @@ namespace Kudubrowse.Views
             BlockedChanged?.Invoke(this);
         }
 
-        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title };
+        // ================================================================ sleeping
+
+        /// <summary>Tabs not looked at for this long go to sleep (they use almost no processor and less memory).</summary>
+        public static TimeSpan SleepAfter { get; set; } = TimeSpan.FromMinutes(10);
+        public DateTime LastShown { get; private set; } = DateTime.UtcNow;
+        public bool IsSleeping { get; private set; }
+
+        /// <summary>Puts the page to sleep if it's been hidden long enough and isn't playing sound.</summary>
+        public async Task<bool> SleepIfIdle()
+        {
+            var core = View?.CoreWebView2;
+            if (core == null || IsActive || IsSleeping || _closed || DateTime.UtcNow - LastShown < SleepAfter) return false;
+            if (core.IsDocumentPlayingAudio || IsLoading) return false;
+            try
+            {
+                if (!await core.TrySuspendAsync()) return false;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException)
+            {
+                return false;
+            }
+            IsSleeping = true;
+            Header.Opacity = 0.6;
+            Refresh();
+            return true;
+        }
+
+        private void Wake()
+        {
+            if (!IsSleeping) return;
+            IsSleeping = false;
+            Header.Opacity = 1;
+            try { View?.CoreWebView2?.Resume(); }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
+            Refresh();
+        }
+
+        // ================================================================ site data
+
+        /// <summary>Deletes this site's cookies and stored data in this tab's room (signing out of it), then reloads.</summary>
+        public async Task ClearSiteData()
+        {
+            var core = View?.CoreWebView2;
+            if (core == null || string.IsNullOrEmpty(PageHost)) return;
+            var site = Core.Blocking.Domains.Registrable(PageHost);
+            foreach (var c in await core.CookieManager.GetCookiesAsync(null))
+            {
+                var d = c.Domain.TrimStart('.').ToLowerInvariant();
+                if (d == site || d.EndsWith("." + site)) core.CookieManager.DeleteCookie(c);
+            }
+            foreach (var origin in new[] { "https://" + PageHost, "http://" + PageHost, "https://" + site, "https://www." + site }.Distinct())
+                await core.CallDevToolsProtocolMethodAsync("Storage.clearDataForOrigin",
+                    Json.Serialize(new { origin, storageTypes = "local_storage,indexeddb,websql,service_workers,cache_storage,file_systems,shader_cache" }));
+            core.Reload();
+        }
+
+        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room };
 
         public void SetActive(bool active)
         {
+            if (IsActive != active) LastShown = DateTime.UtcNow;
             IsActive = active;
+            if (active) Wake();
             UpdateLook();
         }
 
@@ -175,7 +255,10 @@ namespace Kudubrowse.Views
             var view = View;
             try
             {
-                await view.EnsureCoreWebView2Async(env);
+                var options = env.CreateCoreWebView2ControllerOptions();
+                options.ProfileName = Room;
+                options.IsInPrivateModeEnabled = IsPrivate;
+                await view.EnsureCoreWebView2Async(env, options);
             }
             catch (Exception) when (_closed)
             {
@@ -187,7 +270,7 @@ namespace Kudubrowse.Views
             core.Settings.AreDefaultContextMenusEnabled = true;
             core.DocumentTitleChanged += (s, e) =>
             {
-                BrowserLibrary.History.SetTitle(core.Source, core.DocumentTitle);
+                if (!IsPrivate) BrowserLibrary.History.SetTitle(core.Source, core.DocumentTitle);
                 Title = string.IsNullOrWhiteSpace(core.DocumentTitle) ? AddressBar.Display(core.Source) : core.DocumentTitle;
                 Refresh();
             };
@@ -241,11 +324,12 @@ namespace Kudubrowse.Views
             core.NavigationCompleted += (s, e) =>
             {
                 // Pages opened are kept in the history (only ordinary web pages).
-                if (e.IsSuccess) BrowserLibrary.History.Add(core.Source, core.DocumentTitle);
+                if (e.IsSuccess && !IsPrivate) BrowserLibrary.History.Add(core.Source, core.DocumentTitle);
                 IsLoading = false;
                 Refresh();
             };
             core.FaviconChanged += async (s, e) => await LoadFavicon();
+            core.DownloadStarting += (s, e) => Downloads.Start(e);
             core.NewWindowRequested += (s, e) => NewWindowRequested?.Invoke(this, e);
             core.WindowCloseRequested += (s, e) => PageClosed?.Invoke(this);
             core.ContainsFullScreenElementChanged += (s, e) => FullScreenChanged?.Invoke(this, core.ContainsFullScreenElement);
@@ -386,7 +470,7 @@ namespace Kudubrowse.Views
         private void Refresh()
         {
             _title.Text = Title;
-            Header.ToolTip = Title + (IsBlank ? string.Empty : "\n" + AddressBar.Display(Url));
+            Header.ToolTip = (_roomName == null ? string.Empty : "[" + _roomName + "] ") + Title + (IsBlank ? string.Empty : "\n" + AddressBar.Display(Url)) + (IsSleeping ? "\n(sleeping: wakes up when clicked)" : string.Empty);
             _icon.Visibility = _icon.Source != null ? Visibility.Visible : Visibility.Collapsed;
             _blankIcon.Visibility = _icon.Source != null ? Visibility.Collapsed : Visibility.Visible;
             _blankIcon.Opacity = IsLoading ? 0.45 : 1;

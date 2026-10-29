@@ -39,8 +39,13 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    top-level pages: reports focused login boxes and sent logins; it's only sent a login after the person picks one in
    the browser's own WPF list (never automatic fill). `Verify` asks Windows Hello (UserConsentVerifier interop), else
    the Windows password (CredUI + LogonUser), then not again for a minute.
-4. Rooms (WebView2 profiles), private windows, tab groups, sleeping tabs, side-by-side pages, reading mode
-   (Mozilla Readability), full-page screenshot and PDF, downloads, one running copy, installer. Then release 1.0.
+4a. Done (0.5): rooms (`Core/Rooms.cs`, rooms.txt; each room is a WebView2 profile, `ProfileName` = room id; tabs remember
+   their room in the session file; pop-ups open in the opener's room), private windows (InPrivate; not saved, no
+   history), downloads (`Views/Downloads.cs`, our own list instead of the engine's), sleeping tabs (TrySuspendAsync after
+   10 minutes hidden), clearing a site's or all data (`BrowserRooms.ClearData` uses a hidden controller per room), one
+   running copy (`Core/SingleInstance.cs`: a mutex and a named pipe per user; the second start hands its arguments over).
+4b. Next: tab groups, side-by-side pages, reading mode (Mozilla Readability), full-page screenshot and PDF, installer
+   checks. Then release 1.0.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

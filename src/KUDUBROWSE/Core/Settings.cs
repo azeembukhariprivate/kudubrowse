@@ -108,6 +108,13 @@ namespace Kudubrowse.Core
             set => SetBool("OfferToSavePasswords", value);
         }
 
+        /// <summary>Put tabs that haven't been looked at for a while to sleep.</summary>
+        public static bool SleepTabs
+        {
+            get => GetBool("SleepTabs", true);
+            set => SetBool("SleepTabs", value);
+        }
+
         /// <summary>Show the bookmarks bar under the address bar.</summary>
         public static bool ShowBookmarksBar
         {

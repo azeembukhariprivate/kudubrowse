@@ -8,7 +8,8 @@ account and without anything about you being collected.
 > 1. ✅ The browser itself: tabs, the address bar, back and forward, tabs that come back after a restart
 > 2. ✅ Blocking ads, trackers, cookie banners and pop-ups
 > 3. ✅ Bookmarks, history, suggestions, passwords, bringing everything from Chrome, default browser
-> 4. Rooms (separate logins), reading mode, screenshots, and the installer
+> 4. ✅ Rooms (separate logins), private windows, downloads, sleeping tabs, one running copy; next: tab groups,
+>    side-by-side pages, reading mode, screenshots and PDF, and the installer
 >
 > Version 1.0 will be released when all four are done and tested.
 
@@ -32,6 +33,12 @@ Part of the KUDU family of free, open-source Windows apps by Azeem Bukhari.
   suggested when you sign up. They're encrypted for your Windows account; showing or copying one asks for Windows Hello
   (or your Windows password). "Check for leaks" sends only 5 characters of a scrambled code of each password.
   Passwords come from Chrome through the file Chrome exports, which is deleted afterwards.
+- Rooms: tabs in different rooms (Personal, Work, any you add) keep their logins and site data apart, shown by a
+  coloured line on the tab. Private windows (Ctrl+Shift+N) keep no history and forget sites' cookies when closed.
+- Downloads in the browser's own list (Ctrl+J); files that can run programs ask before opening.
+- Tabs not looked at for 10 minutes go to sleep and wake when clicked; a site's cookies and data can be cleared from
+  the shield button.
+- Links clicked in other apps open as a new tab in the browser that's already open.
 
 The pages are shown by Microsoft Edge WebView2, the engine that comes with Windows and is kept up to date by Windows.
 

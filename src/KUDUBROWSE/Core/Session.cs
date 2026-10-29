@@ -10,6 +10,8 @@ namespace Kudubrowse.Core
     {
         public string Url { get; set; }
         public string Title { get; set; }
+        /// <summary>The room the tab is in (null or "Default" for the first room).</summary>
+        public string Room { get; set; }
     }
 
     /// <summary>
@@ -32,7 +34,7 @@ namespace Kudubrowse.Core
             foreach (var t in tabs)
             {
                 if (string.IsNullOrEmpty(t.Url) || t.Url == "about:blank") continue;
-                sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\n');
+                sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\t').Append(t.Room ?? Rooms.DefaultId).Append('\n');
             }
             try
             {
@@ -59,14 +61,19 @@ namespace Kudubrowse.Core
                 if (!File.Exists(file)) return (tabs, 0);
                 foreach (var line in File.ReadAllLines(file, Encoding.UTF8))
                 {
-                    var parts = line.Split(new[] { '\t' }, 2);
+                    var parts = line.Split('\t');
                     if (parts[0] == "selected")
                     {
                         if (parts.Length == 2) int.TryParse(parts[1], out selected);
                         continue;
                     }
                     if (!IsSafeToReopen(parts[0])) continue;
-                    tabs.Add(new SavedTab { Url = parts[0], Title = parts.Length == 2 ? parts[1] : string.Empty });
+                    tabs.Add(new SavedTab
+                    {
+                        Url = parts[0],
+                        Title = parts.Length >= 2 ? parts[1] : string.Empty,
+                        Room = parts.Length >= 3 && Rooms.ValidId(parts[2]) ? parts[2] : Rooms.DefaultId
+                    });
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
