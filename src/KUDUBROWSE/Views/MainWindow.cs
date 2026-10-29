@@ -405,9 +405,10 @@ namespace Kudubrowse.Views
                     panel.Children.Add(Ui.Subtle(t.PopupsBlocked == 1 ? "1 pop-up blocked" : $"{t.PopupsBlocked} pop-ups blocked", 12.5).Margin(0, 2, 0, 0));
                 var toggle = new CheckBox { Content = "Block on " + site, IsChecked = !t.SiteAllowed }.Styled("Switch");
                 toggle.Margin = new Thickness(0, 12, 0, 0);
-                toggle.Click += (s, e) =>
+                toggle.Click += async (s, e) =>
                 {
                     Blocker.SetAllowed(t.PageHost, toggle.IsChecked != true);
+                    await t.RefreshBlocking();
                     t.Reload();
                 };
                 panel.Children.Add(toggle);

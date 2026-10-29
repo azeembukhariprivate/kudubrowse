@@ -27,7 +27,7 @@ namespace Kudubrowse.Views
         private bool _closed;
         private CoreWebView2Environment _env;
         private string _mainUrl;
-        private string _hidingScriptId;
+        private string _hidingScriptId, _popupScriptId;
 
         public BrowserTab(string url = null, string title = null)
         {
@@ -177,6 +177,13 @@ namespace Kudubrowse.Views
                 try { await core.ExecuteScriptAsync(script); }
                 catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
             };
+            core.WebMessageReceived += (s, e) =>
+            {
+                string message = null;
+                try { message = e.TryGetWebMessageAsString(); }
+                catch (ArgumentException) { }
+                if (message == Blocker.PopupMessage) CountBlockedPopup();
+            };
             await UpdateHidingScript();
             Blocker.Changed += OnBlockerChanged;
             core.NavigationCompleted += (s, e) =>
@@ -208,7 +215,10 @@ namespace Kudubrowse.Views
             BlockedChanged?.Invoke(this);
         }
 
-        private async void OnBlockerChanged()
+        private async void OnBlockerChanged() => await RefreshBlocking();
+
+        /// <summary>Takes in changed blocking settings (before the page is reloaded).</summary>
+        public async Task RefreshBlocking()
         {
             if (_closed || View?.CoreWebView2 == null) return;
             SiteAllowed = Blocker.IsAllowed(PageHost);
@@ -223,9 +233,12 @@ namespace Kudubrowse.Views
             try
             {
                 if (_hidingScriptId != null) core.RemoveScriptToExecuteOnDocumentCreated(_hidingScriptId);
-                _hidingScriptId = null;
+                if (_popupScriptId != null) core.RemoveScriptToExecuteOnDocumentCreated(_popupScriptId);
+                _hidingScriptId = _popupScriptId = null;
                 var script = Blocker.DocumentScript();
                 if (script != null) _hidingScriptId = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+                var popups = Blocker.PopupScript();
+                if (popups != null) _popupScriptId = await core.AddScriptToExecuteOnDocumentCreatedAsync(popups);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
         }

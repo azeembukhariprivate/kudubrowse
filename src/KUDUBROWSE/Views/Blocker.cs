@@ -20,7 +20,7 @@ namespace Kudubrowse.Views
     {
         private static FilterEngine _ads, _cookies;
         // Settings are read once (not for every request a page makes).
-        private static bool _adsOn = Settings.BlockAds, _cookiesOn = Settings.HideCookieBanners;
+        private static bool _adsOn = Settings.BlockAds, _cookiesOn = Settings.HideCookieBanners, _popupsOn = Settings.BlockPopups;
         private static HashSet<string> _allowed = new HashSet<string>(Settings.AllowedSites);
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
@@ -91,6 +91,7 @@ namespace Kudubrowse.Views
         {
             _adsOn = Settings.BlockAds;
             _cookiesOn = Settings.HideCookieBanners;
+            _popupsOn = Settings.BlockPopups;
             _allowed = new HashSet<string>(Settings.AllowedSites);
             _css.Clear();
             Changed?.Invoke();
@@ -173,6 +174,30 @@ namespace Kudubrowse.Views
                    "s.textContent = " + Json.Serialize(css) + ";" +
                    "const add = () => { const r = document.documentElement; if (!r) return false; r.appendChild(s); return true; };" +
                    "if (!add()) { const mo = new MutationObserver(() => { if (add()) mo.disconnect(); }); mo.observe(document, { childList: true }); }" +
+                   "})();";
+        }
+
+        /// <summary>The message a page sends when it was stopped from opening a pop-up.</summary>
+        public const string PopupMessage = "kudubrowse:popup";
+
+        /// <summary>
+        /// Added to every page and frame before it starts: window.open only works straight after a real click or key
+        /// press (the page's "user activation"); otherwise it's a pop-up the page opened by itself, and it's stopped.
+        /// </summary>
+        public static string PopupScript()
+        {
+            if (!_popupsOn) return null;
+            return "(() => {" +
+                   "const allowed = " + Json.Serialize(_allowed.ToList()) + ";" +
+                   "const a = location.ancestorOrigins;" +
+                   "let h = location.hostname; try { if (a && a.length) h = new URL(a[a.length - 1]).hostname; } catch (e) {}" +
+                   "if (allowed.some(d => h === d || h.endsWith('.' + d))) return;" +
+                   "const open = window.open;" +
+                   "window.open = function () {" +
+                   "  const ua = navigator.userActivation;" +
+                   "  if (ua && !ua.isActive) { try { window.chrome.webview.postMessage('" + PopupMessage + "'); } catch (e) {} return null; }" +
+                   "  return open.apply(this, arguments);" +
+                   "};" +
                    "})();";
         }
 

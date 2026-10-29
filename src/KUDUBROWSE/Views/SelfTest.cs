@@ -141,41 +141,48 @@ namespace Kudubrowse.Views
                 });
                 await Step("Ads, trackers and pop-ups are blocked", async () =>
                 {
-                    Blocker.UseRules("||ads.kudutest.invalid^\n||tracker.kudutest.invalid^\n##.ad-box\nkudutest.example##.promo");
-                    Page("ads.html", "Page with ads",
-                        "<img id='ad' src='https://ads.kudutest.invalid/banner.png'><script src='https://tracker.kudutest.invalid/t.js'></script>" +
-                        "<div class='ad-box'>An ad</div><div class='promo'>A promotion</div><div class='content'>The article</div>" +
-                        "<script>setTimeout(() => window.open('https://kudutest.example/second.html'), 100)</script>");
-                    var tab = main.NewTab(select: true);
-                    await tab.EnsureView();
-                    tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
-                    var before = main.Tabs.Count;
-                    main.Go("https://kudutest.example/ads.html");
-                    await Wait(() => tab.Title == "Page with ads" && !tab.IsLoading, 20, "the page with ads");
-                    await Task.Delay(800);
-                    Expect(tab.Blocked >= 2, "the ad and the tracker blocked (blocked: " + tab.Blocked + ")");
-                    Expect(tab.PopupsBlocked == 1 && main.Tabs.Count == before, "the pop-up blocked");
-                    Expect(await Display(tab, ".ad-box") == "none", "the general hiding rule");
-                    Expect(await Display(tab, ".promo") == "none", "the site's own hiding rule");
-                    Expect(await Display(tab, ".content") != "none", "the article still shown");
-                    await Capture(main, "ads blocked");
-                    var shield = main.ShowShield();
-                    Pump();
-                    Screenshots.All("Shield");
-                    shield.IsOpen = false;
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        Blocker.UseRules("||ads.kudutest.invalid^\n||tracker.kudutest.invalid^\n##.ad-box\nkudutest.example##.promo");
+                        Page("ads.html", "Page with ads",
+                            "<img id='ad' src='https://ads.kudutest.invalid/banner.png'><script src='https://tracker.kudutest.invalid/t.js'></script>" +
+                            "<div class='ad-box'>An ad</div><div class='promo'>A promotion</div><div class='content'>The article</div>" +
+                            "<script>setTimeout(() => window.open('https://kudutest.example/second.html'), 100)</script>");
+                        var tab = main.NewTab(select: true);
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        var before = main.Tabs.Count;
+                        main.Go("https://kudutest.example/ads.html");
+                        await Wait(() => tab.Title == "Page with ads" && !tab.IsLoading, 20, "the page with ads");
+                        await Task.Delay(800);
+                        Expect(tab.Blocked >= 2, "the ad and the tracker blocked (blocked: " + tab.Blocked + ")");
+                        Expect(tab.PopupsBlocked == 1 && main.Tabs.Count == before, "the pop-up blocked");
+                        Expect(await Display(tab, ".ad-box") == "none", "the general hiding rule");
+                        Expect(await Display(tab, ".promo") == "none", "the site's own hiding rule");
+                        Expect(await Display(tab, ".content") != "none", "the article still shown");
+                        await Capture(main, "ads blocked");
+                        var shield = main.ShowShield();
+                        Pump();
+                        Screenshots.All("Shield");
+                        shield.IsOpen = false;
 
-                    // Allow the site: nothing is blocked after reloading.
-                    Blocker.SetAllowed(tab.PageHost, true);
-                    Expect(Settings.AllowedSites.Contains("kudutest.example"), "the site is in the allowed list");
-                    tab.Reload();
-                    await Wait(() => !tab.IsLoading && main.Tabs.Count == before + 1, 20, "the reload, and the pop-up opening this time");
-                    await Task.Delay(500);
-                    Expect(tab.Blocked == 0, "nothing blocked on an allowed site");
-                    Expect(await Display(tab, ".ad-box") != "none", "nothing hidden on an allowed site");
-                    main.CloseTab(main.Current);
-                    Blocker.SetAllowed("kudutest.example", false);
-                    main.Select(tab);
-                    main.CloseTab(tab);
+                        // Allow the site: nothing is blocked after reloading.
+                        Blocker.SetAllowed(tab.PageHost, true);
+                        Expect(Settings.AllowedSites.Contains("kudutest.example"), "the site is in the allowed list");
+                        await tab.RefreshBlocking();
+                        tab.Reload();
+                        await Wait(() => !tab.IsLoading && main.Tabs.Count == before + 1, 20, "the reload, and the pop-up opening this time");
+                        await Task.Delay(500);
+                        Expect(tab.Blocked == 0, "nothing blocked on an allowed site");
+                        Expect(await Display(tab, ".ad-box") != "none", "nothing hidden on an allowed site");
+                    }
+                    finally
+                    {
+                        Blocker.SetAllowed("kudutest.example", false);
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
                 });
                 await Step("Tabs come back next time", async () =>
                 {
