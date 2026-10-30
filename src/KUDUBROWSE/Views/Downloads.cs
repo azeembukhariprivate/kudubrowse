@@ -183,6 +183,7 @@ namespace Kudubrowse.Views
 
         internal async void RunOwn()
         {
+            Record.Own = true; // straight away, not only once the first piece starts (the list shows it from now on)
             _cancel = new CancellationTokenSource();
             _cancelling = false;
             Record.State = DownloadState.Running;
