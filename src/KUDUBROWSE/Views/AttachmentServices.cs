@@ -58,7 +58,9 @@ namespace Kudubrowse.Views
                     done.TrySetException(ex);
                 }
             });
-            thread.SetApartmentState(ApartmentState.STA);
+            // Not a single-threaded apartment of our own: Windows then hosts the scanner's object on a thread of its
+            // own that keeps its messages flowing, so the check can't stall waiting on this one.
+            thread.SetApartmentState(ApartmentState.MTA);
             thread.IsBackground = true;
             thread.Start();
             return done.Task;

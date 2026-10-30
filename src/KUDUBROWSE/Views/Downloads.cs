@@ -52,7 +52,14 @@ namespace Kudubrowse.Views
         /// <summary>Bytes a second, lately.</summary>
         public double Speed { get; private set; }
 
-        public bool CanPause => Running;
+        /// <summary>The whole file is here and Windows' virus scanner is checking it.</summary>
+        public bool Checking { get; private set; }
+        /// <summary>Every byte has arrived and the download is being finished off.</summary>
+        public bool Finishing => Checking || (Running && Total > 0 && Received >= Total);
+        /// <summary>Finished, and nothing left to do (the virus check included).</summary>
+        public bool Ready => Done && !Checking;
+
+        public bool CanPause => Running && !Finishing;
         public bool CanCarryOn => Paused || Failed;
 
         // ---------------------------------------------------------------- the engine's downloads
@@ -190,11 +197,31 @@ namespace Kudubrowse.Views
             {
                 var token = _cancel.Token;
                 await Task.Run(() => d.Run(token));
-                // Like the engine's own downloads: the "came from the internet" mark and the virus scanner.
-                if (!await AttachmentServices.Check(Record.File, Record.Url, Record.Referrer))
+                // Like the engine's own downloads: the "came from the internet" mark and the virus scanner. The list
+                // says so meanwhile; if the scanner takes very long, the mark is written directly instead of waiting.
+                Checking = true;
+                Tell(true);
+                try
                 {
-                    Record.State = DownloadState.Failed;
-                    Record.Error = "Windows' virus scanner removed it";
+                    var check = AttachmentServices.Check(Record.File, Record.Url, Record.Referrer);
+                    if (await Task.WhenAny(check, Task.Delay(TimeSpan.FromMinutes(2))) == check)
+                    {
+                        if (!await check)
+                        {
+                            Record.State = DownloadState.Failed;
+                            Record.Error = "Windows' virus scanner removed it";
+                        }
+                    }
+                    else AttachmentServices.Mark(Record.File, Record.Url, Record.Referrer);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is COMException || ex is InvalidCastException)
+                {
+                    try { AttachmentServices.Mark(Record.File, Record.Url, Record.Referrer); }
+                    catch (Exception again) when (again is IOException || again is UnauthorizedAccessException) { }
+                }
+                finally
+                {
+                    Checking = false;
                 }
             }
             catch (OperationCanceledException)
@@ -222,8 +249,15 @@ namespace Kudubrowse.Views
         }
 
         /// <summary>Lets the list know (at most 4 times a second, unless the state changed) and keeps the list file current.</summary>
+        private DownloadState _toldState;
+        private bool _toldChecking;
+
         private void Tell(bool now = false)
         {
+            // A change of state (finished, paused, checking) is always shown straight away.
+            if (Record.State != _toldState || Checking != _toldChecking) now = true;
+            _toldState = Record.State;
+            _toldChecking = Checking;
             var at = DateTime.UtcNow;
             if (!now && (at - _lastTell).TotalMilliseconds < 250) return;
             _lastTell = at;
@@ -498,7 +532,11 @@ namespace Kudubrowse.Views
     {
         private static DownloadsWindow _open;
         private readonly StackPanel _list = new StackPanel();
-        private readonly DispatcherTimer _refresh;
+        private readonly DispatcherTimer _refresh, _tick;
+        private readonly Dictionary<DownloadItem, List<string>> _buttons = new Dictionary<DownloadItem, List<string>>();
+
+        /// <summary>The buttons shown for a download, as last drawn (for the self-test).</summary>
+        public IReadOnlyList<string> ButtonsFor(DownloadItem item) => _buttons.TryGetValue(item, out var b) ? b : new List<string>();
         private bool _pending;
 
         public static DownloadsWindow Show(Window owner)
@@ -552,10 +590,18 @@ namespace Kudubrowse.Views
                 if (_pending) Fill();
             };
             Downloads.Changed += OnChanged;
+            // While files arrive the list is redrawn every second anyway (speed, time left), so it can't stay behind.
+            _tick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _tick.Tick += (s, e) =>
+            {
+                if (Downloads.Items.Any(i => i.Running || i.Checking)) Fill();
+            };
+            _tick.Start();
             Closed += (s, e) =>
             {
                 Downloads.Changed -= OnChanged;
                 _refresh.Stop();
+                _tick.Stop();
                 _open = null;
             };
             Fill();
@@ -573,6 +619,7 @@ namespace Kudubrowse.Views
         {
             _pending = false;
             _list.Children.Clear();
+            _buttons.Clear();
             if (Downloads.Items.Count == 0)
             {
                 _list.Children.Add(Ui.Subtle("Files you download appear here.", 13).Margin(8, 8, 0, 0));
@@ -582,27 +629,30 @@ namespace Kudubrowse.Views
             {
                 var g = Ui.Columns(Ui.Px(30), Ui.Star(), Ui.Auto);
                 g.Margin = new Thickness(4, 6, 4, 6);
-                var icon = Ui.Icon(item.Done ? "IconFile" : item.Failed ? "IconWarn" : item.Paused ? "IconPause" : item.State == DownloadState.Cancelled ? "IconClose" : "IconImport", 16);
+                var icon = Ui.Icon(item.Ready ? "IconFile" : item.Checking ? "IconShield" : item.Failed ? "IconWarn" : item.Paused ? "IconPause" : item.State == DownloadState.Cancelled ? "IconClose" : "IconImport", 16);
                 icon.VerticalAlignment = VerticalAlignment.Top;
                 icon.Margin = new Thickness(0, 2, 0, 0);
                 g.Children.Add(icon.At(0, 0));
                 var text = Ui.Column(Ui.Text(item.FileName, 13), Ui.Subtle(Status(item), 11.5, false));
-                if (item.Running || item.Paused)
+                if (item.Running || item.Paused || item.Checking)
                 {
-                    var bar = new ProgressBar { Height = 4, Maximum = 1000, Margin = new Thickness(0, 5, 0, 1), IsIndeterminate = item.Total <= 0 && item.Running };
+                    var bar = new ProgressBar { Height = 4, Maximum = 1000, Margin = new Thickness(0, 5, 0, 1), IsIndeterminate = (item.Total <= 0 && item.Running) || item.Finishing };
                     if (item.Total > 0) bar.Value = item.Received * 1000.0 / item.Total;
                     text.Children.Add(bar);
                 }
                 g.Children.Add(text.At(0, 1));
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
+                var labels = new List<string>();
+                _buttons[item] = labels;
                 void Add(Button b, string tip, Action act)
                 {
+                    labels.Add(tip);
                     b.ToolTip = tip;
                     b.Click += (s, e) => act();
                     if (buttons.Children.Count > 0) b.Margin = new Thickness(6, 0, 0, 0);
                     buttons.Children.Add(b);
                 }
-                if (item.Done && File.Exists(item.Path))
+                if (item.Ready && File.Exists(item.Path))
                 {
                     Add(Ui.Small(Ui.Button("Open")), "Open the file", () => Downloads.Open(this, item));
                     Add(Ui.Small(Ui.Button(null, "IconFolder")), "Show in folder", () => AppInfo.OpenFolder(System.IO.Path.GetDirectoryName(item.Path), item.Path));
@@ -610,7 +660,7 @@ namespace Kudubrowse.Views
                 if (item.CanPause) Add(Ui.Small(Ui.Button("Pause", "IconPause")), "Pause; carry on later, even after closing the browser", item.Pause);
                 if (item.Paused) Add(Ui.Small(Ui.Button("Carry on", "IconPlay")), "Carry on from where it stopped", item.CarryOn);
                 if (item.Failed) Add(Ui.Small(Ui.Button("Try again", "IconRefresh")), "Try again, from where it stopped when the site allows it", item.CarryOn);
-                if (item.Running || item.Paused) Add(Ui.Small(Ui.Button(null, "IconClose")), "Cancel", item.Cancel);
+                if ((item.Running || item.Paused) && !item.Finishing) Add(Ui.Small(Ui.Button(null, "IconClose")), "Cancel", item.Cancel);
                 g.Children.Add(buttons.At(0, 2));
                 _list.Children.Add(g);
             }
@@ -619,6 +669,8 @@ namespace Kudubrowse.Views
         private static string Status(DownloadItem item)
         {
             var size = item.Total > 0 ? $"{DownloadRules.Size(item.Received)} of {DownloadRules.Size(item.Total)}" : DownloadRules.Size(item.Received);
+            if (item.Checking) return DownloadRules.Size(item.Received) + " · checking with Windows' virus scanner…";
+            if (item.Finishing) return DownloadRules.Size(item.Received) + " · finishing…";
             switch (item.State)
             {
                 case DownloadState.Running:

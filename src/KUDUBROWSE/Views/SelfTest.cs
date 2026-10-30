@@ -506,18 +506,26 @@ namespace Kudubrowse.Views
                             Screenshots.One(dw, "Downloads, paused");
                             bigItem.SlowMs = 0;
                             item.CarryOn();
-                            await Wait(() => item.Done || item.Failed, 60, "the big download to finish");
+                            await Wait(() => item.Ready || item.Failed, 90, "the big download to finish (and the virus check)");
                             Expect(item.Done, "finished: " + item.Record.Error);
                             Expect(File.ReadAllBytes(item.Path).SequenceEqual(big), "the file is exactly the site's");
                             Expect(AttachmentServices.HasMark(item.Path), "marked as from the internet, like the engine's downloads");
                             Expect(server.CookiesSeen.Any(c => c.StartsWith("/big.bin") && c.Contains("session=kudu")), "the site's cookies were sent");
+                            // The list shows it as finished: Open, no Pause.
+                            dw.Close();
+                            dw = DownloadsWindow.Show(main);
+                            OffScreen(dw);
+                            Pump();
+                            var shown = dw.ButtonsFor(item);
+                            Expect(shown.Contains("Open the file") && !shown.Any(b => b.StartsWith("Pause")), "the list shows it finished: " + string.Join(", ", shown));
+                            dw.Close();
 
                             // Sorted by type.
                             Settings.SortDownloads = true;
                             // Opened by its address: a second download started by a page script (not a real click) is held back
                             // by the engine's guard against pages starting many downloads.
                             main.Go(server.Url("photo.png"));
-                            await Wait(() => Downloads.Items.Any(i => i.FileName == "photo.png" && i.Done), 20, "the picture");
+                            await Wait(() => Downloads.Items.Any(i => i.FileName == "photo.png" && i.Ready), 20, "the picture");
                             var pic = Downloads.Items.First(i => i.FileName == "photo.png");
                             Expect(Path.GetDirectoryName(pic.Path) == Path.Combine(Downloads.Folder, "Pictures"), "in the Pictures folder: " + pic.Path);
                             Expect(!pic.Record.Own, "small files are left to the engine");
@@ -533,10 +541,9 @@ namespace Kudubrowse.Views
                             var stopped = Downloads.Items.First(i => i.FileName == "plain.zip");
                             Expect(stopped.Failed && !stopped.ThisSession, "comes back as not finished");
                             stopped.CarryOn();
-                            await Wait(() => stopped.Done || (stopped.Failed && stopped.Record.Own), 30, "trying again");
+                            await Wait(() => stopped.Ready || (stopped.Failed && stopped.Record.Own), 60, "trying again");
                             Expect(stopped.Done, "finished when tried again: " + stopped.Record.Error);
                             Expect(File.ReadAllBytes(stopped.Path).SequenceEqual(plain), "whole");
-                            dw.Close();
                             dw = DownloadsWindow.Show(main);
                             OffScreen(dw);
                             Pump();
