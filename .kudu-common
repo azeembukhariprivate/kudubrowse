@@ -1,5 +1,5 @@
 # Shared code copied from https://github.com/azeembukhariprivate/kudu-common by its sync.py.
-commit 913725b961163d86a43af94c6635f7746abfe131
+commit 2d46adca891b5a7d030b14771b042bae44e4a58c
 folder src/KUDUBROWSE
 - Views/Dialogs.cs
 - Views/Screenshots.cs
