@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using Kudubrowse.Controls;
 using Kudubrowse.Core;
 
 namespace Kudubrowse.Views
 {
-    /// <summary>"What KUDUBROWSE can do": what makes it different, and its best everyday features, each with a way to try it.</summary>
-    public sealed class FeaturesWindow : Window
+    /// <summary>
+    /// About KUDUBROWSE: who made it, its licence and version, updates, and everything it can do (what makes it
+    /// different and its best everyday features), each with a way to try it.
+    /// </summary>
+    public sealed class AboutWindow : Window
     {
-        private static FeaturesWindow _open;
+        private static AboutWindow _open;
         private readonly MainWindow _main;
 
         /// <summary>One feature: what it's called, a line about it, its shortcut (or where to find it), and how to try it.</summary>
@@ -72,41 +76,108 @@ namespace Kudubrowse.Views
             new Feature("IconMonitor", "Zoom, print and full screen", "Make pages bigger or smaller, print them, or fill the screen.", "Ctrl+plus, Ctrl+P, F11")
         };
 
-        public static FeaturesWindow Show(MainWindow main)
+        public static AboutWindow Show(MainWindow main, Window owner = null)
         {
             if (_open == null || !_open.IsLoaded)
             {
-                _open = new FeaturesWindow(main);
+                _open = new AboutWindow(main, owner);
                 _open.Show();
             }
             _open.Activate();
             return _open;
         }
 
-        public FeaturesWindow(MainWindow main)
+        public AboutWindow(MainWindow main, Window owner = null)
         {
             _main = main;
-            Width = 680;
-            Height = Math.Min(760, SystemParameters.WorkArea.Height - 40);
-            Dialogs.Prepare(this, "What " + AppInfo.Name + " can do", main);
-            var header = Ui.Row(LogoTile.Create(48), Ui.Column(Ui.Text("What " + AppInfo.Name + " can do", 18, bold: true),
-                Ui.Subtle("A private everyday web browser. Here's what it has, and how to try it.", 12.5)).Margin(14, 0, 0, 0));
-            ((FrameworkElement)header.Children[1]).VerticalAlignment = VerticalAlignment.Center;
+            Width = 700;
+            Height = Math.Min(800, SystemParameters.WorkArea.Height - 40);
+            Dialogs.Prepare(this, "About " + AppInfo.Name, owner ?? main);
             var list = new StackPanel();
-            list.Children.Add(header.Margin(0, 0, 0, 8));
+
+            // Who made it, its licence and where it comes from.
+            var header = Ui.Row(LogoTile.Create(64), Ui.Column(Ui.Text(AppInfo.Name, 20, bold: true),
+                Ui.Subtle("Version " + AppInfo.VersionText + " · A private everyday web browser", 12.5)).Margin(16, 0, 0, 0));
+            ((FrameworkElement)header.Children[1]).VerticalAlignment = VerticalAlignment.Center;
+            list.Children.Add(header);
+            var rows = new StackPanel { Margin = new Thickness(0, 18, 0, 0) };
+            void Row(string label, UIElement value)
+            {
+                var g = Ui.Columns(Ui.Px(120), Ui.Star());
+                g.Children.Add(Ui.Subtle(label, 12.5, false).At(0, 0));
+                g.Children.Add(value.At(0, 1));
+                rows.Children.Add(new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 7, 0, 7), Child = g }.Res(Border.BorderBrushProperty, "BorderBrush"));
+            }
+            var madeBy = Ui.Text("Azeem, with Claude and ", 12.5);
+            var heart = new Run("♥");
+            heart.SetResourceReference(TextElement.ForegroundProperty, "Accent");
+            madeBy.Inlines.Add(heart);
+            Row("Made by", madeBy);
+            Row("Licence", Ui.Row(Ui.Text("MIT · free and open source  ", 12.5), Ui.Link("View", (s, e) => OpenLocal("LICENSE.txt"))));
+            Row("Source code", Ui.Link("github.com/" + AppInfo.RepoOwner + "/" + AppInfo.RepoName, (s, e) => AppInfo.OpenUrl(AppInfo.RepoUrl)));
+            var web = Web.RuntimeVersion;
+            Row("Web engine", Ui.Text(web != null ? "Microsoft Edge WebView2 " + web + " (kept up to date by Windows)" : "Microsoft Edge WebView2 isn't installed", 12.5, wrap: true));
+            Row("Third-party", Ui.Link("Third-party notices", (s, e) => OpenLocal("THIRD-PARTY-NOTICES.txt")));
+
+            // Updates: what the browser knows, and a way to look now.
+            var status = Ui.Text(string.Empty, 12.5, wrap: true);
+            var checkNow = Ui.Small(Ui.Button("Check now", "IconRefresh"));
+            var downloadPage = Ui.Link("Download page", (s, e) => AppInfo.OpenUrl(AppInfo.ReleasesUrl + "/latest"));
+            void ShowStatus()
+            {
+                var text = Updater.Status;
+                if (text.Length == 0)
+                    text = Settings.CheckForUpdates
+                        ? (Updater.Installed ? "Updates itself: new versions are installed when you close " + AppInfo.Name + "." : "This copy wasn't installed, so it isn't updated by itself.")
+                        : "Updating by itself is switched off in Settings.";
+                status.Text = text;
+                downloadPage.Visibility = Updater.Installed ? Visibility.Collapsed : Visibility.Visible;
+            }
+            checkNow.Click += async (s, e) =>
+            {
+                checkNow.IsEnabled = false;
+                try { await Updater.CheckNow(); }
+                finally { checkNow.IsEnabled = true; }
+            };
+            Action changed = () => Dispatcher.BeginInvoke(new Action(ShowStatus));
+            Updater.StatusChanged += changed;
+            Closed += (s, e) => Updater.StatusChanged -= changed;
+            ShowStatus();
+            var updateRow = Ui.Columns(Ui.Star(), Ui.Auto);
+            updateRow.Children.Add(Ui.Column(status, downloadPage).At(0, 0));
+            ((FrameworkElement)updateRow.Children[0]).VerticalAlignment = VerticalAlignment.Center;
+            updateRow.Children.Add(checkNow.Margin(12, 0, 0, 0).At(0, 1));
+            Row("Updates", updateRow);
+            rows.Children.Add(Ui.Divider());
+            list.Children.Add(rows);
+            list.Children.Add(Ui.Subtle(AppInfo.Name + " has no account and collects nothing about you. Your tabs, history and site data stay in your AppData folder.", 11.5)
+                .Margin(0, 10, 0, 6));
+
+            // What it can do, each with a way to try it.
             AddGroup(list, "What makes it different", Different);
             AddGroup(list, "Best everyday features", Everyday);
+
             var close = Ui.Button("Close", null, "PrimaryButton");
             close.IsCancel = true;
             close.Click += (s, e) => Close();
             close.HorizontalAlignment = HorizontalAlignment.Right;
-            var root = new Grid { Margin = new Thickness(20, 16, 20, 16) };
+            var root = new Grid { Margin = new Thickness(22, 18, 22, 16) };
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             root.Children.Add(new ScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(0, 0, 6, 0) }.At(0, 0));
             root.Children.Add(close.Margin(0, 12, 0, 0).At(1, 0));
             Content = root;
             Closed += (s, e) => _open = null;
+        }
+
+        /// <summary>What the updates line says (for the self-test).</summary>
+        public static string UpdateText => Updater.Status;
+
+        private static void OpenLocal(string name)
+        {
+            var path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AppInfo.ExePath) ?? string.Empty, name);
+            if (System.IO.File.Exists(path)) AppInfo.OpenFile(path);
+            else AppInfo.OpenUrl(AppInfo.RepoUrl);
         }
 
         /// <summary>How many "Try it" buttons there are (for the self-test).</summary>
@@ -125,7 +196,7 @@ namespace Kudubrowse.Views
                 if (f.Keys != null) text.Children.Add(Ui.Subtle(f.Keys, 11.5, false).Margin(0, 3, 0, 0).Res(TextBlock.ForegroundProperty, "Accent"));
                 g.Children.Add(text.At(0, 1));
                 // A private window has no rooms, and nothing to bring from Chrome.
-                if (f.TryIt != null && !(_main.IsPrivate && (f.Name == "Rooms" || f.Name == "Moving from Chrome")))
+                if (f.TryIt != null && _main != null && !(_main.IsPrivate && (f.Name == "Rooms" || f.Name == "Moving from Chrome")))
                 {
                     var feature = f;
                     var tryIt = Ui.Small(Ui.Button("Try it"));

@@ -494,6 +494,10 @@ namespace Kudubrowse.Views
                             var item = Downloads.Items.First(i => i.FileName == "big.bin");
                             Note("big file: " + Downloads.LastChoice);
                             Expect(item.Record.Own, "fetched by the browser itself, not " + Downloads.LastChoice);
+                            // A note under the downloads button says it started, and opens the list when clicked.
+                            Pump();
+                            Expect(main.NoteShown && main.NoteText.Contains("big.bin"), "the \"download started\" note: " + main.NoteText);
+                            Screenshots.All("Download started note");
                             await Wait(() => item.Received > 2 * 1024 * 1024 || item.Done, 30, "some of it to arrive");
                             Expect(!item.Done, "still arriving when paused");
                             item.Pause();
@@ -647,11 +651,16 @@ namespace Kudubrowse.Views
                         main.Select(keep.Last());
                     }
                 });
-                await Step("What KUDUBROWSE can do", () =>
+                await Step("About KUDUBROWSE: who made it, updates, and everything it can do in one window", () =>
                 {
-                    var f = new FeaturesWindow(main);
+                    var f = new AboutWindow(main);
                     Expect(f.TryButtons >= 15, "\"Try it\" buttons, found " + f.TryButtons);
                     ShowAndClose(f);
+                    // The note the first start after an update shows.
+                    main.ShowUpdatedNote("9.9.9");
+                    Pump();
+                    Expect(main.NoteShown && main.NoteText.Contains("updated to 9.9.9"), "the \"updated\" note: " + main.NoteText);
+                    Screenshots.All("Updated note");
                     return Task.CompletedTask;
                 });
                 await Step("Can be chosen as the default browser", () =>
@@ -695,7 +704,7 @@ namespace Kudubrowse.Views
                     Screenshots.All("Dark theme");
                     ShowAndClose(new SettingsWindow(main));
                     ShowAndClose(About.Build(main));
-                    ShowAndClose(new FeaturesWindow(main));
+                    ShowAndClose(new AboutWindow(main));
                     ThemeManager.Apply(ThemeMode.Light);
                     await Task.CompletedTask;
                 });

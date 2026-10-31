@@ -246,10 +246,11 @@ namespace Kudubrowse.Views
             root.Children.Add(clearAll);
 
             root.Children.Add(Ui.Heading("Updates", 14).Margin(0, 16, 0, 4));
-            var updates = new CheckBox { Content = "Check for a new " + AppInfo.Name + " version when it starts", IsChecked = Settings.CheckForUpdates };
+            var updates = new CheckBox { Content = "Update " + AppInfo.Name + " by itself", IsChecked = Settings.CheckForUpdates };
             updates.Click += (s, e) => Settings.CheckForUpdates = updates.IsChecked == true;
             root.Children.Add(updates);
-            root.Children.Add(Ui.Subtle("Only asks GitHub for the latest version number. The engine that shows web pages is kept up to date by Windows.", 12)
+            root.Children.Add(Ui.Subtle("Once a day it asks GitHub for a new version. A new one is downloaded quietly, checked, and installed when you close " +
+                AppInfo.Name + "; your tabs are there when you open it again. The engine that shows web pages is kept up to date by Windows.", 12)
                 .Margin(27, 0, 0, 0));
 
             root.Children.Add(Ui.Divider().Margin(0, 18, 0, 0));
@@ -266,85 +267,12 @@ namespace Kudubrowse.Views
         }
     }
 
+    /// <summary>Opens "About KUDUBROWSE" (one window with everything about the browser).</summary>
     public static class About
     {
-        public static Window Build(Window owner)
-        {
-            var header = Ui.Row(LogoTile.Create(64), Ui.Column(Ui.Text(AppInfo.Name, 20, bold: true), Ui.Subtle("Version " + AppInfo.VersionText + " · A private everyday web browser", 12.5))
-                .Margin(16, 0, 0, 0));
-            ((FrameworkElement)header.Children[1]).VerticalAlignment = VerticalAlignment.Center;
+        public static Window Build(Window owner) => new AboutWindow(owner as MainWindow ?? MainWindow.LastActive, owner);
 
-            var rows = new StackPanel { Margin = new Thickness(0, 18, 0, 0) };
-            void Row(string label, UIElement value)
-            {
-                var g = Ui.Columns(Ui.Px(120), Ui.Star());
-                g.Children.Add(Ui.Subtle(label, 12.5, false).At(0, 0));
-                g.Children.Add(value.At(0, 1));
-                rows.Children.Add(new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 7, 0, 7), Child = g }.Res(Border.BorderBrushProperty, "BorderBrush"));
-            }
-            var madeBy = Ui.Text("Azeem, with Claude and ", 12.5);
-            var heart = new Run("♥");
-            heart.SetResourceReference(TextElement.ForegroundProperty, "Accent");
-            madeBy.Inlines.Add(heart);
-            Row("Made by", madeBy);
-            Row("Licence", Ui.Row(Ui.Text("MIT · free and open source  ", 12.5), Ui.Link("View", (s, e) => OpenLocal("LICENSE.txt"))));
-            Row("Source code", Ui.Link("github.com/" + AppInfo.RepoOwner + "/" + AppInfo.RepoName, (s, e) => AppInfo.OpenUrl(AppInfo.RepoUrl)));
-            var web = Web.RuntimeVersion;
-            Row("Web engine", Ui.Text(web != null ? "Microsoft Edge WebView2 " + web + " (kept up to date by Windows)" : "Microsoft Edge WebView2 isn't installed", 12.5, wrap: true));
-            Row("Third-party", Ui.Link("Third-party notices", (s, e) => OpenLocal("THIRD-PARTY-NOTICES.txt")));
-            rows.Children.Add(Ui.Divider());
-
-            var content = Ui.Column(header, rows,
-                Ui.Subtle(AppInfo.Name + " has no account and collects nothing about you. Your tabs, history and site data stay in your AppData folder.", 11.5)
-                    .Margin(0, 14, 0, 0));
-
-            Window window = null;
-            var updates = Ui.Button("Check for updates");
-            var close = Ui.Button("Close", null, "PrimaryButton");
-            close.IsCancel = true;
-            close.IsDefault = true;
-            var features = Ui.Button("What it can do");
-            features.ToolTip = "What makes " + AppInfo.Name + " different, and its best everyday features";
-            window = Dialogs.Dialog(owner, "About " + AppInfo.Name, content, 580, features, updates, close);
-            close.Click += (s, e) => window.Close();
-            features.Click += (s, e) =>
-            {
-                window.Close();
-                FeaturesWindow.Show(owner as MainWindow ?? MainWindow.LastActive);
-            };
-            updates.Click += async (s, e) =>
-            {
-                updates.IsEnabled = false;
-                try
-                {
-                    var info = await UpdateChecker.CheckAsync();
-                    if (info == null) Dialogs.Info(window, "Couldn't find any published version yet.");
-                    else if (info.IsNewer)
-                    {
-                        if (Dialogs.Confirm(window, $"{AppInfo.Name} {info.Latest.ToString(3)} is available. Open the download page?")) AppInfo.OpenUrl(info.Url);
-                    }
-                    else Dialogs.Info(window, "You have the latest version.");
-                }
-                catch
-                {
-                    Dialogs.Error(window, "Couldn't check for updates. Check your internet connection and try again.");
-                }
-                finally
-                {
-                    updates.IsEnabled = true;
-                }
-            };
-            return window;
-        }
-
-        public static void Show(Window owner) => Build(owner).ShowDialog();
-
-        private static void OpenLocal(string name)
-        {
-            var path = Path.Combine(Path.GetDirectoryName(AppInfo.ExePath) ?? string.Empty, name);
-            if (File.Exists(path)) AppInfo.OpenFile(path);
-            else AppInfo.OpenUrl(AppInfo.RepoUrl);
-        }
+        public static void Show(Window owner) => AboutWindow.Show(owner as MainWindow ?? MainWindow.LastActive, owner);
     }
 
     /// <summary>Shown the first time: bring things over from Chrome, choose a search engine, make it the default browser.</summary>

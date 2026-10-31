@@ -34,7 +34,7 @@
 - **Reading mode** (F9): just the article as clean text, in light, sepia or dark, at the text size you like.
 - **A picture of the whole page**, not just the part on screen (Ctrl+Shift+S), and **saving a page as PDF**.
 - **Private windows** (Ctrl+Shift+N): no history is kept, and sites' cookies are forgotten when the window closes.
-- **A download manager** (Ctrl+J):
+- **A download manager** (Ctrl+J). When a download starts, a small note under the downloads button says so; click it to see your downloads.
   - **Big files come faster**: files over 20 MB are fetched in up to six pieces at the same time when the site allows it, with your login for that site, and get the same "from the internet" mark and virus check as other downloads.
   - **Pause and carry on**, even after closing the browser or restarting the PC; **try again** when a download stops part way, from where it stopped when the site allows it. Dropped connections are tried again by themselves.
   - **The list is kept** for next time (not for private windows), with the speed and the time left while files arrive.
@@ -42,7 +42,8 @@
   - Files that can run programs ask before opening.
 - **Clear a site's cookies and data** from the shield button, or the history and every room's site data from Settings.
 - **Default browser**: can be chosen in Windows' Default apps, and links clicked in other apps open as a new tab in the browser that's already open.
-- **What KUDUBROWSE can do** (in the menu and the About window) lists all of this, with a "Try it" button for each.
+- **About KUDUBROWSE** (in the menu) has everything in one place: who made it, its version and updates, and all of the above with a "Try it" button for each.
+- **Updates itself**: once a day it looks for a new version, downloads it quietly, checks it against GitHub's checksum, and installs it when you close the browser; the next time you open it, it says what it was updated to. It can be switched off in Settings. (A copy run from the portable zip isn't changed; it just says when a new version is out.)
 - Zoom, print, full screen (F11), and light and dark looks that follow Windows.
 
 ## Download
@@ -62,7 +63,7 @@ KUDUBROWSE itself collects nothing and has no account. Apart from the sites you 
 - the sites you download big files from, to fetch them in pieces (with only that site's own cookies);
 - Pwned Passwords, only when you press *Check for leaks* (5 characters of each scrambled password are sent);
 - the search engine you chose, when you search from the address bar;
-- GitHub, to check for a newer version (can be turned off in Settings).
+- GitHub, once a day, to look for a newer version and download it (can be turned off in Settings).
 
 ## Build from source
 

@@ -136,6 +136,20 @@ namespace Kudubrowse.Core
             set => SetBool("RestoreTabs", value);
         }
     
+        /// <summary>A checked installer of a newer version, ready to install when the browser closes ("version|file|sha256").</summary>
+        public static string UpdateReady
+        {
+            get => Get("UpdateReady", string.Empty);
+            set => Set("UpdateReady", value);
+        }
+
+        /// <summary>The version that ran last time (to say "Updated to ..." once after an update).</summary>
+        public static string LastRunVersion
+        {
+            get => Get("LastRunVersion", string.Empty);
+            set => Set("LastRunVersion", value);
+        }
+
         /// <summary>Where downloads go (empty: Windows' Downloads folder).</summary>
         public static string DownloadFolder
         {

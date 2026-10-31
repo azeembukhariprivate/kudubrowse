@@ -48,7 +48,7 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    side-by-side pages (`_pages` gets 3 columns and a GridSplitter; clicking into a half makes it current), reading mode
    (`Assets/Readability.js` 0.6.0, Apache-2.0, embedded; `Views/ReadingScript.cs` shows it in a closed shadow root over
    the page and strips anything that could run), whole-page screenshot (DevTools `Page.captureScreenshot`) and PDF
-   (`PrintToPdfAsync`), "What KUDUBROWSE can do" (`Views/FeaturesWindow.cs`, menu and About), installer checks
+   (`PrintToPdfAsync`), "What KUDUBROWSE can do" (now part of About, `Views/AboutWindow.cs`), installer checks
    (WebView2 present; uninstalling asks before removing the person's data; CI installs and uninstalls).
    Released as 1.0.0 (README with the download button, docs/logo*.png from docs/logo.svg).
 1.1: download manager. `Core/FastDownloader.cs` (the browser's own downloader: up to 6 pieces for files of 20 MB+, If-Range
@@ -58,6 +58,13 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    size -> cancel the engine's and fetch it ourselves; otherwise the engine (pause/resume via its operation). Own downloads
    get the mark and virus check through `Views/AttachmentServices.cs` (IAttachmentExecute, else Zone.Identifier).
    Cookies come from an open tab in the download's room or `BrowserRooms.Hidden`. Tests use `Views/TestServer.cs`.
+1.2: a note under the downloads button when a download starts (`MainWindow.Notes.cs`, `Downloads.Started`); About
+   KUDUBROWSE is one window (`AboutWindow.cs`: credit, licence, updates, features with "Try it"); updating by itself
+   (`Core/AutoUpdate.cs` reads the latest release and takes only "KUDUBROWSE-x.y.z-setup.exe" from the app's own
+   Releases page with GitHub's sha256 digest; `Views/Updater.cs` checks 20 s after start and daily, downloads to
+   %LocalAppData%\KUDUBROWSE\Update, and after the last window closes runs the installer /VERYSILENT (installed copies
+   only, found through the Inno uninstall key); the next start shows "Updated to ..."; Settings.CheckForUpdates switches
+   it off).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

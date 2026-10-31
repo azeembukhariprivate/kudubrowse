@@ -29,7 +29,7 @@ namespace Kudubrowse.Views
         private readonly Button _back, _forward, _reload, _newTabButton, _shield;
         private readonly TextBlock _shieldCount = new TextBlock { FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly Glyph _shieldIcon = Ui.Icon("IconShield", 16);
-        private Button _downloads;
+        private Button _downloads, _menuButton;
         private DispatcherTimer _sleepTimer;
         private readonly Grid _chrome;
         private readonly DispatcherTimer _saveTimer;
@@ -62,6 +62,7 @@ namespace Kudubrowse.Views
                 else Current?.Reload();
             });
             var menu = ToolButton("IconMore", "Menu", null);
+            _menuButton = menu;
             _shield = ToolButton(null, "Ads and trackers blocked on this page", null);
             _shield.Content = Ui.Row(_shieldIcon, _shieldCount);
             _shield.Width = double.NaN;
@@ -137,6 +138,10 @@ namespace Kudubrowse.Views
             Downloads.Changed += OnDownloadsChanged;
             Closed += (s, e) => Downloads.Changed -= OnDownloadsChanged;
             OnDownloadsChanged(); // downloads paused last time show the button straight away
+            Action<DownloadItem, MainWindow> started = (item, from) => { if (from == this || (from == null && this == LastActive)) ShowDownloadNote(item); };
+            Downloads.Started += started;
+            Closed += (s, e) => Downloads.Started -= started;
+            WatchNotes();
             var toolbar = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Auto, Ui.Auto, Ui.Auto);
             toolbar.Children.Add(_back.At(0, 0));
             toolbar.Children.Add(_forward.At(0, 1));
@@ -637,7 +642,6 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Bring bookmarks and history from Chrome...", () => new ImportWindow(this).ShowDialog()));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Settings", () => new SettingsWindow(this).ShowDialog()));
-            menu.Items.Add(Item("What " + AppInfo.Name + " can do", () => FeaturesWindow.Show(this)));
             menu.Items.Add(Item("About " + AppInfo.Name, () => About.Show(this)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Close window", Close));

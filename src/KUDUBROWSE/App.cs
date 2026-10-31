@@ -67,8 +67,15 @@ namespace Kudubrowse
                 // Keep Windows' note of where the browser is up to date (it may have been moved), then say hello once.
                 System.Threading.Tasks.Task.Run(() => ShellIntegration.Register());
                 if (!Settings.WelcomeShown) main.Dispatcher.BeginInvoke(new Action(() => WelcomeWindow.ShowOnce(main)), DispatcherPriority.ApplicationIdle);
+                // Updating by itself: "Updated to ..." once after an update, and the daily look for a new version.
+                var updated = Updater.UpdatedTo();
+                if (updated != null) main.Dispatcher.BeginInvoke(new Action(() => main.ShowUpdatedNote(updated)), DispatcherPriority.ApplicationIdle);
+                Updater.Start();
             };
-            return Run();
+            var code = Run();
+            // The browser has closed: a new version waiting is installed now, quietly.
+            Updater.InstallIfReady();
+            return code;
         }
 
         /// <summary>An address (or a request for a window) handed over by a second start of the browser.</summary>

@@ -310,6 +310,9 @@ namespace Kudubrowse.Views
 
         public static event Action Changed;
 
+        /// <summary>A download started from a page in this window (the window shows a short note about it).</summary>
+        public static event Action<DownloadItem, MainWindow> Started;
+
         /// <summary>Why the last download was fetched the way it was (shown by the self-test).</summary>
         public static string LastChoice { get; private set; }
 
@@ -404,13 +407,13 @@ namespace Kudubrowse.Views
                         LastChoice = "the browser itself";
                         e.Cancel = true;
                         var own = new DownloadItem(record);
-                        Add(own);
+                        Add(own, Window.GetWindow(tab.View) as MainWindow);
                         own.RunOwn();
                         return;
                     }
                 }
                 e.ResultFilePath = path;
-                Add(new DownloadItem(record, op));
+                Add(new DownloadItem(record, op), Window.GetWindow(tab.View) as MainWindow);
             }
             finally
             {
@@ -418,8 +421,9 @@ namespace Kudubrowse.Views
             }
         }
 
-        private static void Add(DownloadItem item)
+        private static void Add(DownloadItem item, MainWindow from)
         {
+            Started?.Invoke(item, from);
             Items.Insert(0, item);
             SaveSoon();
             Tell();
