@@ -124,6 +124,9 @@ namespace Kudubrowse.Core
             if (_list.Count > Max) _list.RemoveAt(_list.Count - 1);
         }
 
+        /// <summary>Takes one closed tab off the list (it's being opened again).</summary>
+        public bool Take(SavedTab tab) => _list.Remove(tab);
+
         public SavedTab TakeLatest()
         {
             if (_list.Count == 0) return null;

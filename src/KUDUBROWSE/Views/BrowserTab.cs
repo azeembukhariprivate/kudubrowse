@@ -130,6 +130,9 @@ namespace Kudubrowse.Views
         public string Title { get; private set; }
         public bool IsLoading { get; private set; }
         public bool IsActive { get; private set; }
+        /// <summary>The site's little picture shown on the tab, or null.</summary>
+        public System.Windows.Media.ImageSource Icon => _icon.Source;
+
         public bool IsBlank => string.IsNullOrEmpty(Url) || Url == "about:blank";
         /// <summary>The host of the page shown (or being opened).</summary>
         public string PageHost { get; private set; } = string.Empty;

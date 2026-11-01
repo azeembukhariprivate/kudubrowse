@@ -69,6 +69,10 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    "muted"; "Always mute <site>" in the tab menu, `Settings.MutedSites`, applied at SourceChanged; the self-test turns
    off the autoplay rule with `Web.ExtraArguments` to play a test tone); tabs down the side (`Settings.TabsOnSide`,
    `MainWindow.PlaceTabs`: the same tab headers move into `_side`, a scrolling list left of the pages; row 0 hides).
+1.4: find any tab (`Views/TabFinder.cs`, Ctrl+Shift+A, the menu and the tab menu: a borderless window over the browser
+   listing the tabs of every window of the same kind (private with private) and the recently closed ones, filtered and
+   ranked by `Core/TabSearch.cs`; Enter goes to the tab and brings its window forward, or reopens a closed one and
+   takes it off `ClosedTabs` with `Take`).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

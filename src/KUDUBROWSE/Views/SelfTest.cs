@@ -640,6 +640,56 @@ namespace Kudubrowse.Views
                     Expect(!main.TabsShownOnSide, "back along the top");
                     return Task.CompletedTask;
                 });
+                await Step("Find any tab", async () =>
+                {
+                    string Url(string name, string title) => new Uri(Page(name, title, "<p>A page for finding tabs.</p>")).AbsoluteUri;
+                    var a = main.NewTab(Url("find-weather.html", "Weather in Kochi"), select: true);
+                    var b = main.NewTab(Url("find-mail.html", "Inbox - Mail"), select: true);
+                    var c = main.NewTab(Url("find-recipe.html", "Fish curry recipe"), select: true);
+                    await Wait(() => a.Title == "Weather in Kochi" && b.Title == "Inbox - Mail" && c.Title == "Fish curry recipe", 30, "the pages' titles");
+                    main.CloseTab(c);
+                    var other = new MainWindow();
+                    OffScreen(other);
+                    other.Show();
+                    var d = other.NewTab(Url("find-metro.html", "Kochi Metro timetable"), select: true);
+                    await Wait(() => d.Title == "Kochi Metro timetable", 30, "the other window's page");
+                    main.Select(b);
+                    main.Activate();
+                    Pump();
+
+                    var finder = new TabFinder(main) { StayOpen = true };
+                    finder.Show();
+                    Pump();
+                    Expect(finder.Results.Count >= 4, "every tab with no words typed, got " + finder.Results.Count);
+                    finder.Query = "kochi";
+                    Pump();
+                    Expect(finder.Results.Count == 2 && finder.Results[0].Tab == d && finder.Results[1].Tab == a,
+                        "the two Kochi tabs, the one whose title starts with it first: " + string.Join(", ", finder.Results.Select(r => r.Title)));
+                    Screenshots.One(finder, "Find a tab");
+                    finder.Query = "curry";
+                    Pump();
+                    Expect(finder.Results.Count == 1 && finder.Results[0].Closed != null, "a recently closed tab");
+                    finder.Query = "nothing like this";
+                    Pump();
+                    Expect(finder.Results.Count == 0, "nothing found");
+                    finder.Query = "metro";
+                    Pump();
+                    finder.OpenSelected();
+                    Pump();
+                    Expect(other.Current == d, "went to the tab in the other window");
+
+                    finder = new TabFinder(main) { StayOpen = true };
+                    finder.Show();
+                    finder.Query = "curry";
+                    Pump();
+                    finder.OpenSelected();
+                    await Wait(() => main.Tabs.Any(t => t.Title == "Fish curry recipe"), 30, "the closed tab opened again");
+                    Expect(!MainWindow.RecentlyClosed.Items.Any(t => (t.Url ?? "").EndsWith("find-recipe.html")), "and taken off the closed list");
+
+                    foreach (var t in main.Tabs.Where(t => (t.Url ?? "").Contains("find-")).ToList()) main.CloseTab(t);
+                    other.Close();
+                    Pump();
+                });
                 await Step("Tab groups and two pages side by side", async () =>
                 {
                     var keep = main.Tabs.ToList();

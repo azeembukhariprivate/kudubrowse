@@ -451,6 +451,7 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Close tab", () => CloseTab(tab), "Ctrl+W"));
             menu.Items.Add(Item("Close other tabs", () => CloseOtherTabs(tab)));
             menu.Items.Add(Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T"));
+            menu.Items.Add(Item("Find a tab...", () => TabFinder.Show(this), "Ctrl+Shift+A"));
         }
 
         private static MenuItem Item(string text, Action act, string keys = null)
@@ -634,6 +635,7 @@ namespace Kudubrowse.Views
             var reopen = Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T");
             reopen.IsEnabled = RecentlyClosed.Count > 0;
             menu.Items.Add(reopen);
+            menu.Items.Add(Item("Find a tab...", () => TabFinder.Show(this), "Ctrl+Shift+A"));
             menu.Items.Add(new Separator());
             var zoom = new MenuItem { Header = $"Zoom ({Math.Round((Current?.Zoom ?? 1) * 100)}%)" };
             zoom.Items.Add(Item("Bigger", () => ZoomBy(1.1), "Ctrl++"));
@@ -721,6 +723,7 @@ namespace Kudubrowse.Views
             var alt = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
             var handled = true;
             if (ctrl && shift && key == Key.T) ReopenClosedTab();
+            else if (ctrl && shift && key == Key.A) TabFinder.Show(this);
             else if (ctrl && key == Key.T) NewTab(select: true);
             else if (ctrl && shift && key == Key.N) NewPrivateWindow();
             else if (ctrl && key == Key.N) NewWindow();

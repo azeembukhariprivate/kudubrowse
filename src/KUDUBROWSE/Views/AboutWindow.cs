@@ -58,6 +58,8 @@ namespace Kudubrowse.Views
             new Feature("IconStar", "Bookmarks and the bookmarks bar", "Keep the pages you like one click away.", "Ctrl+D, Ctrl+Shift+O", m => LibraryWindow.Show(m, true)),
             new Feature("IconHistory", "History", "Find a page you saw before; it's kept for 90 days.", "Ctrl+H", m => LibraryWindow.Show(m, false)),
             new Feature("IconSearch", "Suggestions as you type", "The address bar suggests pages from your bookmarks and history.", "Ctrl+L", m => m.FocusAddress()),
+            new Feature("IconSearch", "Find any tab", "Type a few words of a tab's title or address to find it among the tabs in every window and the ones you closed lately.", "Ctrl+Shift+A",
+                m => TabFinder.Show(m)),
             new Feature("IconList", "Tabs down the side", "List your tabs down the left of the window: their names have room, and the list scrolls when there are many.", "Menu › Tabs down the side",
                 m => MainWindow.PlaceTabs(!Settings.TabsOnSide)),
             new Feature("IconList", "Tab groups", "Put tabs in a named, coloured group, and fold the group away when you don't need it.", "Right-click a tab › Add to group",

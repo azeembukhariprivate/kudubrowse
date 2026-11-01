@@ -27,6 +27,7 @@
 ## Everyday features
 
 - **Tabs**: open, close and reopen closed tabs (Ctrl+Shift+T), switch with Ctrl+Tab or Ctrl+1 to Ctrl+9. The tabs you had open come back next time and load when you first click them, so starting stays quick.
+- **Find any tab**: press Ctrl+Shift+A and type a few words of a tab's title or address to find it among the tabs in every window and the ones you closed lately; Enter goes straight to it.
 - **Tabs down the side**: the tabs can be listed down the left of the window instead of along the top (in the menu, or Settings), handy with many tabs.
 - **Tab groups**: put tabs in a named, coloured group and fold it away to just its name (right-click a tab).
 - **Two pages side by side** in one window, with a line between them you can drag (right-click a tab).

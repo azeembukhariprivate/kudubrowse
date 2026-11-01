@@ -18,6 +18,7 @@ namespace Kudubrowse.Tests
             Test("Open tabs are saved and come back in order, with the selected one", TabsComeBack);
             Test("Only ordinary web pages and files are reopened", OnlySafeTabsReopen);
             Test("Closed tabs can be reopened newest first, up to a limit", ClosedTabsReopen);
+            Test("Any tab can be found by a few words of its title or address", TabsAreFound);
             BlockingTests.Run(Test);
             LibraryTests.Run(Test);
             PasswordTests.Run(Test);
@@ -142,6 +143,32 @@ namespace Kudubrowse.Tests
             Equal(null, closed.TakeLatest(), "none left");
             for (var i = 0; i < 40; i++) closed.Add(new SavedTab { Url = "https://x.org/" + i });
             Equal(ClosedTabs.Max, closed.Count, "limited");
+            var some = closed.Items[3];
+            Equal(true, closed.Take(some), "one taken off the list");
+            Equal(false, closed.Items.Contains(some), "gone");
+            Equal(false, closed.Take(some), "only once");
+        }
+
+        private static void TabsAreFound()
+        {
+            var tabs = new[]
+            {
+                ("Weather in Kochi - forecast", "https://weather.example/kochi"),
+                ("Inbox (3) - Mail", "https://mail.example/inbox"),
+                ("Kochi Metro timetable", "https://metro.example/"),
+                ("Recipes: kochi style fish curry", "https://food.example/curry"),
+                ("News", "https://news.example/kochi-rain")
+            };
+            var found = TabSearch.Find(tabs, "kochi", t => t.Item1, t => t.Item2).Select(t => t.Item1).ToList();
+            Equal("Kochi Metro timetable", found[0], "a title starting with the word comes first");
+            Equal("Weather in Kochi - forecast", found[1], "then a word in the title");
+            Equal("Recipes: kochi style fish curry", found[2], "in the order they were");
+            Equal("News", found[3], "the address counts too, last");
+            Equal(4, found.Count, "all four with the word (not the mail)");
+            Equal(1, TabSearch.Find(tabs, "MAIL inbox", t => t.Item1, t => t.Item2).Count, "every word, any case");
+            Equal(0, TabSearch.Find(tabs, "kochi zzz", t => t.Item1, t => t.Item2).Count, "a word nowhere: nothing");
+            Equal(5, TabSearch.Find(tabs, "  ", t => t.Item1, t => t.Item2).Count, "no words: everything, as it was");
+            Equal(-1, TabSearch.Score("x", null, null), "no title or address");
         }
     }
 }
