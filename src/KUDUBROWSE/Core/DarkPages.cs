@@ -58,12 +58,16 @@ namespace Kudubrowse.Core
   if (light.some(d => h === d || h.endsWith('.' + d))) return;
   const css = 'html { filter: invert(0.9) hue-rotate(180deg) !important; background: #fff !important; }' +
     'img, video, picture, canvas, iframe, embed, object, svg image, [style*=""background-image""] { filter: invert(1) hue-rotate(180deg) !important; }';
+  // As a page starts there may be nothing to put the style in yet: then it goes in as soon as there is.
   const add = () => {
-    if (document.getElementById('kudu-dark')) return;
+    if (document.getElementById('kudu-dark')) return true;
+    const root = document.head || document.documentElement;
+    if (!root) return false;
     const s = document.createElement('style');
     s.id = 'kudu-dark';
     s.textContent = css;
-    (document.head || document.documentElement).appendChild(s);
+    root.appendChild(s);
+    return true;
   };
   // A page that's dark already is left as it is (its own colours, read with the darkening switched off for a moment).
   const check = () => {
@@ -79,7 +83,10 @@ namespace Kudubrowse.Core
     s.disabled = false;
     if (l < 0.4) s.remove();
   };
-  add();
+  if (!add()) {
+    const watch = new MutationObserver(() => { if (add()) watch.disconnect(); });
+    watch.observe(document, { childList: true, subtree: true });
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { add(); check(); });
   else check();
   window.addEventListener('load', check);
