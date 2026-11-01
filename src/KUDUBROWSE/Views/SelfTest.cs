@@ -669,6 +669,18 @@ namespace Kudubrowse.Views
                     finder.Query = "curry";
                     Pump();
                     Expect(finder.Results.Count == 1 && finder.Results[0].Closed != null, "a recently closed tab");
+                    // Bookmarks and history are searched too, once something is typed.
+                    var mark = BrowserLibrary.Bookmarks.Add("Backwater boat tours", "https://boats.kudutest.invalid/tours");
+                    BrowserLibrary.History.Add("https://ferry.kudutest.invalid/timetable", "Backwater ferry timetable");
+                    finder.Query = "backwater";
+                    Pump();
+                    Expect(finder.Results.Count == 2 && finder.Results.Any(r => r.Library == "Bookmarks") && finder.Results.Any(r => r.Library == "History"),
+                        "a bookmark and a page from history: " + string.Join(", ", finder.Results.Select(r => r.Library + " " + r.Title)));
+                    Screenshots.One(finder, "Find a tab: bookmarks and history");
+                    finder.Query = "";
+                    Pump();
+                    Expect(finder.Results.All(r => r.Library == null), "not before anything is typed");
+                    BrowserLibrary.Bookmarks.Remove(mark);
                     finder.Query = "nothing like this";
                     Pump();
                     Expect(finder.Results.Count == 0, "nothing found");

@@ -11,7 +11,8 @@ namespace Kudubrowse.Views
 {
     /// <summary>
     /// Find any tab (Ctrl+Shift+A): type a few words of a tab's title or address to find it among the tabs open in every
-    /// window and the recently closed ones, then Enter goes to it (or opens a closed one again).
+    /// window and the recently closed ones (and, once something is typed, the bookmarks and history), then Enter goes to it
+    /// (or opens a closed one, a bookmark or a page from history in a new tab).
     /// </summary>
     public sealed class TabFinder : Window
     {
@@ -21,6 +22,8 @@ namespace Kudubrowse.Views
             public BrowserTab Tab { get; set; }
             public MainWindow Window { get; set; }
             public SavedTab Closed { get; set; }
+            /// <summary>"Bookmarks" or "History" for a page that isn't open (opened in a new tab).</summary>
+            public string Library { get; set; }
             public string Title { get; set; }
             public string Url { get; set; }
         }
@@ -30,6 +33,7 @@ namespace Kudubrowse.Views
         private readonly ListBox _list = new ListBox { MaxHeight = 430, BorderThickness = new Thickness(0) };
         private readonly TextBlock _empty = Ui.Subtle("No tab has those words.", 12.5, true);
         private readonly List<Hit> _results = new List<Hit>();
+        private const int MaxLibrary = 6;
         private bool _closing;
 
         /// <summary>For the self-test: stay open when another window becomes active.</summary>
@@ -68,7 +72,7 @@ namespace Kudubrowse.Views
                 if (e.ChangedButton == MouseButton.Left && _list.SelectedItem is ListBoxItem) OpenSelected();
             };
 
-            var hint = Ui.Subtle("Type a few words of a tab's title or address · ↑↓ to choose · Enter to go to it · Esc to close", 11.5, true);
+            var hint = Ui.Subtle("Type a few words of a tab's title or address (bookmarks and history are searched too) · ↑↓ to choose · Enter to go there · Esc to close", 11.5, true);
             var root = Ui.Column(
                 Ui.Row(Ui.Icon("IconSearch", 16).Margin(0, 0, 10, 0), Ui.Heading("Find a tab", 14)),
                 _search.Margin(0, 10, 0, 6),
@@ -138,11 +142,25 @@ namespace Kudubrowse.Views
         {
             _results.Clear();
             _results.AddRange(TabSearch.Find(Everything(), _search.Text, h => h.Title, h => h.Url));
+            if (!string.IsNullOrWhiteSpace(_search.Text))
+            {
+                // Bookmarks and pages from history, when something is typed: a few of each, not ones already listed.
+                var shown = new HashSet<string>(_results.Select(r => r.Url), StringComparer.OrdinalIgnoreCase);
+                var marks = BrowserLibrary.Bookmarks.AllLinks().Where(b => !string.IsNullOrEmpty(b.Url))
+                    .Select(b => new Hit { Library = "Bookmarks", Title = string.IsNullOrEmpty(b.Title) ? b.Url : b.Title, Url = b.Url });
+                foreach (var h in TabSearch.Find(marks, _search.Text, h => h.Title, h => h.Url).Where(h => shown.Add(h.Url)).Take(MaxLibrary)) _results.Add(h);
+                if (!_owner.IsPrivate)
+                {
+                    var visits = BrowserLibrary.History.All.OrderByDescending(v => v.Visits).ThenByDescending(v => v.LastVisit)
+                        .Select(v => new Hit { Library = "History", Title = string.IsNullOrEmpty(v.Title) ? v.Url : v.Title, Url = v.Url });
+                    foreach (var h in TabSearch.Find(visits, _search.Text, h => h.Title, h => h.Url).Where(h => shown.Add(h.Url)).Take(MaxLibrary)) _results.Add(h);
+                }
+            }
             _list.Items.Clear();
             var heading = (string)null;
             foreach (var hit in _results)
             {
-                var section = hit.Closed != null ? "Recently closed" : "Open tabs";
+                var section = hit.Library ?? (hit.Closed != null ? "Recently closed" : "Open tabs");
                 if (section != heading)
                 {
                     heading = section;
@@ -165,7 +183,7 @@ namespace Kudubrowse.Views
             var grid = Ui.Columns(Ui.Auto, Ui.Star());
             UIElement icon = hit.Tab?.Icon != null
                 ? new Image { Source = hit.Tab.Icon, Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center }
-                : (UIElement)Ui.Icon(hit.Closed != null ? "IconHistory" : "IconFile", 16);
+                : (UIElement)Ui.Icon(hit.Library == "Bookmarks" ? "IconStar" : hit.Closed != null || hit.Library != null ? "IconHistory" : "IconFile", 16);
             grid.Children.Add(((FrameworkElement)icon).Margin(0, 0, 10, 0).At(0, 0));
             var notes = new List<string>();
             var host = Host(hit.Url);
@@ -225,6 +243,10 @@ namespace Kudubrowse.Views
             else if (hit.Closed != null && MainWindow.RecentlyClosed.Take(hit.Closed))
             {
                 _owner.NewTab(hit.Closed.Url, true, _owner.Current, hit.Closed.Room);
+            }
+            else if (hit.Library != null && Session.IsSafeToReopen(hit.Url))
+            {
+                _owner.NewTab(hit.Url, true, _owner.Current);
             }
         }
 

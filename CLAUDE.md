@@ -72,7 +72,8 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
 1.4: find any tab (`Views/TabFinder.cs`, Ctrl+Shift+A, the menu and the tab menu: a borderless window over the browser
    listing the tabs of every window of the same kind (private with private) and the recently closed ones, filtered and
    ranked by `Core/TabSearch.cs`; Enter goes to the tab and brings its window forward, or reopens a closed one and
-   takes it off `ClosedTabs` with `Take`).
+   takes it off `ClosedTabs` with `Take`). 1.4.1: once something is typed, a few bookmarks and pages from history too
+   (history not in private windows), opened in a new tab.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 
