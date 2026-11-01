@@ -42,6 +42,22 @@ namespace Kudubrowse.Views
             root.Children.Add(onSide);
             root.Children.Add(Ui.Subtle("Easier with many tabs: their names have room, and the list scrolls.", 12).Margin(27, 0, 0, 0));
 
+            root.Children.Add(Ui.Heading("Pages", 14).Margin(0, 16, 0, 8));
+            var looks = new WrapPanel();
+            foreach (var (mode, text, tip) in new[]
+                     {
+                         (DarkMode.Off, "As the site shows them", "Each site in its own colours"),
+                         (DarkMode.WhenSiteHasIt, "Dark when the site has a dark look", "Sites that have a dark look of their own show it"),
+                         (DarkMode.Always, "Always dark", "Sites with a dark look show it, and light pages are made dark")
+                     })
+            {
+                var chip = new RadioButton { Content = text, ToolTip = tip, GroupName = "dark", IsChecked = Settings.DarkPages == mode }.Styled("ChipRadio");
+                chip.Checked += (s, e) => MainWindow.SetDarkPages(mode);
+                looks.Children.Add(chip);
+            }
+            root.Children.Add(looks);
+            root.Children.Add(Ui.Subtle("With \"Always dark\", pictures and videos keep their own colours, pages that are dark already are left as they are, and a site can be left light: right-click its tab › Don't darken.", 12).Margin(0, 2, 0, 0));
+
             root.Children.Add(Ui.Heading("Search", 14).Margin(0, 16, 0, 4));
             root.Children.Add(Ui.Subtle("Words typed in the address bar are searched for with:", 12.5).Margin(0, 0, 0, 8));
             var engines = new WrapPanel();

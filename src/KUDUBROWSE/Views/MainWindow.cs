@@ -445,6 +445,11 @@ namespace Kudubrowse.Views
                 var always = Settings.MutedSites.Contains(site);
                 menu.Items.Add(Item(always ? "Stop always muting " + site : "Always mute " + site, () => AlwaysMute(site, !always)));
             }
+            if (site != null && Settings.DarkPages == DarkMode.Always)
+            {
+                var light = Settings.LightSites.Contains(site);
+                menu.Items.Add(Item(light ? "Darken " + site + " again" : "Don't darken " + site, () => DarkenSite(site, light)));
+            }
             menu.Items.Add(GroupMenu(tab));
             if (IsSplit && (tab == Current || tab == _splitPartner))
                 menu.Items.Add(Item("Stop showing side by side", EndSideBySide));
@@ -653,6 +658,10 @@ namespace Kudubrowse.Views
             menu.Items.Add(zoom);
             menu.Items.Add(Item("Print...", Print, "Ctrl+P"));
             menu.Items.Add(Item("Reading mode", async () => await ToggleReadingMode(), "F9"));
+            var dark = Item("Dark pages", () => SetDarkPages(Settings.DarkPages == DarkMode.Always ? DarkMode.Off : DarkMode.Always));
+            dark.IsCheckable = true;
+            dark.IsChecked = Settings.DarkPages == DarkMode.Always;
+            menu.Items.Add(dark);
             menu.Items.Add(Item(IsFloating(Current) ? "Bring the video back" : "Video in a floating window", async () =>
             {
                 if (IsFloating(Current)) BringBack(Current);
@@ -766,6 +775,23 @@ namespace Kudubrowse.Views
             else if (key == Key.Escape && Current?.IsLoading == true && !_address.IsKeyboardFocusWithin) Current.Stop();
             else handled = false;
             if (handled) e.Handled = true;
+        }
+
+        /// <summary>Chooses how pages look; open pages follow at once.</summary>
+        public static void SetDarkPages(DarkMode mode)
+        {
+            Settings.DarkPages = mode;
+            DarkPages.Notify();
+        }
+
+        /// <summary>Takes a site off the "don't darken" list (<paramref name="on"/>) or puts it on; its open pages follow.</summary>
+        public static void DarkenSite(string site, bool on)
+        {
+            var list = Settings.LightSites;
+            if (on) list.Remove(site);
+            else list.Add(site);
+            Settings.LightSites = list;
+            DarkPages.Notify();
         }
 
         /// <summary>Puts a site on the "always mute" list (its open tabs are muted now), or takes it off (they're unmuted).</summary>

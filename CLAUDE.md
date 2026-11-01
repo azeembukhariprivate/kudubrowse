@@ -78,6 +78,11 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    `data-kudu-float` and adds a style showing only it, filling the page; the tab's WebView2 moves into a Topmost
    `FloatingVideo` tool window (Layout and sleeping skip floating tabs); the tab shows a "Bring it back" note; closing the
    small window puts the page back and removes the style; closing the tab or the browser window closes it).
+1.6: dark pages (`Settings.DarkPages`: Off / WhenSiteHasIt / Always; `Core/DarkPages.cs`). Not off: the profile's
+   PreferredColorScheme is Dark, so sites with their own dark look show it. Always: a document-created script (re-added
+   on `DarkPages.Changed`, and run on the page shown now) inverts light pages (`invert(0.9) hue-rotate(180deg)` on html,
+   pictures and videos inverted back), leaves pages whose own background is already dark, and skips sites on
+   `Settings.LightSites` (tab menu "Don't darken <site>"). Menu "Dark pages" toggles Always/Off; Settings has all three.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

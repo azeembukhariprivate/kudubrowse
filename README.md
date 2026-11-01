@@ -27,6 +27,7 @@
 ## Everyday features
 
 - **Tabs**: open, close and reopen closed tabs (Ctrl+Shift+T), switch with Ctrl+Tab or Ctrl+1 to Ctrl+9. The tabs you had open come back next time and load when you first click them, so starting stays quick.
+- **Dark pages**: show websites in dark colours. Sites with a dark look of their own show it, and with "Always dark" light pages are made dark too, while pictures and videos keep their colours; any site can be left light (right-click its tab).
 - **Video in a floating window**: keep watching a video in a small window that stays on top of your other windows (in the menu, or right-click a tab); close it to put the page back in its tab.
 - **Find any tab**: press Ctrl+Shift+A and type a few words of a tab's title or address to find it among the tabs in every window, the ones you closed lately, your bookmarks and your history; Enter goes straight to it.
 - **Tabs down the side**: the tabs can be listed down the left of the window instead of along the top (in the menu, or Settings), handy with many tabs.

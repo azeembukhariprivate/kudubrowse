@@ -702,6 +702,69 @@ namespace Kudubrowse.Views
                     other.Close();
                     Pump();
                 });
+                await Step("Dark pages", async () =>
+                {
+                    var savedMode = Settings.DarkPages;
+                    var savedLight = Settings.LightSites;
+                    var tab = main.NewTab(select: true);
+                    try
+                    {
+                        MainWindow.SetDarkPages(DarkMode.Off);
+                        Settings.LightSites = new List<string>();
+                        Page("light.html", "Light page", "<p>Black words on a white page.</p>");
+                        Page("darkalready.html", "Dark already", "<style>body { background: #111; color: #eee; }</style><p>This page is dark by itself.</p>");
+                        Page("hasdark.html", "Has a dark look", "<style>@media (prefers-color-scheme: dark) { body { background: #000; color: #fff; } }</style><p>A site with a dark look of its own.</p>");
+                        await tab.EnsureView();
+                        var core = tab.View.CoreWebView2;
+                        core.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        async Task Open(string name, string title)
+                        {
+                            main.Go("https://kudutest.example/" + name);
+                            await Wait(() => tab.Title == title && !tab.IsLoading, 20, title);
+                            await Task.Delay(200);
+                        }
+                        Task<string> Filter() => core.ExecuteScriptAsync("getComputedStyle(document.documentElement).filter");
+                        async Task Darkened(bool on, string what) =>
+                            await WaitAsync(async () => (await Filter()).Contains("invert") == on, 10, what);
+
+                        await Open("light.html", "Light page");
+                        await Darkened(false, "as the site shows it");
+                        MainWindow.SetDarkPages(DarkMode.Always);
+                        await Darkened(true, "always dark: the page shown now turns dark at once");
+                        Screenshots.All("Dark pages");
+                        tab.Reload();
+                        await Wait(() => !tab.IsLoading, 20, "reloaded");
+                        await Darkened(true, "and stays dark when it's opened again");
+
+                        await Open("darkalready.html", "Dark already");
+                        await Darkened(false, "a page that's dark already is left as it is");
+
+                        await Open("light.html", "Light page");
+                        await Darkened(true, "dark again");
+                        MainWindow.DarkenSite("kudutest.example", false);
+                        await Darkened(false, "a site on the \"don't darken\" list is left light");
+                        tab.Reload();
+                        await Wait(() => !tab.IsLoading, 20, "reloaded");
+                        await Darkened(false, "and stays light");
+                        MainWindow.DarkenSite("kudutest.example", true);
+                        await Darkened(true, "darkened again");
+
+                        MainWindow.SetDarkPages(DarkMode.WhenSiteHasIt);
+                        await Darkened(false, "only sites with a dark look of their own");
+                        await Open("hasdark.html", "Has a dark look");
+                        Expect(await core.ExecuteScriptAsync("matchMedia('(prefers-color-scheme: dark)').matches") == "true", "the site is asked for its dark look");
+                        Expect(await core.ExecuteScriptAsync("getComputedStyle(document.body).backgroundColor") == "\"rgb(0, 0, 0)\"", "and shows it");
+                        Screenshots.All("A site's own dark look");
+                        MainWindow.SetDarkPages(DarkMode.Off);
+                        await Darkened(false, "off again");
+                    }
+                    finally
+                    {
+                        Settings.LightSites = savedLight;
+                        MainWindow.SetDarkPages(savedMode);
+                        main.CloseTab(tab);
+                    }
+                });
                 await Step("Video in a floating window", async () =>
                 {
                     var plain = main.NewTab(new Uri(Page("novideo.html", "No video", "<p>Just words.</p>")).AbsoluteUri, select: true);

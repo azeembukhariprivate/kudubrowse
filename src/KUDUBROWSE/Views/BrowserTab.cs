@@ -28,7 +28,7 @@ namespace Kudubrowse.Views
         private bool _closed;
         private CoreWebView2Environment _env;
         private string _mainUrl;
-        private string _hidingScriptId, _popupScriptId;
+        private string _hidingScriptId, _popupScriptId, _darkScriptId;
 
         public BrowserTab(string url = null, string title = null, string room = null, bool isPrivate = false)
         {
@@ -336,7 +336,8 @@ namespace Kudubrowse.Views
         public Task EnsureView()
         {
             if (_ready != null) return _ready;
-            View = new WebView2 { DefaultBackgroundColor = System.Drawing.Color.White };
+            // When pages are always dark, an empty page is dark too (no white flash before a page appears).
+            View = new WebView2 { DefaultBackgroundColor = Settings.DarkPages == DarkMode.Always ? System.Drawing.Color.FromArgb(0x20, 0x21, 0x24) : System.Drawing.Color.White };
             // The page needs to be in the window before the engine can start in it.
             ViewCreated?.Invoke(this);
             _ready = Create();
@@ -425,6 +426,8 @@ namespace Kudubrowse.Views
             catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
             await UpdateHidingScript();
             Blocker.Changed += OnBlockerChanged;
+            await UpdateDarkPages(false);
+            DarkPages.Changed += OnDarkPagesChanged;
             core.NavigationCompleted += (s, e) =>
             {
                 // Pages opened are kept in the history (only ordinary web pages).
@@ -484,6 +487,37 @@ namespace Kudubrowse.Views
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
         }
+
+        private void OnDarkPagesChanged() => View?.Dispatcher.BeginInvoke(new Action(async () => await UpdateDarkPages(true)));
+
+        /// <summary>
+        /// Follows the "dark pages" choice: asks sites for their dark look, and darkens light pages from now on (and the
+        /// page shown now when <paramref name="now"/>).
+        /// </summary>
+        private async Task UpdateDarkPages(bool now)
+        {
+            var core = View?.CoreWebView2;
+            if (core == null) return;
+            var mode = Settings.DarkPages;
+            try
+            {
+                core.Profile.PreferredColorScheme = mode == DarkMode.Off ? CoreWebView2PreferredColorScheme.Auto : CoreWebView2PreferredColorScheme.Dark;
+                if (_darkScriptId != null) core.RemoveScriptToExecuteOnDocumentCreated(_darkScriptId);
+                _darkScriptId = null;
+                var script = mode == DarkMode.Always ? DarkPages.Script(Settings.LightSites) : null;
+                if (script != null) _darkScriptId = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+                View.DefaultBackgroundColor = mode == DarkMode.Always ? System.Drawing.Color.FromArgb(0x20, 0x21, 0x24) : System.Drawing.Color.White;
+                if (now)
+                {
+                    await core.ExecuteScriptAsync(DarkPages.UndoScript);
+                    if (script != null) await core.ExecuteScriptAsync(script);
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException || ex is NotImplementedException) { }
+        }
+
+        /// <summary>Pages are always dark and this tab's site isn't on the "don't darken" list.</summary>
+        public bool SiteDarkened => Settings.DarkPages == DarkMode.Always && PageHost.Length > 0 && !DarkPages.IsLightSite(Settings.LightSites, PageHost);
 
         public static string HostOf(string url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https") ? u.Host.ToLowerInvariant() : string.Empty;
@@ -566,6 +600,7 @@ namespace Kudubrowse.Views
         {
             _closed = true;
             Blocker.Changed -= OnBlockerChanged;
+            DarkPages.Changed -= OnDarkPagesChanged;
             try { View?.Dispose(); }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ObjectDisposedException) { }
             View = null;

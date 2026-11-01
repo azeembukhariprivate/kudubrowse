@@ -164,6 +164,20 @@ namespace Kudubrowse.Core
             set => Set("MutedSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
         }
 
+        /// <summary>How pages look: "Off" (as the site shows them), "WhenSiteHasIt" or "Always" (dark).</summary>
+        public static DarkMode DarkPages
+        {
+            get => Core.DarkPages.Parse(Get("DarkPages", "Off"));
+            set => Set("DarkPages", value.ToString());
+        }
+
+        /// <summary>Sites never darkened when pages are always dark (registrable domains).</summary>
+        public static List<string> LightSites
+        {
+            get => Get("LightSites", string.Empty).Split('\n').Where(p => p.Length > 0).ToList();
+            set => Set("LightSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
+        }
+
         /// <summary>Where downloads go (empty: Windows' Downloads folder).</summary>
         public static string DownloadFolder
         {

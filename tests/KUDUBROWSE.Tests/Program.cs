@@ -19,6 +19,7 @@ namespace Kudubrowse.Tests
             Test("Only ordinary web pages and files are reopened", OnlySafeTabsReopen);
             Test("Closed tabs can be reopened newest first, up to a limit", ClosedTabsReopen);
             Test("Any tab can be found by a few words of its title or address", TabsAreFound);
+            Test("Dark pages: the choice, and sites left light", DarkPagesChoices);
             BlockingTests.Run(Test);
             LibraryTests.Run(Test);
             PasswordTests.Run(Test);
@@ -147,6 +148,22 @@ namespace Kudubrowse.Tests
             Equal(true, closed.Take(some), "one taken off the list");
             Equal(false, closed.Items.Contains(some), "gone");
             Equal(false, closed.Take(some), "only once");
+        }
+
+        private static void DarkPagesChoices()
+        {
+            Equal(DarkMode.Always, DarkPages.Parse("always"), "read back");
+            Equal(DarkMode.WhenSiteHasIt, DarkPages.Parse("WhenSiteHasIt"), "read back");
+            Equal(DarkMode.Off, DarkPages.Parse("nonsense"), "anything else: off");
+            Equal(true, DarkPages.Covers("example.com", "www.Example.com"), "a sub-site is covered");
+            Equal(true, DarkPages.Covers("example.com", "example.com"), "the site itself");
+            Equal(false, DarkPages.Covers("example.com", "badexample.com"), "not a name that just ends the same");
+            Equal(false, DarkPages.Covers("example.com", ""), "no site");
+            Equal(true, DarkPages.IsLightSite(new[] { "a.org", "example.com" }, "mail.example.com"), "on the list");
+            var script = DarkPages.Script(new[] { "Example.com", "we\"ird</script>" });
+            Equal(true, script.Contains("const light = [\"example.com\",\"we\\\"ird\\u003c/script\\u003e\"];"), "the list written safely into the script: " + script.Split('\n')[2]);
+            Equal(true, script.Contains("invert(0.9)") && script.Contains("hue-rotate(180deg)"), "light pages turned dark");
+            Equal(true, script.Contains("img, video, picture, canvas"), "pictures and videos kept as they are");
         }
 
         private static void TabsAreFound()
