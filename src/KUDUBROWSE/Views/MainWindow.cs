@@ -220,6 +220,7 @@ namespace Kudubrowse.Views
                     Downloads.Closing();
                 }
                 SaveSession(includeClosing: !IsPrivate && !Open.Any(w => !w.IsPrivate) ? this : null);
+                CloseFloating();
                 foreach (var t in _tabs) t.Close();
             };
             Closed += (s, e) =>
@@ -331,8 +332,9 @@ namespace Kudubrowse.Views
             UpdateSaveBar();
             _newTabPage.Visibility = tab.IsBlank && tab.View == null ? Visibility.Visible : Visibility.Collapsed;
             UpdateToolbar();
+            UpdateFloatingNote();
             if (tab.IsBlank && tab.View == null) FocusNewTabSearch();
-            else tab.View?.Focus();
+            else if (!IsFloating(tab)) tab.View?.Focus();
             ScheduleSave();
         }
 
@@ -341,6 +343,7 @@ namespace Kudubrowse.Views
             var index = _tabs.IndexOf(tab);
             if (index < 0) return;
             if (!IsPrivate) RecentlyClosed.Add(tab.ToSaved());
+            CloseFloating(tab);
             _tabs.RemoveAt(index);
             if (tab == _splitPartner) _splitPartner = null;
             if (tab.View != null) _pages.Children.Remove(tab.View);
@@ -452,6 +455,12 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Close other tabs", () => CloseOtherTabs(tab)));
             menu.Items.Add(Item("Reopen closed tab", ReopenClosedTab, "Ctrl+Shift+T"));
             menu.Items.Add(Item("Find a tab...", () => TabFinder.Show(this), "Ctrl+Shift+A"));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item(IsFloating(tab) ? "Bring the video back" : "Video in a floating window", async () =>
+            {
+                if (IsFloating(tab)) BringBack(tab);
+                else await FloatVideo(tab);
+            }));
         }
 
         private static MenuItem Item(string text, Action act, string keys = null)
@@ -511,7 +520,7 @@ namespace Kudubrowse.Views
             if (!Settings.SleepTabs) return 0;
             var n = 0;
             foreach (var t in _tabs.ToList())
-                if (await t.SleepIfIdle()) n++;
+                if (!IsFloating(t) && await t.SleepIfIdle()) n++;
             return n;
         }
 
@@ -644,6 +653,11 @@ namespace Kudubrowse.Views
             menu.Items.Add(zoom);
             menu.Items.Add(Item("Print...", Print, "Ctrl+P"));
             menu.Items.Add(Item("Reading mode", async () => await ToggleReadingMode(), "F9"));
+            menu.Items.Add(Item(IsFloating(Current) ? "Bring the video back" : "Video in a floating window", async () =>
+            {
+                if (IsFloating(Current)) BringBack(Current);
+                else await FloatVideo(Current);
+            }));
             menu.Items.Add(Item("Screenshot of the whole page...", async () => await SaveScreenshot(), "Ctrl+Shift+S"));
             menu.Items.Add(Item("Save the page as PDF...", async () => await SavePdf()));
             menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));

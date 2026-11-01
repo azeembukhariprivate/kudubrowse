@@ -702,6 +702,57 @@ namespace Kudubrowse.Views
                     other.Close();
                     Pump();
                 });
+                await Step("Video in a floating window", async () =>
+                {
+                    var plain = main.NewTab(new Uri(Page("novideo.html", "No video", "<p>Just words.</p>")).AbsoluteUri, select: true);
+                    await Wait(() => plain.Title == "No video" && !plain.IsLoading, 30, "a page without a video");
+                    Expect(!await main.FloatVideo(plain), "a page with no video isn't floated");
+                    Expect(!main.IsFloating(plain), "nothing floating");
+
+                    // A moving picture drawn on a canvas, played in a video element.
+                    var video = main.NewTab(new Uri(Page("video.html", "Video",
+                        "<canvas id='c' width='320' height='180' style='display:none'></canvas>" +
+                        "<video id='v' autoplay muted playsinline width='480' height='270'></video>" +
+                        "<script>const c = document.getElementById('c'), x = c.getContext('2d'); let i = 0;" +
+                        "setInterval(() => { x.fillStyle = 'hsl(' + (i++ % 360) + ',70%,50%)'; x.fillRect(0, 0, 320, 180); }, 40);" +
+                        "const v = document.getElementById('v'); v.srcObject = c.captureStream(25); v.play();</script>")).AbsoluteUri, select: true);
+                    await Wait(() => video.Title == "Video" && !video.IsLoading, 30, "the video page");
+                    await WaitAsync(async () => await video.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('v').readyState > 0") == "true", 20, "the video to start");
+
+                    Expect(await main.FloatVideo(video), "floated");
+                    var window = main.FloatingWindowOf(video);
+                    Expect(window != null && window.IsVisible && window.Topmost, "a small window that stays on top");
+                    Expect(ReferenceEquals(window.Content, video.View), "the page is in the small window");
+                    Pump();
+                    var position = await video.View.CoreWebView2.ExecuteScriptAsync("getComputedStyle(document.querySelector('[data-kudu-float]')).position");
+                    Expect(position == "\"fixed\"", "only the video is shown, filling the window: " + position);
+                    Expect(await video.View.CoreWebView2.ExecuteScriptAsync("document.title") == "\"Video\"", "the page keeps working in the small window");
+                    Expect(main.FloatingNoteShown, "the tab says the video is floating");
+                    await Task.Delay(500);
+                    Screenshots.One(window, "Video in a floating window");
+                    Screenshots.All("Video floating");
+
+                    main.Select(plain);
+                    Pump();
+                    Expect(!main.FloatingNoteShown && window.IsVisible, "another tab: the video keeps floating");
+                    main.Select(video);
+                    Pump();
+                    Expect(main.FloatingNoteShown, "back on its tab: the note");
+
+                    main.BringBack(video);
+                    Pump();
+                    Expect(!main.IsFloating(video) && !window.IsVisible, "brought back");
+                    await Task.Delay(300);
+                    Expect(await video.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('kudu-float-style') === null") == "true", "the page looks as before");
+                    Expect(!main.FloatingNoteShown, "the note gone");
+
+                    Expect(await main.FloatVideo(video), "floated again");
+                    var again = main.FloatingWindowOf(video);
+                    main.CloseTab(video);
+                    Pump();
+                    Expect(!again.IsVisible, "closing the tab closes its floating window");
+                    main.CloseTab(plain);
+                });
                 await Step("Tab groups and two pages side by side", async () =>
                 {
                     var keep = main.Tabs.ToList();

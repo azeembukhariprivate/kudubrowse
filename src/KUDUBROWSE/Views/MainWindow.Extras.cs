@@ -278,7 +278,7 @@ namespace Kudubrowse.Views
             _splitter.Visibility = split ? Visibility.Visible : Visibility.Collapsed;
             foreach (var t in _tabs)
             {
-                if (t.View == null) continue;
+                if (t.View == null || IsFloating(t)) continue; // a floating video's page is in its own window
                 var shown = t == Current || (split && t == _splitPartner);
                 t.View.Visibility = shown ? Visibility.Visible : Visibility.Hidden;
                 // The current tab on the left (or alone); its partner on the right.

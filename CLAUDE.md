@@ -74,6 +74,10 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    ranked by `Core/TabSearch.cs`; Enter goes to the tab and brings its window forward, or reopens a closed one and
    takes it off `ClosedTabs` with `Take`). 1.4.1: once something is typed, a few bookmarks and pages from history too
    (history not in private windows), opened in a new tab.
+1.5: video in a floating window (`Views/MainWindow.Video.cs`: `FloatVideo` marks the biggest (playing) video with
+   `data-kudu-float` and adds a style showing only it, filling the page; the tab's WebView2 moves into a Topmost
+   `FloatingVideo` tool window (Layout and sleeping skip floating tabs); the tab shows a "Bring it back" note; closing the
+   small window puts the page back and removes the style; closing the tab or the browser window closes it).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 
