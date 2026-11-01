@@ -164,6 +164,8 @@ namespace Kudubrowse.Views
         /// <summary>A login box got focus: where it is on the page (in page pixels), and whether it's for a new password.</summary>
         public event Action<BrowserTab, Point, bool> LoginFieldFocused;
         public event Action<BrowserTab> LoginFieldLeft;
+        /// <summary>A box for a two-step sign-in code got focus: where it is on the page (in page pixels).</summary>
+        public event Action<BrowserTab, Point> CodeFieldFocused;
         /// <summary>A login was sent on the page: its address, the name and the password typed.</summary>
         public event Action<BrowserTab, string, string, string> LoginSent;
 
@@ -185,6 +187,9 @@ namespace Kudubrowse.Views
                 case "field":
                     LoginFieldFocused?.Invoke(this, new Point(Num("x"), Num("y")), m.TryGetValue("isNew", out var n) && n is bool b && b);
                     break;
+                case "codefield":
+                    CodeFieldFocused?.Invoke(this, new Point(Num("x"), Num("y")));
+                    break;
                 case "blur":
                     LoginFieldLeft?.Invoke(this);
                     break;
@@ -204,8 +209,12 @@ namespace Kudubrowse.Views
         /// Only when the page is still on <paramref name="origin"/>, the site the list was shown for: a page that moved on
         /// to another site in the meantime never gets the login. Returns false when nothing was sent.
         /// </summary>
-        public bool Fill(string origin, string username, string password) =>
-            Send(origin, Json.Serialize(new { kudu = "fill", username, password }));
+        public bool Fill(string origin, string username, string password, string code = null) =>
+            Send(origin, Json.Serialize(new { kudu = "fill", username, password, code }));
+
+        /// <summary>Fills the focused sign-in code box with a code (only on the same site, after the person picks it).</summary>
+        public bool FillCode(string origin, string code) =>
+            Send(origin, Json.Serialize(new { kudu = "fillcode", code }));
 
         /// <summary>Fills the new-password boxes with a strong password (also only on the same site).</summary>
         public bool FillGenerated(string origin, string password) =>

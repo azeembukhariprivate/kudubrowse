@@ -68,6 +68,7 @@ namespace Kudubrowse.Views
         {
             tab.LoginSent += OnLoginSent;
             tab.LoginFieldFocused += OnLoginField;
+            tab.CodeFieldFocused += OnCodeField;
             tab.LoginFieldLeft += t =>
             {
                 if (t == Current && !_fillPopup.IsMouseOver) _fillPopup.IsOpen = false;
@@ -162,7 +163,7 @@ namespace Kudubrowse.Views
                 var login = l;
                 _fillItems.Children.Add(Choice(string.IsNullOrEmpty(l.Username) ? "(no name)" : l.Username, "••••••••  ·  " + l.Site, "IconUser", "login:" + l.Username, () =>
                 {
-                    if (tab.Fill(origin, login.Username, login.Password)) PasswordStore.Vault.MarkUsed(login);
+                    if (tab.Fill(origin, login.Username, login.Password, login.CodeNow())) PasswordStore.Vault.MarkUsed(login);
                 }));
             }
             if (isNew)
@@ -184,6 +185,49 @@ namespace Kudubrowse.Views
             manage.HorizontalAlignment = HorizontalAlignment.Left;
             _fillItems.Children.Add(manage);
             // Page pixels → window units (the page may be zoomed).
+            var zoom = tab.View.ZoomFactor;
+            _fillPopup.PlacementTarget = tab.View;
+            _fillPopup.HorizontalOffset = at.X * zoom;
+            _fillPopup.VerticalOffset = at.Y * zoom + 2;
+            _fillPopup.IsOpen = true;
+        }
+
+        /// <summary>A sign-in code box got focus: offers the codes of this site's logins that have a two-step key.</summary>
+        private void OnCodeField(BrowserTab tab, Point at)
+        {
+            if (tab != Current || tab.View == null) return;
+            var origin = Vault.OriginOf(tab.View.CoreWebView2?.Source);
+            if (origin == null) return;
+            var withCodes = PasswordStore.Vault.For(origin).Where(l => l.CodeNow() != null).Take(6).ToList();
+            if (withCodes.Count == 0)
+            {
+                _fillPopup.IsOpen = false;
+                return;
+            }
+            _fillTab = tab;
+            _fillItems.Children.Clear();
+            foreach (var l in withCodes)
+            {
+                var login = l;
+                var key = SignInCodes.Parse(l.CodeKey);
+                var now = DateTimeOffset.UtcNow;
+                var b = Ui.Button(null, "IconLock", "GhostButton");
+                var text = Ui.Column(Ui.Text("Sign-in code for " + (string.IsNullOrEmpty(l.Username) ? l.Site : l.Username), 13),
+                    Ui.Subtle(SignInCodes.Show(SignInCodes.Code(key, now)) + "  ·  " + SignInCodes.SecondsLeft(key, now) + " s left  ·  " + l.Site, 11.5, false));
+                b.Content = Ui.Row(Ui.Icon("IconLock", 16), text.Margin(10, 0, 0, 0));
+                b.HorizontalContentAlignment = HorizontalAlignment.Left;
+                b.Padding = new Thickness(10, 6, 10, 6);
+                b.Tag = "code:" + l.Username;
+                System.Windows.Automation.AutomationProperties.SetName(b, "Sign-in code for " + l.Username);
+                b.Click += (s, e) =>
+                {
+                    _fillPopup.IsOpen = false;
+                    // A fresh code at the moment it's picked.
+                    var code = login.CodeNow();
+                    if (code != null && tab.FillCode(origin, code)) PasswordStore.Vault.MarkUsed(login);
+                };
+                _fillItems.Children.Add(b);
+            }
             var zoom = tab.View.ZoomFactor;
             _fillPopup.PlacementTarget = tab.View;
             _fillPopup.HorizontalOffset = at.X * zoom;

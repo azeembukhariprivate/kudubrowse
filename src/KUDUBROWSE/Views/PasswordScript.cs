@@ -4,7 +4,8 @@ namespace Kudubrowse.Views
     /// The small script added to every top-level page for passwords. It tells the browser when a login box gets focus
     /// (so the browser can show its own list of saved logins next to it) and what was typed when a login form is sent
     /// (so the browser can offer to save it). It only fills fields when the browser sends a login, which happens only
-    /// after the person picks one in the browser's list; the page never gets saved logins otherwise.
+    /// after the person picks one in the browser's list; the page never gets saved logins otherwise. Boxes for two-step
+    /// sign-in codes are noticed too, and get a code (never the key it's made from) the same way.
     /// </summary>
     public static class PasswordScript
     {
@@ -25,9 +26,28 @@ namespace Kudubrowse.Views
     for (let i = inputs.indexOf(pw) - 1; i >= 0; i--) if (isUser(inputs[i])) return inputs[i];
     return null;
   };
+  // A box for a two-step sign-in code: marked as one, or named like one (one box, or one box per digit).
+  const isCode = el => {
+    if (!el || el.tagName !== 'INPUT' || !['text', 'tel', 'number', ''].includes(el.type)) return false;
+    if (/one-time-code/.test(el.autocomplete || '')) return true;
+    const words = [el.name, el.id, el.placeholder, el.getAttribute('aria-label')].join(' ');
+    return /(one.?time|otp|totp|2fa|mfa|two.?(factor|step)|verification|authenticat|security).{0,12}(code|token)|(^|[^a-z])(otp|totp|2fa|mfa)([^a-z]|$)/i.test(words);
+  };
+  const digitBoxes = el => {
+    if (el.maxLength !== 1) return [el];
+    const all = Array.from(scope(el).querySelectorAll('input')).filter(i => visible(i) && i.maxLength === 1);
+    return all.length >= 4 ? all : [el];
+  };
   let field = null, shown = false;
   document.addEventListener('focusin', e => {
     const el = e.target;
+    if (isCode(el)) {
+      field = el;
+      shown = true;
+      const r = el.getBoundingClientRect();
+      post({ kudu: 'codefield', x: r.left, y: r.bottom, w: r.width });
+      return;
+    }
     let pw = isPw(el) ? el : null;
     if (!pw && isUser(el)) pw = pwFields(scope(el))[0] || null;
     if (!pw) return;
@@ -65,7 +85,14 @@ namespace Kudubrowse.Views
   };
   window.chrome.webview.addEventListener('message', e => {
     const d = e.data;
-    if (!d || d.kudu !== 'fill' || !field) return;
+    if (!d || !field) return;
+    if (d.kudu === 'fillcode') {
+      const boxes = digitBoxes(field);
+      if (boxes.length > 1) boxes.forEach((b, i) => set(b, d.code[i] || ''));
+      else set(field, d.code);
+      return;
+    }
+    if (d.kudu !== 'fill') return;
     if (d.generated) {
       const all = pwFields(scope(field));
       (all.length >= 3 ? all.slice(1) : all).forEach(p => set(p, d.password));
@@ -74,6 +101,11 @@ namespace Kudubrowse.Views
     const pw = isPw(field) ? field : pwFields(scope(field))[0];
     set(userFor(pw), d.username);
     set(pw, d.password);
+    // A sign-in code box on the same form gets the code too.
+    if (d.code) {
+      const code = Array.from(scope(pw).querySelectorAll('input')).find(i => visible(i) && isCode(i));
+      if (code) set(code, d.code);
+    }
   });
 })();";
     }

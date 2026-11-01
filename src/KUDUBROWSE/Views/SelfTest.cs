@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Kudubrowse.Core;
+using Kudubrowse.Core.Passwords;
 
 namespace Kudubrowse.Views
 {
@@ -363,6 +364,58 @@ namespace Kudubrowse.Views
                     {
                         foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
                         main.Select(keep.Last());
+                    }
+                });
+                await Step("Two-step sign-in codes: kept with a login, offered in the code box, filled with the password", async () =>
+                {
+                    var tab = main.NewTab(select: true);
+                    Login login = null;
+                    try
+                    {
+                        Page("code.html", "Code", "<form><p>Enter the 6-digit code from your app</p><input id='otp' autocomplete='one-time-code' inputmode='numeric'><button>Go</button></form>");
+                        Page("digits.html", "Digits", "<form>" + string.Concat(Enumerable.Range(1, 6).Select(i => $"<input id='d{i}' name='otp{i}' maxlength='1' size='1'>")) + "</form>");
+                        Page("logincode.html", "Sign in with a code", "<form><input id='user' autocomplete='username'><input id='pass' type='password'><input id='totp' name='totp'><button>Sign in</button></form>");
+                        login = PasswordStore.Vault.Save("https://kudutest.example/", "codes-test", "Munnar-2026!");
+                        Expect(!PasswordStore.Vault.SetCodeKey(login, "not a key"), "a wrong key isn't kept");
+                        Expect(PasswordStore.Vault.SetCodeKey(login, "otpauth://totp/Test:codes-test?secret=JBSWY3DPEHPK3PXP&issuer=Test"), "the key kept");
+                        PasswordStore.Reload();
+                        login = PasswordStore.Vault.Find("https://kudutest.example", "codes-test");
+                        Expect(login?.CodeKey != null, "read back from the encrypted file");
+                        bool IsCode(string v) => new[] { -30, 0, 30 }.Any(d => v == login.CodeNow(DateTimeOffset.UtcNow.AddSeconds(d)));
+
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/code.html");
+                        await Wait(() => tab.Title == "Code" && !tab.IsLoading, 20, "the code page");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('otp').focus()");
+                        await Wait(() => main.FillListOpen && main.FillChoices.Contains("code:codes-test"), 10, "the code offered next to the box");
+                        Expect(await Value(tab, "otp") == "", "nothing filled before it's picked");
+                        Screenshots.All("Sign-in code offered");
+                        main.ChooseFill("code:codes-test");
+                        await WaitAsync(async () => IsCode(await Value(tab, "otp")), 10, "the code filled");
+
+                        main.Go("https://kudutest.example/digits.html");
+                        await Wait(() => tab.Title == "Digits" && !tab.IsLoading, 20, "the page with a box per digit");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('d1').focus()");
+                        await Wait(() => main.FillChoices.Contains("code:codes-test"), 10, "offered again");
+                        main.ChooseFill("code:codes-test");
+                        await WaitAsync(async () => IsCode(await tab.View.CoreWebView2.ExecuteScriptAsync(
+                            "[1,2,3,4,5,6].map(i => document.getElementById('d' + i).value).join('')") is string v ? v.Trim('\"') : ""), 10, "a digit in each box");
+
+                        main.Go("https://kudutest.example/logincode.html");
+                        await Wait(() => tab.Title == "Sign in with a code" && !tab.IsLoading, 20, "a sign-in page with a code box");
+                        await tab.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('user').focus()");
+                        await Wait(() => main.FillChoices.Contains("login:codes-test"), 10, "the login offered");
+                        main.ChooseFill("login:codes-test");
+                        await WaitAsync(async () => await Value(tab, "pass") == "Munnar-2026!", 10, "the password filled");
+                        Expect(IsCode(await Value(tab, "totp")), "and the code with it");
+
+                        Expect(!File.ReadAllText(PasswordStore.Vault.File).Contains("JBSWY3DP"), "the key isn't readable in the file");
+                    }
+                    finally
+                    {
+                        if (login != null) PasswordStore.Vault.Remove(login);
+                        main.CloseTab(tab);
                     }
                 });
                 await Step("Rooms keep logins apart; private windows keep nothing", async () =>

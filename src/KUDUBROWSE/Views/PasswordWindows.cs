@@ -144,6 +144,22 @@ namespace Kudubrowse.Views
                     if (await Verify.Ask(this, "Copy the password for " + l.Site)) Ui.Copy(l.Password);
                 });
                 Add("Copy the name", () => Ui.Copy(l.Username));
+                menu.Items.Add(new Separator());
+                if (l.CodeKey == null)
+                    Add("Add a sign-in code...", () => AskCodeKey(l));
+                else
+                {
+                    Add("Copy the sign-in code (" + SignInCodes.Show(l.CodeNow()) + ")", async () =>
+                    {
+                        if (await Verify.Ask(this, "Copy the sign-in code for " + l.Site)) Ui.Copy(l.CodeNow());
+                    });
+                    Add("Change the sign-in key...", () => AskCodeKey(l));
+                    Add("Remove the sign-in code", () =>
+                    {
+                        if (Dialogs.Confirm(this, $"Stop making sign-in codes for {l.Username} on {l.Site}? Keep another way to sign in (such as an authenticator app) before you do."))
+                            PasswordStore.Vault.SetCodeKey(l, null);
+                    });
+                }
                 Add("Open the site", () => (Owner as MainWindow ?? MainWindow.Open.FirstOrDefault())?.OpenAddress(l.Origin, true));
                 menu.Items.Add(new Separator());
                 Add("Delete", () =>
@@ -156,9 +172,22 @@ namespace Kudubrowse.Views
             return g;
         }
 
+        /// <summary>Asks for a site's two-step key and keeps it with the login (only after the person proves it's them).</summary>
+        private async void AskCodeKey(Login l)
+        {
+            if (!await Verify.Ask(this, "Add a sign-in code for " + l.Site)) return;
+            var text = Dialogs.Ask(this, "Sign-in code for " + l.Site,
+                "Paste the setup key the site shows when you turn on two-step sign-in (often under \"Can't scan the code?\"), or an otpauth:// link. "
+                + AppInfo.Name + " then makes the 6-digit codes, as an authenticator app does, and offers them when the site asks.", l.CodeKey ?? string.Empty);
+            if (text == null) return;
+            if (!PasswordStore.Vault.SetCodeKey(l, text))
+                Dialogs.Error(this, "That isn't a setup key. It's a row of letters and digits (A to Z and 2 to 7), often in groups of four.");
+        }
+
         private string Notes(Login l, bool reused)
         {
             var notes = new List<string>();
+            if (l.CodeKey != null) notes.Add("makes sign-in codes");
             if (_leaks.TryGetValue(l, out var n) && n > 0) notes.Add($"found in known leaks ({n:N0} times)");
             if (PasswordTools.IsWeak(l.Password)) notes.Add("easy to guess");
             if (reused) notes.Add("also used on another site");

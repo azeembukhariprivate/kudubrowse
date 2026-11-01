@@ -25,6 +25,15 @@ namespace Kudubrowse.Core.Passwords
         [DataMember(Name = "created", Order = 4)] public DateTime Created { get; set; }
         [DataMember(Name = "used", Order = 5)] public DateTime LastUsed { get; set; }
         [DataMember(Name = "changed", Order = 6)] public DateTime Changed { get; set; }
+        /// <summary>The two-step sign-in key, as the site gave it (setup key or otpauth:// link); null when there's none.</summary>
+        [DataMember(Name = "code", Order = 7, EmitDefaultValue = false)] public string CodeKey { get; set; }
+
+        /// <summary>The sign-in code now, or null when there's no key.</summary>
+        public string CodeNow(DateTimeOffset? at = null)
+        {
+            var key = SignInCodes.Parse(CodeKey);
+            return key == null ? null : SignInCodes.Code(key, at ?? DateTimeOffset.UtcNow);
+        }
 
         public string Site => Vault.HostOf(Origin);
     }
@@ -161,6 +170,16 @@ namespace Kudubrowse.Core.Passwords
             }
             Save();
             return l;
+        }
+
+        /// <summary>Keeps a two-step sign-in key with a login (null takes it away). False when the text isn't a key.</summary>
+        public bool SetCodeKey(Login l, string key)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && SignInCodes.Parse(key) == null) return false;
+            l.CodeKey = string.IsNullOrWhiteSpace(key) ? null : key.Trim();
+            l.Changed = DateTime.UtcNow;
+            Save();
+            return true;
         }
 
         public void MarkUsed(Login l)

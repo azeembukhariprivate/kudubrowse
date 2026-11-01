@@ -83,6 +83,11 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    on `DarkPages.Changed`, and run on the page shown now) inverts light pages (`invert(0.9) hue-rotate(180deg)` on html,
    pictures and videos inverted back), leaves pages whose own background is already dark, and skips sites on
    `Settings.LightSites` (tab menu "Don't darken <site>"). Menu "Dark pages" toggles Always/Off; Settings has all three.
+1.7: two-step sign-in codes (`Core/Passwords/SignInCodes.cs`: RFC 6238 codes from a setup key or otpauth:// link,
+   tested with the RFC's own examples; `Login.CodeKey`, kept in the encrypted vault, set with `Vault.SetCodeKey` from the
+   passwords window after `Verify`). `PasswordScript` notices code boxes (autocomplete one-time-code, or otp/2fa-like
+   names; one box or a box per digit) and posts "codefield"; `OnCodeField` lists this site's logins with a key and sends
+   only the code ("fillcode") after one is picked. Filling a login also fills a code box on the same form.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

@@ -58,6 +58,8 @@ namespace Kudubrowse.Views
             new Feature("IconStar", "Bookmarks and the bookmarks bar", "Keep the pages you like one click away.", "Ctrl+D, Ctrl+Shift+O", m => LibraryWindow.Show(m, true)),
             new Feature("IconHistory", "History", "Find a page you saw before; it's kept for 90 days.", "Ctrl+H", m => LibraryWindow.Show(m, false)),
             new Feature("IconSearch", "Suggestions as you type", "The address bar suggests pages from your bookmarks and history.", "Ctrl+L", m => m.FocusAddress()),
+            new Feature("IconLock", "Two-step sign-in codes", "Keep a site's sign-in key with its password: the 6-digit codes are made for you and offered in the site's code box.", "Passwords › ⋯ › Add a sign-in code",
+                m => PasswordsWindow.Show(m)),
             new Feature("IconEye", "Dark pages", "Show websites in dark colours: sites with a dark look show it, and light pages are made dark, with pictures kept as they are.", "Menu › Dark pages, or Settings",
                 m => MainWindow.SetDarkPages(Settings.DarkPages == DarkMode.Always ? DarkMode.Off : DarkMode.Always)),
             new Feature("IconPlay", "Video in a floating window", "Keep watching a video in a small window that stays on top while you do other things. Close it to put the page back in its tab.", "Menu › Video in a floating window",

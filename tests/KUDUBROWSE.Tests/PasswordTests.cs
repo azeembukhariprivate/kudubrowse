@@ -46,11 +46,83 @@ namespace Kudubrowse.Tests
             test("Passwords: strong ones are random and mixed; weak ones are spotted", Strength);
             test("Passwords: the leak check sends only 5 characters of the scrambled password", LeakCheck);
             test("Passwords: Chrome's export file and others like it are read", Csv);
+            test("Sign-in codes: made as authenticator apps make them (the standard's own examples)", CodesMatchTheStandard);
+            test("Sign-in codes: setup keys and otpauth links are read; other text isn't", KeysAreRead);
+            test("Sign-in codes: kept with the login, encrypted, and taken away again", CodesAreKept);
         }
 
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
+        }
+
+        private static void CodesMatchTheStandard()
+        {
+            // RFC 6238, appendix B: 8-digit codes for these times, with each kind of scrambling.
+            var sha1 = new SignInKey { Secret = System.Text.Encoding.ASCII.GetBytes("12345678901234567890"), Digits = 8 };
+            var sha256 = new SignInKey { Secret = System.Text.Encoding.ASCII.GetBytes("12345678901234567890123456789012"), Digits = 8, Algorithm = "SHA256" };
+            var sha512 = new SignInKey { Secret = System.Text.Encoding.ASCII.GetBytes("1234567890123456789012345678901234567890123456789012345678901234"), Digits = 8, Algorithm = "SHA512" };
+            var cases = new (long Time, string A, string B, string C)[]
+            {
+                (59, "94287082", "46119246", "90693936"),
+                (1111111109, "07081804", "68084774", "25091201"),
+                (1111111111, "14050471", "67062674", "99943326"),
+                (1234567890, "89005924", "91819424", "93441116"),
+                (2000000000, "69279037", "90698825", "38618901"),
+                (20000000000, "65353130", "77737706", "47863826")
+            };
+            foreach (var c in cases)
+            {
+                var at = DateTimeOffset.FromUnixTimeSeconds(c.Time);
+                Equal(c.A, SignInCodes.Code(sha1, at), "SHA1 at " + c.Time);
+                Equal(c.B, SignInCodes.Code(sha256, at), "SHA256 at " + c.Time);
+                Equal(c.C, SignInCodes.Code(sha512, at), "SHA512 at " + c.Time);
+            }
+            var six = SignInCodes.Parse("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
+            Equal("287082", SignInCodes.Code(six, DateTimeOffset.FromUnixTimeSeconds(59)), "6 digits (the last six)");
+            Equal(1, SignInCodes.SecondsLeft(six, DateTimeOffset.FromUnixTimeSeconds(59)), "seconds left");
+            Equal(30, SignInCodes.SecondsLeft(six, DateTimeOffset.FromUnixTimeSeconds(60)), "a new code");
+            Equal("287 082", SignInCodes.Show("287082"), "shown in halves");
+        }
+
+        private static void KeysAreRead()
+        {
+            var plain = SignInCodes.Parse(" gezd gnbv gy3t qojq-gezd gnbv gy3t qojq ");
+            Equal("12345678901234567890", System.Text.Encoding.ASCII.GetString(plain.Secret), "spaces, dashes and small letters");
+            var link = SignInCodes.Parse("otpauth://totp/Example:azeem%40example.com?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Example&digits=8&period=60&algorithm=sha256");
+            Equal(8, link.Digits, "digits from the link");
+            Equal(60, link.Period, "period from the link");
+            Equal("SHA256", link.Algorithm, "algorithm from the link");
+            Equal(20, link.Secret.Length, "the secret");
+            Equal(null, SignInCodes.Parse("not a key!"), "other text");
+            Equal(null, SignInCodes.Parse("ABC"), "too short");
+            Equal(null, SignInCodes.Parse(""), "nothing");
+            Equal(null, SignInCodes.Parse("otpauth://hotp/x?secret=GEZDGNBVGY3TQOJQ"), "counter keys aren't time codes");
+            Equal(null, SignInCodes.Parse("otpauth://totp/x?secret=GEZDGNBVGY3TQOJQ&digits=12"), "odd number of digits");
+            Equal(null, SignInCodes.Parse("otpauth://totp/x?issuer=nothing"), "no secret");
+        }
+
+        private static void CodesAreKept()
+        {
+            var file = Temp();
+            try
+            {
+                var v = Vault.Load(file, new TestProtector(3));
+                var l = v.Save("https://bank.example/login", "azeem", "pw");
+                Equal(null, l.CodeNow(), "no code before a key is added");
+                Equal(false, v.SetCodeKey(l, "not a key"), "a wrong key isn't kept");
+                Equal(true, v.SetCodeKey(l, "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"), "kept");
+                Equal("287082", l.CodeNow(DateTimeOffset.FromUnixTimeSeconds(59)), "the code");
+                Equal(false, File.ReadAllText(file).Contains("GEZDGNBV"), "the key isn't readable in the file");
+                var again = Vault.Load(file, new TestProtector(3));
+                Equal("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", again.Logins.Single().CodeKey, "read back");
+                Equal(true, again.SetCodeKey(again.Logins.Single(), null), "taken away");
+                Equal(null, Vault.Load(file, new TestProtector(3)).Logins.Single().CodeKey, "gone");
+            }
+            finally
+            {
+                File.Delete(file);
+            }
         }
 
         private static string Temp() => Path.Combine(Path.GetTempPath(), "kudubrowse-test-" + Guid.NewGuid().ToString("N") + ".dat");
