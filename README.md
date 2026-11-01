@@ -33,6 +33,7 @@
 - **Bookmarks** (the star, Ctrl+D) with folders and a bookmarks bar, and **history** by day, kept for 90 days. Both can be searched (Ctrl+Shift+O, Ctrl+H).
 - **Reading mode** (F9): just the article as clean text, in light, sepia or dark, at the text size you like.
 - **A picture of the whole page**, not just the part on screen (Ctrl+Shift+S), and **saving a page as PDF**.
+- **Mute a tab**: a speaker shows on tabs playing sound; click it (or Ctrl+M) to mute that tab, which stays muted next time. Right-click a tab to always mute a noisy site.
 - **Private windows** (Ctrl+Shift+N): no history is kept, and sites' cookies are forgotten when the window closes.
 - **A download manager** (Ctrl+J). When a download starts, a small note under the downloads button says so; click it to see your downloads.
   - **Big files come faster**: files over 20 MB are fetched in up to six pieces at the same time when the site allows it, with your login for that site, and get the same "from the internet" mark and virus check as other downloads.

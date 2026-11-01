@@ -150,6 +150,13 @@ namespace Kudubrowse.Core
             set => Set("LastRunVersion", value);
         }
 
+        /// <summary>Sites (registrable domains) whose tabs are always muted.</summary>
+        public static List<string> MutedSites
+        {
+            get => Get("MutedSites", string.Empty).Split('\n').Where(p => p.Length > 0).ToList();
+            set => Set("MutedSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
+        }
+
         /// <summary>Where downloads go (empty: Windows' Downloads folder).</summary>
         public static string DownloadFolder
         {

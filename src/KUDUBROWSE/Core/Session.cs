@@ -15,11 +15,13 @@ namespace Kudubrowse.Core
         /// <summary>The tab group it's in (null for none), and the group's colour.</summary>
         public string Group { get; set; }
         public string GroupColor { get; set; }
+        /// <summary>The tab was muted.</summary>
+        public bool Muted { get; set; }
     }
 
     /// <summary>
     /// The open tabs, kept in %LocalAppData%\KUDUBROWSE\session.txt so they come back after closing or a crash.
-    /// One line per tab: the address, the title, the room and the tab group ("name|colour"), between tab characters.
+    /// One line per tab: the address, the title, the room, the tab group ("name|colour") and "muted", between tab characters.
     /// The first line says which tab was selected.
     /// </summary>
     public static class Session
@@ -39,7 +41,8 @@ namespace Kudubrowse.Core
             {
                 if (string.IsNullOrEmpty(t.Url) || t.Url == "about:blank") continue;
                 sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\t').Append(t.Room ?? Rooms.DefaultId)
-                  .Append('\t').Append(string.IsNullOrEmpty(t.Group) ? string.Empty : Clean(t.Group).Replace('|', ' ') + "|" + Clean(t.GroupColor)).Append('\n');
+                  .Append('\t').Append(string.IsNullOrEmpty(t.Group) ? string.Empty : Clean(t.Group).Replace('|', ' ') + "|" + Clean(t.GroupColor))
+                  .Append('\t').Append(t.Muted ? "muted" : string.Empty).Append('\n');
             }
             try
             {
@@ -85,6 +88,7 @@ namespace Kudubrowse.Core
                         tab.Group = group[0].Trim();
                         tab.GroupColor = IsColor(group[1]) ? group[1] : Rooms.Colors[1];
                     }
+                    tab.Muted = parts.Length >= 5 && parts[4] == "muted";
                     tabs.Add(tab);
                 }
             }

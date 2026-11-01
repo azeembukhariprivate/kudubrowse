@@ -13,6 +13,7 @@ namespace Kudubrowse.Tests
             test("Rooms: Personal and Work to start, add, rename, remove, kept", RoomsWork);
             test("Rooms: each tab's room is saved with it; unknown rooms fall back to the first", TabsKeepRooms);
             test("Tab groups are saved with the tabs; odd colours and old files are handled", TabsKeepGroups);
+            test("Muted tabs stay muted next time", TabsKeepMuted);
             test("One running copy: a second start hands its address to the first", OneCopy);
             test("Downloads: files that can run programs are spotted; sizes in plain words", Downloads);
         }
@@ -62,6 +63,27 @@ namespace Kudubrowse.Tests
                 Equal("Default|room-1", string.Join("|", tabs.Select(t => t.Room)), "rooms kept");
                 File.AppendAllText(file, "https://c.example/\tC\t..\\evil\n");
                 Equal(Rooms.DefaultId, Session.Load(file).Tabs.Last().Room, "a strange room name isn't used");
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        private static void TabsKeepMuted()
+        {
+            var file = Temp();
+            try
+            {
+                Session.Save(new[]
+                {
+                    new SavedTab { Url = "https://a.example/", Title = "A", Muted = true },
+                    new SavedTab { Url = "https://b.example/", Title = "B", Group = "G", GroupColor = "#2563EB" }
+                }, 0, file);
+                var tabs = Session.Load(file).Tabs;
+                Equal(true, tabs[0].Muted, "the muted tab");
+                Equal(false, tabs[1].Muted, "the other one");
+                Equal("G", tabs[1].Group, "its group still read");
             }
             finally
             {

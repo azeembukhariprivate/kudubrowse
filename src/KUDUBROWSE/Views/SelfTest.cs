@@ -32,6 +32,9 @@ namespace Kudubrowse.Views
             _temp = Path.Combine(Path.GetTempPath(), "kudubrowse-selftest-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             Directory.CreateDirectory(_temp);
             Web.ProfileFolder = Path.Combine(_temp, "profile");
+            Web.ExtraArguments = "--autoplay-policy=no-user-gesture-required"; // the sound test page plays without a click
+            var savedMuted = Settings.MutedSites;
+            Settings.MutedSites = new List<string>();
             Session.DefaultFile = Path.Combine(_temp, "session.txt");
             Core.Blocking.BlockLists.DownloadFolder = Path.Combine(_temp, "lists");
             BrowserLibrary.Folder = Path.Combine(_temp, "library");
@@ -563,6 +566,54 @@ namespace Kudubrowse.Views
                         }
                     }
                 });
+                await Step("Muting a tab, and always muting a site", async () =>
+                {
+                    var keep = main.Tabs.ToList();
+                    try
+                    {
+                        // A second of a quiet tone, as a WAV file, played over and over.
+                        File.WriteAllBytes(Path.Combine(_temp, "tone.wav"), Tone());
+                        Page("sound.html", "Sound", "<audio id='a' src='tone.wav' autoplay loop></audio>");
+                        var tab = main.NewTab(select: true);
+                        await tab.EnsureView();
+                        tab.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/sound.html");
+                        await Wait(() => tab.Title == "Sound" && !tab.IsLoading, 20, "the sound page");
+                        try
+                        {
+                            await Wait(() => tab.PlayingSound, 10, "the page to play");
+                            Note("the page plays sound; the speaker shows on its tab");
+                        }
+                        catch (Exception)
+                        {
+                            Note("this machine plays no sound (no sound device); muting is still checked");
+                        }
+                        tab.SetMuted(true);
+                        Expect(tab.Muted && tab.View.CoreWebView2.IsMuted, "muted");
+                        Screenshots.All("Muted tab");
+                        Expect(tab.ToSaved().Muted, "kept for next time");
+                        tab.SetMuted(false);
+                        Expect(!tab.View.CoreWebView2.IsMuted, "unmuted");
+
+                        // Always muting the site: its tabs are muted now, and new ones start muted.
+                        MainWindow.AlwaysMute("kudutest.example", true);
+                        Expect(tab.Muted, "the open tab muted");
+                        var other = main.NewTab(select: true);
+                        await other.EnsureView();
+                        other.View.CoreWebView2.SetVirtualHostNameToFolderMapping("kudutest.example", _temp, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                        main.Go("https://kudutest.example/second.html");
+                        await Wait(() => other.Title == "Second page" && !other.IsLoading, 20, "another page of the site");
+                        Expect(other.Muted && other.View.CoreWebView2.IsMuted, "a new tab of the site starts muted");
+                        MainWindow.AlwaysMute("kudutest.example", false);
+                        Expect(!tab.Muted && !other.Muted, "off the list: unmuted again");
+                    }
+                    finally
+                    {
+                        Settings.MutedSites = new List<string>();
+                        foreach (var t in main.Tabs.Where(t => !keep.Contains(t)).ToList()) main.CloseTab(t);
+                        main.Select(keep.Last());
+                    }
+                });
                 await Step("Tab groups and two pages side by side", async () =>
                 {
                     var keep = main.Tabs.ToList();
@@ -718,6 +769,7 @@ namespace Kudubrowse.Views
             }
 
             (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads) = savedDownloads;
+            Settings.MutedSites = savedMuted;
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
             Settings.OfferToSavePasswords = savedOffer;
@@ -746,6 +798,24 @@ namespace Kudubrowse.Views
         {
             var json = await tab.View.CoreWebView2.ExecuteScriptAsync($"getComputedStyle(document.querySelector('{selector}')).display");
             return json.Trim('"');
+        }
+
+        /// <summary>One second of a quiet 440 Hz tone, as a WAV file.</summary>
+        private static byte[] Tone()
+        {
+            const int rate = 22050;
+            var samples = new short[rate];
+            for (var i = 0; i < samples.Length; i++) samples[i] = (short)(Math.Sin(2 * Math.PI * 440 * i / rate) * 3000);
+            using (var m = new MemoryStream())
+            using (var w = new BinaryWriter(m))
+            {
+                w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + samples.Length * 2); w.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+                w.Write(16); w.Write((short)1); w.Write((short)1); w.Write(rate); w.Write(rate * 2); w.Write((short)2); w.Write((short)16);
+                w.Write(Encoding.ASCII.GetBytes("data")); w.Write(samples.Length * 2);
+                foreach (var s in samples) w.Write(s);
+                w.Flush();
+                return m.ToArray();
+            }
         }
 
         /// <summary>Writes a test page and returns its path.</summary>

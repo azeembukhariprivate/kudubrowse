@@ -14,8 +14,12 @@ namespace Kudubrowse.Views
         /// <summary>Where the profile is kept (cookies, cache, site data): %LocalAppData%\KUDUBROWSE\Profiles\Default.</summary>
         public static string ProfileFolder { get; set; } = Path.Combine(Session.DataFolder, "Profiles", "Default");
 
+        /// <summary>Extra switches for the engine (only the self-test uses one: pages may play sound without a click).</summary>
+        public static string ExtraArguments { get; set; }
+
         public static Task<CoreWebView2Environment> Environment =>
-            _environment ?? (_environment = CoreWebView2Environment.CreateAsync(null, ProfileFolder));
+            _environment ?? (_environment = CoreWebView2Environment.CreateAsync(null, ProfileFolder,
+                string.IsNullOrEmpty(ExtraArguments) ? null : new CoreWebView2EnvironmentOptions(ExtraArguments)));
 
         /// <summary>The installed engine's version, or null when it isn't installed.</summary>
         public static string RuntimeVersion

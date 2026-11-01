@@ -249,6 +249,7 @@ namespace Kudubrowse.Views
                 foreach (var t in saved)
                 {
                     var tab = new BrowserTab(t.Url, t.Title, t.Room);
+                    if (t.Muted) tab.SetMuted(true);
                     if (t.Group != null)
                     {
                         var key = t.Group + "|" + t.GroupColor;
@@ -429,6 +430,13 @@ namespace Kudubrowse.Views
                 };
                 move.Items.Add(new MenuItem());
                 menu.Items.Add(move);
+            }
+            menu.Items.Add(Item(tab.Muted ? "Unmute tab" : "Mute tab", () => tab.SetMuted(!tab.Muted), "Ctrl+M"));
+            var site = tab.PageHost.Length > 0 ? Core.Blocking.Domains.Registrable(tab.PageHost) : null;
+            if (site != null && !IsPrivate)
+            {
+                var always = Settings.MutedSites.Contains(site);
+                menu.Items.Add(Item(always ? "Stop always muting " + site : "Always mute " + site, () => AlwaysMute(site, !always)));
             }
             menu.Items.Add(GroupMenu(tab));
             if (IsSplit && (tab == Current || tab == _splitPartner))
@@ -722,6 +730,7 @@ namespace Kudubrowse.Views
             else if (ctrl && (key == Key.D0 || key == Key.NumPad0)) { if (Current != null) Current.Zoom = 1; }
             else if (ctrl && key == Key.P) Print();
             else if (key == Key.F9) _ = ToggleReadingMode();
+            else if (ctrl && key == Key.M) { if (Current != null) Current.SetMuted(!Current.Muted); }
             else if (ctrl && shift && key == Key.S) _ = SaveScreenshot();
             else if (key == Key.F11) SetFullScreen(!_fullScreen);
             else if (ctrl && shift && key == Key.B) ToggleBookmarksBar();
@@ -733,6 +742,17 @@ namespace Kudubrowse.Views
             else if (key == Key.Escape && Current?.IsLoading == true && !_address.IsKeyboardFocusWithin) Current.Stop();
             else handled = false;
             if (handled) e.Handled = true;
+        }
+
+        /// <summary>Puts a site on the "always mute" list (its open tabs are muted now), or takes it off (they're unmuted).</summary>
+        public static void AlwaysMute(string site, bool on)
+        {
+            var list = Settings.MutedSites;
+            if (on) list.Add(site);
+            else list.Remove(site);
+            Settings.MutedSites = list;
+            foreach (var t in Open.SelectMany(w => w.Tabs))
+                if (t.PageHost.Length > 0 && Core.Blocking.Domains.Registrable(t.PageHost) == site) t.SetMuted(on);
         }
 
         private void SelectBy(int step)

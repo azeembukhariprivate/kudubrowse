@@ -106,6 +106,27 @@ namespace Kudubrowse.Views
                 root.Children.Add(sites);
             }
 
+            var muted = Settings.MutedSites;
+            if (muted.Count > 0)
+            {
+                root.Children.Add(Ui.Heading("Sound", 14).Margin(0, 16, 0, 4));
+                root.Children.Add(Ui.Text("Sites always muted:", 12.5).Margin(0, 0, 0, 4));
+                var mutedSites = new WrapPanel();
+                foreach (var site in muted)
+                {
+                    var chip = Ui.Small(Ui.Button(site, "IconClose", "SecondaryButton"));
+                    chip.ToolTip = "Stop always muting " + site;
+                    chip.Margin = new Thickness(0, 0, 6, 6);
+                    chip.Click += (s, e) =>
+                    {
+                        MainWindow.AlwaysMute(site, false);
+                        mutedSites.Children.Remove(chip);
+                    };
+                    mutedSites.Children.Add(chip);
+                }
+                root.Children.Add(mutedSites);
+            }
+
             root.Children.Add(Ui.Heading("Passwords", 14).Margin(0, 16, 0, 4));
             var offer = new CheckBox { Content = "Offer to save passwords when you sign in to sites", IsChecked = Settings.OfferToSavePasswords };
             offer.Click += (s, e) => Settings.OfferToSavePasswords = offer.IsChecked == true;

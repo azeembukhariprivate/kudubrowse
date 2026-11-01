@@ -65,6 +65,9 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    %LocalAppData%\KUDUBROWSE\Update, and after the last window closes runs the installer /VERYSILENT (installed copies
    only, found through the Inno uninstall key); the next start shows "Updated to ..."; Settings.CheckForUpdates switches
    it off).
+1.3: muting tabs (`BrowserTab` speaker button, `SetMuted` -> CoreWebView2.IsMuted, Ctrl+M, kept as a 5th session column
+   "muted"; "Always mute <site>" in the tab menu, `Settings.MutedSites`, applied at SourceChanged; the self-test turns
+   off the autoplay rule with `Web.ExtraArguments` to play a test tone).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

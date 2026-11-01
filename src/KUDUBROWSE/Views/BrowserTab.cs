@@ -45,12 +45,21 @@ namespace Kudubrowse.Views
             close.ToolTip = "Close tab (Ctrl+W)";
             close.Click += (s, e) => CloseClicked?.Invoke(this);
 
-            var grid = Ui.Columns(Ui.Px(22), Ui.Star(), Ui.Auto);
+            // The speaker: shown while the page plays sound (or is muted); a click mutes or unmutes the tab.
+            _sound = Ui.Button(null, "IconSound", "GhostButton");
+            _sound.Padding = new Thickness(0);
+            _sound.Width = _sound.Height = _sound.MinHeight = 22;
+            _sound.MinWidth = 22;
+            _sound.Visibility = Visibility.Collapsed;
+            _sound.Click += (s, e) => SetMuted(!Muted);
+
+            var grid = Ui.Columns(Ui.Px(22), Ui.Star(), Ui.Auto, Ui.Auto);
             grid.Children.Add(_icon.At(0, 0));
             grid.Children.Add(_blankIcon.At(0, 0));
             grid.Children.Add(_title.Margin(6, 0, 4, 0).At(0, 1));
-            grid.Children.Add(close.At(0, 2));
-            Grid.SetColumnSpan(_groupLine, 3);
+            grid.Children.Add(_sound.At(0, 2));
+            grid.Children.Add(close.At(0, 3));
+            Grid.SetColumnSpan(_groupLine, 4);
             grid.Children.Add(_groupLine);
             Header = new Border
             {
@@ -258,7 +267,45 @@ namespace Kudubrowse.Views
             core.Reload();
         }
 
-        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room, Group = Group?.Name, GroupColor = Group?.Color };
+        public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room, Group = Group?.Name, GroupColor = Group?.Color, Muted = Muted };
+
+        // ================================================================ sound
+
+        private readonly Button _sound;
+
+        /// <summary>The tab is muted (kept for next time).</summary>
+        public bool Muted { get; private set; }
+
+        /// <summary>The page is playing sound (heard or not).</summary>
+        public bool PlayingSound
+        {
+            get
+            {
+                try { return View?.CoreWebView2?.IsDocumentPlayingAudio == true; }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { return false; }
+            }
+        }
+
+        public void SetMuted(bool muted)
+        {
+            Muted = muted;
+            try { if (View?.CoreWebView2 != null) View.CoreWebView2.IsMuted = muted; }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
+            ShowSound();
+            Changed?.Invoke(this);
+        }
+
+        /// <summary>The site of the page is on the "always mute" list.</summary>
+        public bool SiteAlwaysMuted => PageHost.Length > 0 && Settings.MutedSites.Contains(Core.Blocking.Domains.Registrable(PageHost));
+
+        private void ShowSound()
+        {
+            var show = Muted || PlayingSound;
+            _sound.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            _sound.Content = Ui.Label(Muted ? "IconMuted" : "IconSound", null, 14);
+            _sound.ToolTip = Muted ? "Unmute this tab (Ctrl+M)" : "Mute this tab (Ctrl+M)";
+            System.Windows.Automation.AutomationProperties.SetName(_sound, Muted ? "Unmute tab" : "Mute tab");
+        }
 
         public void SetActive(bool active)
         {
@@ -307,7 +354,16 @@ namespace Kudubrowse.Views
             core.SourceChanged += (s, e) =>
             {
                 Url = core.Source;
+                // A site on the "always mute" list starts muted.
+                if (!Muted && SiteAlwaysMuted) SetMuted(true);
                 Refresh();
+            };
+            core.IsMuted = Muted;
+            core.IsDocumentPlayingAudioChanged += (s, e) => ShowSound();
+            core.IsMutedChanged += (s, e) =>
+            {
+                Muted = core.IsMuted;
+                ShowSound();
             };
             core.HistoryChanged += (s, e) => Refresh();
             core.NavigationStarting += (s, e) =>
