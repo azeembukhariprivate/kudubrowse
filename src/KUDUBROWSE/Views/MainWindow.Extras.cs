@@ -94,16 +94,77 @@ namespace Kudubrowse.Views
         private void RebuildStrip()
         {
             _strip.Children.Clear();
+            _side.Children.Clear();
+            var side = Settings.TabsOnSide;
+            var panel = side ? _side : _strip;
             TabGroup previous = null;
             foreach (var t in _tabs)
             {
-                if (t.Group != null && t.Group != previous) _strip.Children.Add(GroupChip(t.Group));
+                if (t.Group != null && t.Group != previous)
+                {
+                    var chip = GroupChip(t.Group);
+                    if (side)
+                    {
+                        chip.HorizontalAlignment = HorizontalAlignment.Left;
+                        chip.Margin = new Thickness(8, 8, 6, 3);
+                    }
+                    panel.Children.Add(chip);
+                }
                 previous = t.Group;
                 t.Header.Visibility = t.Group != null && t.Group.Collapsed && t != Current ? Visibility.Collapsed : Visibility.Visible;
-                t.ShowRoom();
-                _strip.Children.Add(t.Header);
+                t.SetOnSide(side);
+                panel.Children.Add(t.Header);
             }
             SizeTabs();
+        }
+
+        // ================================================================ tabs down the side
+
+        private readonly StackPanel _side = new StackPanel();
+        private Border _sideBar;
+
+        /// <summary>Every tab is in the list down the side (for the self-test).</summary>
+        public bool TabsShownOnSide => _tabs.All(t => ReferenceEquals(t.Header.Parent, _side));
+
+        /// <summary>The list of tabs down the left side: a "New tab" button, then the tabs (it scrolls when there are many).</summary>
+        private Border BuildSideBar()
+        {
+            var newTab = Ui.Button("New tab", "IconPlus", "GhostButton", (s, e) => NewTab(select: true));
+            newTab.HorizontalAlignment = HorizontalAlignment.Stretch;
+            newTab.HorizontalContentAlignment = HorizontalAlignment.Left;
+            newTab.Margin = new Thickness(6, 6, 6, 4);
+            newTab.ToolTip = "New tab (Ctrl+T)";
+            var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            if (IsPrivate)
+            {
+                var badge = Ui.Chip("Private", Tone.Accent, "IconEye");
+                badge.HorizontalAlignment = HorizontalAlignment.Left;
+                badge.ToolTip = "Nothing from this window is kept: no history, and sites' cookies go when it closes.";
+                grid.Children.Add(badge.Margin(10, 8, 6, 0).At(0, 0));
+            }
+            grid.Children.Add(newTab.At(1, 0));
+            grid.Children.Add(new ScrollViewer { Content = _side, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(0, 0, 0, 8) }.At(2, 0));
+            _sideBar = new Border { Child = grid, Width = 240, BorderThickness = new Thickness(0, 0, 1, 0) }
+                .Res(Border.BackgroundProperty, "SurfaceAltBg").Res(Border.BorderBrushProperty, "BorderBrush");
+            return _sideBar;
+        }
+
+        /// <summary>Tabs along the top or down the side, in every window.</summary>
+        public static void PlaceTabs(bool onSide)
+        {
+            Settings.TabsOnSide = onSide;
+            foreach (var w in Open) w.ApplyTabsPlace();
+        }
+
+        private void ApplyTabsPlace()
+        {
+            var side = Settings.TabsOnSide;
+            _sideBar.Visibility = side && !_fullScreen ? Visibility.Visible : Visibility.Collapsed;
+            _chrome.RowDefinitions[0].Height = side || _fullScreen ? new GridLength(0) : GridLength.Auto;
+            RebuildStrip();
         }
 
         private Border GroupChip(TabGroup g)

@@ -27,6 +27,7 @@
 ## Everyday features
 
 - **Tabs**: open, close and reopen closed tabs (Ctrl+Shift+T), switch with Ctrl+Tab or Ctrl+1 to Ctrl+9. The tabs you had open come back next time and load when you first click them, so starting stays quick.
+- **Tabs down the side**: the tabs can be listed down the left of the window instead of along the top (in the menu, or Settings), handy with many tabs.
 - **Tab groups**: put tabs in a named, coloured group and fold it away to just its name (right-click a tab).
 - **Two pages side by side** in one window, with a line between them you can drag (right-click a tab).
 - **The address bar**: type an address or words to search for, with Google, Bing, DuckDuckGo, Brave Search or Startpage. It suggests pages from your bookmarks and history as you type.

@@ -100,7 +100,8 @@ namespace Kudubrowse.Views
         {
             var room = BrowserRooms.All.Find(Room);
             var color = IsPrivate ? "#5B21B6" : room.IsDefault ? null : room.Color;
-            Header.BorderThickness = new Thickness(0, color == null ? 0 : 3, 0, 0);
+            // Along the top: a line above the tab; down the side: a line on its left.
+            Header.BorderThickness = color == null ? new Thickness(0) : OnSide ? new Thickness(3, 0, 0, 0) : new Thickness(0, 3, 0, 0);
             Header.BorderBrush = color == null ? null : new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
             _groupLine.Background = Group == null ? null : new SolidColorBrush((Color)ColorConverter.ConvertFromString(Group.Color));
             _roomName = IsPrivate ? "Private" : room.IsDefault ? null : room.Name;
@@ -108,6 +109,19 @@ namespace Kudubrowse.Views
         }
 
         private string _roomName;
+
+        /// <summary>Shown in the list down the side of the window (full width, rounded all round) or along the top.</summary>
+        public bool OnSide { get; private set; }
+
+        public void SetOnSide(bool side)
+        {
+            OnSide = side;
+            Header.CornerRadius = side ? new CornerRadius(6) : new CornerRadius(8, 8, 0, 0);
+            Header.Margin = side ? new Thickness(6, 1, 6, 1) : new Thickness(0, 6, 2, 0);
+            if (side) Header.Width = double.NaN;
+            Header.HorizontalAlignment = side ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
+            ShowRoom();
+        }
         private readonly Border _groupLine = new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(-6, 0, 0, 0), CornerRadius = new CornerRadius(1.5), IsHitTestVisible = false };
         /// <summary>The page, once the tab has been shown.</summary>
         public WebView2 View { get; private set; }

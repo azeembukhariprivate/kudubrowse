@@ -34,6 +34,8 @@ namespace Kudubrowse.Views
             Web.ProfileFolder = Path.Combine(_temp, "profile");
             Web.ExtraArguments = "--autoplay-policy=no-user-gesture-required"; // the sound test page plays without a click
             var savedMuted = Settings.MutedSites;
+            var savedSide = Settings.TabsOnSide;
+            Settings.TabsOnSide = false;
             Settings.MutedSites = new List<string>();
             Session.DefaultFile = Path.Combine(_temp, "session.txt");
             Core.Blocking.BlockLists.DownloadFolder = Path.Combine(_temp, "lists");
@@ -112,7 +114,10 @@ namespace Kudubrowse.Views
                 await Step("Type a page's address", async () =>
                 {
                     main.Go(first);
-                    await Wait(() => main.Current.Title == "First page", 30, "the first page");
+                    // The engine's very first start can be slow (after Windows has just updated it): up to a minute.
+                    var startedAt = DateTime.UtcNow;
+                    await Wait(() => main.Current.Title == "First page", 60, "the first page");
+                    Note($"the first page took {(DateTime.UtcNow - startedAt).TotalSeconds:0.0}s (the engine starting)");
                     Expect(main.Title.StartsWith("First page"), "window title");
                     Expect(main.AddressText.StartsWith("file:///"), "address shown: " + main.AddressText);
                     await Capture(main, "first page");
@@ -614,6 +619,27 @@ namespace Kudubrowse.Views
                         main.Select(keep.Last());
                     }
                 });
+                await Step("Tabs down the side", () =>
+                {
+                    try
+                    {
+                        MainWindow.PlaceTabs(true);
+                        Pump();
+                        Expect(main.TabsShownOnSide, "every tab is in the list down the side");
+                        Screenshots.All("Tabs down the side");
+                        main.NewTab(select: true);
+                        Pump();
+                        Expect(main.TabsShownOnSide, "a new tab joins the list");
+                        main.CloseTab(main.Current);
+                    }
+                    finally
+                    {
+                        MainWindow.PlaceTabs(false);
+                    }
+                    Pump();
+                    Expect(!main.TabsShownOnSide, "back along the top");
+                    return Task.CompletedTask;
+                });
                 await Step("Tab groups and two pages side by side", async () =>
                 {
                     var keep = main.Tabs.ToList();
@@ -770,6 +796,7 @@ namespace Kudubrowse.Views
 
             (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads) = savedDownloads;
             Settings.MutedSites = savedMuted;
+            Settings.TabsOnSide = savedSide;
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
             Settings.OfferToSavePasswords = savedOffer;

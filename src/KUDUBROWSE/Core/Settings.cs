@@ -150,6 +150,13 @@ namespace Kudubrowse.Core
             set => Set("LastRunVersion", value);
         }
 
+        /// <summary>Tabs are listed down the left side of the window instead of along the top.</summary>
+        public static bool TabsOnSide
+        {
+            get => GetBool("TabsOnSide", false);
+            set => SetBool("TabsOnSide", value);
+        }
+
         /// <summary>Sites (registrable domains) whose tabs are always muted.</summary>
         public static List<string> MutedSites
         {

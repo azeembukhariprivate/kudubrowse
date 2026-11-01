@@ -67,7 +67,8 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    it off).
 1.3: muting tabs (`BrowserTab` speaker button, `SetMuted` -> CoreWebView2.IsMuted, Ctrl+M, kept as a 5th session column
    "muted"; "Always mute <site>" in the tab menu, `Settings.MutedSites`, applied at SourceChanged; the self-test turns
-   off the autoplay rule with `Web.ExtraArguments` to play a test tone).
+   off the autoplay rule with `Web.ExtraArguments` to play a test tone); tabs down the side (`Settings.TabsOnSide`,
+   `MainWindow.PlaceTabs`: the same tab headers move into `_side`, a scrolling list left of the pages; row 0 hides).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

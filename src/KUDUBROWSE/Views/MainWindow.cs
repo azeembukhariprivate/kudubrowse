@@ -189,8 +189,12 @@ namespace Kudubrowse.Views
             _chrome.Children.Add(toolbarBar.At(1, 0));
             _chrome.Children.Add(_bar.At(2, 0));
             _chrome.Children.Add(InitPasswords().At(3, 0));
-            _chrome.Children.Add(_pages.At(4, 0));
+            var pagesHost = Ui.Columns(Ui.Auto, Ui.Star());
+            pagesHost.Children.Add(BuildSideBar().At(0, 0));
+            pagesHost.Children.Add(_pages.At(0, 1));
+            _chrome.Children.Add(pagesHost.At(4, 0));
             Content = _chrome;
+            ApplyTabsPlace();
 
             PreviewKeyDown += OnKey;
             // Tabs not looked at for a while go to sleep.
@@ -459,6 +463,7 @@ namespace Kudubrowse.Views
         /// <summary>Tabs share the strip's width, between 90 and 240 pixels each.</summary>
         private void SizeTabs()
         {
+            if (Settings.TabsOnSide) return; // down the side they take the list's whole width
             var shown = _tabs.Count(t => t.Header.Visibility == Visibility.Visible);
             if (shown == 0) return;
             var chips = _strip.Children.OfType<FrameworkElement>().Where(c => !_tabs.Any(t => t.Header == c)).Sum(c => c.ActualWidth > 0 ? c.ActualWidth + 8 : 80);
@@ -640,6 +645,7 @@ namespace Kudubrowse.Views
             menu.Items.Add(Item("Screenshot of the whole page...", async () => await SaveScreenshot(), "Ctrl+Shift+S"));
             menu.Items.Add(Item("Save the page as PDF...", async () => await SavePdf()));
             menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));
+            menu.Items.Add(Item(Settings.TabsOnSide ? "Tabs along the top" : "Tabs down the side", () => PlaceTabs(!Settings.TabsOnSide)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
             menu.Items.Add(Item("Bookmarks", () => LibraryWindow.Show(this, true), "Ctrl+Shift+O"));
@@ -698,7 +704,8 @@ namespace Kudubrowse.Views
                 WindowStyle = WindowStyle.SingleBorderWindow;
                 WindowState = _stateBeforeFullScreen;
             }
-            _chrome.RowDefinitions[0].Height = on ? new GridLength(0) : GridLength.Auto;
+            _chrome.RowDefinitions[0].Height = on || Settings.TabsOnSide ? new GridLength(0) : GridLength.Auto;
+            _sideBar.Visibility = !on && Settings.TabsOnSide ? Visibility.Visible : Visibility.Collapsed;
             _chrome.RowDefinitions[1].Height = on ? new GridLength(0) : GridLength.Auto;
             _chrome.RowDefinitions[2].Height = on ? new GridLength(0) : GridLength.Auto;
             _chrome.RowDefinitions[3].Height = on ? new GridLength(0) : GridLength.Auto;

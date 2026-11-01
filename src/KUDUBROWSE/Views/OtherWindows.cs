@@ -37,6 +37,10 @@ namespace Kudubrowse.Views
                 themes.Children.Add(chip);
             }
             root.Children.Add(themes);
+            var onSide = new CheckBox { Content = "Show tabs down the side of the window", IsChecked = Settings.TabsOnSide, Margin = new Thickness(0, 10, 0, 0) };
+            onSide.Click += (s, e) => MainWindow.PlaceTabs(onSide.IsChecked == true);
+            root.Children.Add(onSide);
+            root.Children.Add(Ui.Subtle("Easier with many tabs: their names have room, and the list scrolls.", 12).Margin(27, 0, 0, 0));
 
             root.Children.Add(Ui.Heading("Search", 14).Margin(0, 16, 0, 4));
             root.Children.Add(Ui.Subtle("Words typed in the address bar are searched for with:", 12.5).Margin(0, 0, 0, 8));
