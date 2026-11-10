@@ -119,6 +119,7 @@ namespace Kudubrowse
         {
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             DispatcherUnhandledException += OnUnhandledException;
+            SafetyNet.Install(); // says so if an error behind the window closes the app
             ThemeManager.Init(Settings.Theme);
             ThemeManager.WatchSystem();
         }
