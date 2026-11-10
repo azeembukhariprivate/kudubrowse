@@ -88,6 +88,9 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    passwords window after `Verify`). `PasswordScript` notices code boxes (autocomplete one-time-code, or otp/2fa-like
    names; one box or a box per digit) and posts "codefield"; `OnCodeField` lists this site's logins with a key and sends
    only the code ("fillcode") after one is picked. Filling a login also fills a code box on the same form.
+1.7.1: copied passwords and sign-in codes don't linger (`Views/SecretClipboard.cs`: marked to stay out of Windows'
+   clipboard history and the shared clipboard, cleared after 30 seconds or when the browser closes, unless something else
+   was copied since).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

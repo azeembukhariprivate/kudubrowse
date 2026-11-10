@@ -2,7 +2,7 @@
 ; Installs for the current Windows user only, so installing never asks for administrator rights.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.7.0"
+  #define MyAppVersion "1.7.1"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\out\KUDUBROWSE"

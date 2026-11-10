@@ -141,7 +141,7 @@ namespace Kudubrowse.Views
                 });
                 Add("Copy the password", async () =>
                 {
-                    if (await Verify.Ask(this, "Copy the password for " + l.Site)) Ui.Copy(l.Password);
+                    if (await Verify.Ask(this, "Copy the password for " + l.Site)) SecretClipboard.Copy(l.Password);
                 });
                 Add("Copy the name", () => Ui.Copy(l.Username));
                 menu.Items.Add(new Separator());
@@ -151,7 +151,7 @@ namespace Kudubrowse.Views
                 {
                     Add("Copy the sign-in code (" + SignInCodes.Show(l.CodeNow()) + ")", async () =>
                     {
-                        if (await Verify.Ask(this, "Copy the sign-in code for " + l.Site)) Ui.Copy(l.CodeNow());
+                        if (await Verify.Ask(this, "Copy the sign-in code for " + l.Site)) SecretClipboard.Copy(l.CodeNow());
                     });
                     Add("Change the sign-in key...", () => AskCodeKey(l));
                     Add("Remove the sign-in code", () =>

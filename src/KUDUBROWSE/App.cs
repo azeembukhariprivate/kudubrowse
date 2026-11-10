@@ -73,6 +73,8 @@ namespace Kudubrowse
                 Updater.Start();
             };
             var code = Run();
+            // A password or sign-in code copied a moment ago doesn't stay on the clipboard after the browser.
+            SecretClipboard.ClearIfStillOurs();
             // The browser has closed: a new version waiting is installed now, quietly.
             Updater.InstallIfReady();
             return code;

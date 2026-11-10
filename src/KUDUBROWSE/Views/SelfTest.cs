@@ -418,6 +418,32 @@ namespace Kudubrowse.Views
                         main.CloseTab(tab);
                     }
                 });
+                await Step("A copied password is kept out of the clipboard history and leaves the clipboard again", async () =>
+                {
+                    var usual = SecretClipboard.ClearAfter;
+                    SecretClipboard.ClearAfter = TimeSpan.FromSeconds(2);
+                    try
+                    {
+                        Expect(SecretClipboard.Copy("self-test secret 1"), "copied");
+                        var data = Clipboard.GetDataObject();
+                        Expect(Clipboard.GetText() == "self-test secret 1", "the secret on the clipboard");
+                        Expect(data.GetDataPresent(SecretClipboard.NotInHistory) && data.GetDataPresent(SecretClipboard.NotInCloud) && data.GetDataPresent(SecretClipboard.NotForMonitors),
+                            "marked to stay out of the clipboard history and the shared clipboard");
+                        await Wait(() => !Clipboard.ContainsText(), 15, "the secret gone from the clipboard by itself");
+
+                        // Something copied afterwards is left alone.
+                        Expect(SecretClipboard.Copy("self-test secret 2"), "copied again");
+                        Clipboard.SetText("copied by the person afterwards");
+                        await Task.Delay(3500);
+                        Expect(Clipboard.GetText() == "copied by the person afterwards", "what was copied afterwards is still there");
+                        Clipboard.Clear();
+                    }
+                    finally
+                    {
+                        SecretClipboard.ClearAfter = usual;
+                    }
+                });
+
                 await Step("Rooms keep logins apart; private windows keep nothing", async () =>
                 {
                     var keep = main.Tabs.ToList();
