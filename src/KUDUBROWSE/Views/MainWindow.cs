@@ -577,7 +577,7 @@ namespace Kudubrowse.Views
                 var clearSite = Ui.Small(Ui.Button("Clear this site's cookies and data", "IconTrash"));
                 clearSite.HorizontalAlignment = HorizontalAlignment.Left;
                 clearSite.Margin = new Thickness(0, 12, 0, 0);
-                clearSite.ToolTip = "Signs you out of " + site + (t.Room == Rooms.DefaultId ? string.Empty : " in this room") + " and forgets what it stored on this PC.";
+                clearSite.ToolTip = Lang.T(t.Room == Rooms.DefaultId ? "Signs you out of {0} and forgets what it stored on this PC." : "Signs you out of {0} in this room and forgets what it stored on this PC.", site);
                 clearSite.Click += async (s, e) =>
                 {
                     if (!Dialogs.Confirm(this, "Clear the cookies and data of " + site + "? You'll be signed out of it.")) return;

@@ -102,9 +102,12 @@ namespace Kudubrowse.Views
                 return;
             }
             var site = Vault.HostOf(Vault.OriginOf(p.Value.Url));
-            var who = string.IsNullOrEmpty(p.Value.Username) ? string.Empty : " for " + p.Value.Username;
+            var who = p.Value.Username ?? string.Empty;
             var update = p.Value.Kind == Vault.SaveKind.Update;
-            _saveText.Text = update ? $"Update the saved password{who} on {site}?" : $"Save the password{who} on {site}?";
+            // Whole sentences, so they can be put into the language in use.
+            _saveText.Text = who.Length == 0
+                ? Lang.T(update ? "Update the saved password on {0}?" : "Save the password on {0}?", site)
+                : Lang.T(update ? "Update the saved password for {0} on {1}?" : "Save the password for {0} on {1}?", who, site);
             _saveButton.Content = update ? "Update" : "Save";
             _neverButton.Visibility = update ? Visibility.Collapsed : Visibility.Visible;
             _saveBar.Visibility = Visibility.Visible;

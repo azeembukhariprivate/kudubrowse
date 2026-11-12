@@ -91,6 +91,11 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
 1.7.1: copied passwords and sign-in codes don't linger (`Views/SecretClipboard.cs`: marked to stay out of Windows'
    clipboard history and the shared clipboard, cleared after 30 seconds or when the browser closes, unless something else
    was copied since).
+1.8: other languages (the shared `Lang`/`LangUi` from kudu-common put each window into the chosen language as it's shown;
+   texts built in code, such as the save-password bar, the passwords summary and the history count, are whole sentences
+   through `Lang.T`). Web pages, search engine names and the block-list names stay as they are. Texts are in
+   `src/KUDUBROWSE/Lang/<code>.txt`, made and checked with kudu-common's `tools/lang.py`; when adding or changing a text,
+   add it to every language file (`tools/lang.py check ../kudubrowse`).
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 

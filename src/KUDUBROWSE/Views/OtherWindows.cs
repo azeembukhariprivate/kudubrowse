@@ -37,6 +37,9 @@ namespace Kudubrowse.Views
                 themes.Children.Add(chip);
             }
             root.Children.Add(themes);
+
+            root.Children.Add(Ui.Heading("Language", 14).Margin(0, 16, 0, 6));
+            root.Children.Add(LangUi.Picker());
             var onSide = new CheckBox { Content = "Show tabs down the side of the window", IsChecked = Settings.TabsOnSide, Margin = new Thickness(0, 10, 0, 0) };
             onSide.Click += (s, e) => MainWindow.PlaceTabs(onSide.IsChecked == true);
             root.Children.Add(onSide);

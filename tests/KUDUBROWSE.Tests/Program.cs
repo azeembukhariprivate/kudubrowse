@@ -13,6 +13,7 @@ namespace Kudubrowse.Tests
         public static int Main()
         {
             Test("Typed web addresses open as they are, or with https:// added", AddressesOpen);
+            Test("The app is in other languages", LangTests.Run);
             Test("Words in the address bar are searched for with the chosen search engine", WordsAreSearched);
             Test("Addresses are shown without https:// and a lone trailing slash", AddressesShowShort);
             Test("Open tabs are saved and come back in order, with the selected one", TabsComeBack);

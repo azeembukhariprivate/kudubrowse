@@ -50,6 +50,7 @@
 - **Default browser**: can be chosen in Windows' Default apps, and links clicked in other apps open as a new tab in the browser that's already open.
 - **About KUDUBROWSE** (in the menu) has everything in one place: who made it, its version and updates, and all of the above with a "Try it" button for each.
 - **Updates itself**: once a day it looks for a new version, downloads it quietly, checks it against GitHub's checksum, and installs it when you close the browser; the next time you open it, it says what it was updated to. It can be switched off in Settings. (A copy run from the portable zip isn't changed; it just says when a new version is out.)
+- **In your language**: English, Malayalam (മലയാളം), Hindi (हिन्दी), Spanish, French and Arabic (with the windows mirrored for right-to-left). KUDUBROWSE starts in the same language as Windows when it has it; choose another in Settings. Web pages themselves are shown as the sites make them.
 - Zoom, print, full screen (F11), and light and dark looks that follow Windows.
 
 ## Download

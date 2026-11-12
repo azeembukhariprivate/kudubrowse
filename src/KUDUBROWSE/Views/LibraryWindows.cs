@@ -142,7 +142,7 @@ namespace Kudubrowse.Views
                     }
                     _list.Items.Add(Row("IconHistory", string.IsNullOrWhiteSpace(v.Title) ? AddressBar.Display(v.Url) : v.Title, AddressBar.Display(v.Url), local.ToString("t"), v));
                 }
-                _count.Text = visits.Count == 0 ? (words.Length > 0 ? "No pages match." : "No history yet.") : $"{visits.Count} pages" + (visits.Count == 500 ? " (the newest 500; search to find others)" : string.Empty);
+                _count.Text = visits.Count == 0 ? (words.Length > 0 ? "No pages match." : "No history yet.") : Lang.T(visits.Count == 500 ? "{0} pages (the newest 500; search to find others)" : "{0} pages", visits.Count);
             }
         }
 

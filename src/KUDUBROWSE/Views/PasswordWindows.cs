@@ -92,11 +92,12 @@ namespace Kudubrowse.Views
             foreach (var l in shown) _rows.Children.Add(Row(l, reused.Contains(l)));
             var weak = vault.Logins.Count(l => PasswordTools.IsWeak(l.Password));
             var leaked = _leaks.Count(x => x.Value > 0);
-            var parts = new List<string> { vault.Logins.Count == 1 ? "1 saved password" : $"{vault.Logins.Count} saved passwords" };
-            if (weak > 0) parts.Add($"{weak} easy to guess");
-            if (reused.Count > 0) parts.Add($"{reused.Count} used on more than one site");
-            if (_leaks.Count > 0) parts.Add(leaked == 0 ? "none found in known leaks" : $"{leaked} found in known leaks: change them");
-            _summary.Text = vault.Logins.Count == 0 ? "No saved passwords yet. When you sign in to a site, " + AppInfo.Name + " offers to save the password." : string.Join(" · ", parts) + ".";
+            // Each piece is a whole phrase in the language in use.
+            var parts = new List<string> { vault.Logins.Count == 1 ? Lang.T("1 saved password") : Lang.T("{0} saved passwords", vault.Logins.Count) };
+            if (weak > 0) parts.Add(Lang.T("{0} easy to guess", weak));
+            if (reused.Count > 0) parts.Add(Lang.T("{0} used on more than one site", reused.Count));
+            if (_leaks.Count > 0) parts.Add(leaked == 0 ? Lang.T("none found in known leaks") : Lang.T("{0} found in known leaks: change them", leaked));
+            _summary.Text = vault.Logins.Count == 0 ? Lang.T("No saved passwords yet. When you sign in to a site, {0} offers to save the password.", AppInfo.Name) : string.Join(" · ", parts) + ".";
             if (vault.NeverSaveOrigins.Count > 0)
             {
                 _rows.Children.Add(Ui.Heading("Never saved for", 13).Margin(8, 16, 0, 6));
@@ -187,11 +188,11 @@ namespace Kudubrowse.Views
         private string Notes(Login l, bool reused)
         {
             var notes = new List<string>();
-            if (l.CodeKey != null) notes.Add("makes sign-in codes");
-            if (_leaks.TryGetValue(l, out var n) && n > 0) notes.Add($"found in known leaks ({n:N0} times)");
-            if (PasswordTools.IsWeak(l.Password)) notes.Add("easy to guess");
-            if (reused) notes.Add("also used on another site");
-            return notes.Count == 0 ? "Saved " + l.Created.ToLocalTime().ToString("d MMM yyyy") : string.Join(" · ", notes);
+            if (l.CodeKey != null) notes.Add(Lang.T("makes sign-in codes"));
+            if (_leaks.TryGetValue(l, out var n) && n > 0) notes.Add(Lang.T("found in known leaks ({0} times)", n.ToString("N0")));
+            if (PasswordTools.IsWeak(l.Password)) notes.Add(Lang.T("easy to guess"));
+            if (reused) notes.Add(Lang.T("also used on another site"));
+            return notes.Count == 0 ? Lang.T("Saved {0}", l.Created.ToLocalTime().ToString("d MMM yyyy")) : string.Join(" · ", notes);
         }
 
         /// <summary>
@@ -297,8 +298,8 @@ namespace Kudubrowse.Views
             {
                 var rows = PasswordTools.ReadCsv(File.ReadAllText(file));
                 var n = PasswordStore.Vault.Merge(rows);
-                var msg = n == 1 ? "1 password brought over." : $"{n} passwords brought over.";
-                if (rows.Count > n) msg += $" {rows.Count - n} were already saved, or aren't for websites.";
+                var msg = n == 1 ? Lang.T("1 password brought over.") : Lang.T("{0} passwords brought over.", n);
+                if (rows.Count > n) msg += " " + Lang.T("{0} were already saved, or aren't for websites.", rows.Count - n);
                 if (deleteAfter)
                 {
                     try
