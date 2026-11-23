@@ -1,3 +1,5 @@
+// Bringing in from Chrome: its profiles, bookmarks (JSON) and history (read with our own read-only SQLite reader, from
+// a copy).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,15 +12,20 @@ namespace Kudubrowse.Core.Library
 {
     public sealed class ChromeProfile
     {
+        /// <summary>The profile's name.</summary>
         public string Name { get; set; }
+        /// <summary>Its folder.</summary>
         public string Folder { get; set; }
+        /// <summary>True when it has bookmarks.</summary>
         public bool HasBookmarks => File.Exists(Path.Combine(Folder, "Bookmarks"));
+        /// <summary>True when it has history.</summary>
         public bool HasHistory => File.Exists(Path.Combine(Folder, "History"));
     }
 
     /// <summary>Reads Chrome's bookmarks (a JSON file) and history (an SQLite file) from its profile folders. Only reads.</summary>
     public static class ChromeImport
     {
+        /// <summary>Chrome's data folder (the tests give their own).</summary>
         public static string UserDataFolder { get; set; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Google", "Chrome", "User Data");
 
@@ -40,6 +47,7 @@ namespace Kudubrowse.Core.Library
             return list.OrderBy(p => p.Folder.EndsWith("Default") ? 0 : 1).ThenBy(p => p.Name).ToList();
         }
 
+        /// <summary>A profile's name from Chrome's Local State file.</summary>
         private static string ProfileName(string localState, string dir)
         {
             if (localState == null) return null;
@@ -77,11 +85,15 @@ namespace Kudubrowse.Core.Library
 
         public sealed class ImportedBookmarks
         {
+            /// <summary>The bookmarks bar.</summary>
             public List<Bookmark> Bar { get; } = new List<Bookmark>();
+            /// <summary>Other bookmarks.</summary>
             public List<Bookmark> Other { get; } = new List<Bookmark>();
+            /// <summary>How many bookmarks there are.</summary>
             public int Count => Bar.Concat(Other).Sum(b => b.IsFolder ? b.AllLinks().Count() : 1);
         }
 
+        /// <summary>Reads Chrome's bookmarks file.</summary>
         public static ImportedBookmarks ReadBookmarks(string file)
         {
             ChromeBookmarksFile data;
@@ -101,6 +113,7 @@ namespace Kudubrowse.Core.Library
             return result;
         }
 
+        /// <summary>Chrome's bookmark folders and links as ours.</summary>
         private static List<Bookmark> Convert(List<ChromeNode> nodes)
         {
             var list = new List<Bookmark>();
@@ -155,6 +168,7 @@ namespace Kudubrowse.Core.Library
             catch (ArgumentOutOfRangeException) { return null; }
         }
 
+        /// <summary>A Chrome time (microseconds since 1601) as a date.</summary>
         private static DateTime? ChromeTime(string micro) => long.TryParse(micro, out var v) ? ChromeTime(v) : null;
 
         /// <summary>Opens a file Chrome may have open, without getting in its way.</summary>

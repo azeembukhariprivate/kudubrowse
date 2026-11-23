@@ -1,3 +1,4 @@
+// The tests for rooms, tabs keeping their room, sound and group, one running copy, and downloads' rooms.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +9,7 @@ namespace Kudubrowse.Tests
 {
     public static class RoomsTests
     {
+        /// <summary>Runs the rooms tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Rooms: Personal and Work to start, add, rename, remove, kept", RoomsWork);
@@ -18,13 +20,16 @@ namespace Kudubrowse.Tests
             test("Downloads: files that can run programs are spotted; sizes in plain words", Downloads);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>A new test file's path.</summary>
         private static string Temp() => Path.Combine(Path.GetTempPath(), "kudubrowse-test-" + Guid.NewGuid().ToString("N") + ".txt");
 
+        /// <summary>Rooms are added, renamed, removed and kept.</summary>
         private static void RoomsWork()
         {
             var file = Temp();
@@ -49,6 +54,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Tabs keep their room.</summary>
         private static void TabsKeepRooms()
         {
             var file = Temp();
@@ -70,6 +76,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Tabs keep being muted.</summary>
         private static void TabsKeepMuted()
         {
             var file = Temp();
@@ -91,6 +98,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Tabs keep their group.</summary>
         private static void TabsKeepGroups()
         {
             var file = Temp();
@@ -119,6 +127,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A second start hands its address to the first.</summary>
         private static void OneCopy()
         {
             var name = "kudubrowse-test-" + Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -142,6 +151,7 @@ namespace Kudubrowse.Tests
             Equal(false, SingleInstance.Send("kudubrowse-nobody-" + Guid.NewGuid().ToString("N"), new[] { "x" }, 300), "nothing running: not sent");
         }
 
+        /// <summary>Downloads keep their room.</summary>
         private static void Downloads()
         {
             Equal(true, DownloadRules.IsRisky("setup.EXE"), "programs");

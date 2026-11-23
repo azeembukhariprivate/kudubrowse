@@ -1,3 +1,5 @@
+// Rules for downloads: sorting into folders by kind, safe and free names, risky kinds of file, and the pieces a big
+// file is fetched in.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,6 +15,7 @@ namespace Kudubrowse.Core
     /// </summary>
     public static class DownloadRules
     {
+        /// <summary>Endings of files that can run programs (they get Windows' check).</summary>
         private static readonly string[] Risky =
         {
             ".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle", ".bat", ".cmd", ".com", ".scr", ".pif", ".cpl",
@@ -22,12 +25,14 @@ namespace Kudubrowse.Core
             ".scf", ".gadget", ".vb", ".msh", ".psc1", ".ps1xml", ".appinstaller", ".diagcab", ".settingcontent-ms", ".library-ms", ".search-ms"
         };
 
+        /// <summary>True when a file could run a program.</summary>
         public static bool IsRisky(string fileName)
         {
             var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
             return Risky.Contains(ext);
         }
 
+        /// <summary>The kinds of file, by ending, for sorting into folders.</summary>
         private static readonly Dictionary<string, string[]> Kinds = new Dictionary<string, string[]>
         {
             ["Pictures"] = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif", ".avif", ".tif", ".tiff", ".ico", ".raw", ".psd" },

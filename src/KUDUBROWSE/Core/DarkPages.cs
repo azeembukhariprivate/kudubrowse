@@ -1,3 +1,5 @@
+// Dark pages: the choice (off, when the site has its own dark look, always), sites kept light, and the script that
+// darkens light pages.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,8 +25,10 @@ namespace Kudubrowse.Core
         /// <summary>Raised when the choice or the "don't darken" list changes, so open pages follow.</summary>
         public static event Action Changed;
 
+        /// <summary>Tells the open pages the choice changed.</summary>
         public static void Notify() => Changed?.Invoke();
 
+        /// <summary>The choice from its text (off when it can't be read).</summary>
         public static DarkMode Parse(string text) => Enum.TryParse(text, true, out DarkMode m) ? m : DarkMode.Off;
 
         /// <summary>A site on the list covers its own pages and those of its sub-sites ("example.com" covers "www.example.com").</summary>
@@ -36,6 +40,7 @@ namespace Kudubrowse.Core
             return host == site || host.EndsWith("." + site, StringComparison.Ordinal);
         }
 
+        /// <summary>True when the site is one kept light.</summary>
         public static bool IsLightSite(IEnumerable<string> lightSites, string host) => lightSites.Any(s => Covers(s, host));
 
         /// <summary>Takes the darkening away from the page shown now.</summary>
@@ -93,6 +98,7 @@ namespace Kudubrowse.Core
 })();";
         }
 
+        /// <summary>Text made safe to put inside the script.</summary>
         private static string Escape(string s)
         {
             var sb = new StringBuilder();

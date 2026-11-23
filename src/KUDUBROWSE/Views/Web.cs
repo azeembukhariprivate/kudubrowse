@@ -1,3 +1,4 @@
+// The one WebView2 engine and profile every tab of the usual room shares.
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace Kudubrowse.Views
     /// <summary>The Edge engine (WebView2) that shows the pages. All tabs share one engine and one profile folder.</summary>
     public static class Web
     {
+        /// <summary>The engine, once started.</summary>
         private static Task<CoreWebView2Environment> _environment;
 
         /// <summary>Where the profile is kept (cookies, cache, site data): %LocalAppData%\KUDUBROWSE\Profiles\Default.</summary>
@@ -17,6 +19,7 @@ namespace Kudubrowse.Views
         /// <summary>Extra switches for the engine (only the self-test uses one: pages may play sound without a click).</summary>
         public static string ExtraArguments { get; set; }
 
+        /// <summary>The engine (started the first time it's asked for).</summary>
         public static Task<CoreWebView2Environment> Environment =>
             _environment ?? (_environment = CoreWebView2Environment.CreateAsync(null, ProfileFolder,
                 string.IsNullOrEmpty(ExtraArguments) ? null : new CoreWebView2EnvironmentOptions(ExtraArguments)));

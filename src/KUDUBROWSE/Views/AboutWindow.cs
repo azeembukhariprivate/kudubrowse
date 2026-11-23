@@ -1,3 +1,4 @@
+// About KUDUBROWSE in one window: the credit, licence and updates, and what the browser can do, each with "Try it".
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +16,15 @@ namespace Kudubrowse.Views
     /// </summary>
     public sealed class AboutWindow : Window
     {
+        /// <summary>The window when it's open (only one at a time).</summary>
         private static AboutWindow _open;
+        /// <summary>The browser window it was opened from.</summary>
         private readonly MainWindow _main;
 
         /// <summary>One feature: what it's called, a line about it, its shortcut (or where to find it), and how to try it.</summary>
         public sealed class Feature
         {
+            /// <summary>A feature: its picture, name, what it does, its keys and how to try it.</summary>
             public Feature(string icon, string name, string about, string keys = null, Action<MainWindow> tryIt = null)
             {
                 Icon = icon;
@@ -30,13 +34,19 @@ namespace Kudubrowse.Views
                 TryIt = tryIt;
             }
 
+            /// <summary>Its picture.</summary>
             public string Icon { get; }
+            /// <summary>Its name.</summary>
             public string Name { get; }
+            /// <summary>What it does.</summary>
             public string About { get; }
+            /// <summary>Its keys, when it has some.</summary>
             public string Keys { get; }
+            /// <summary>Shows it in the browser.</summary>
             public Action<MainWindow> TryIt { get; }
         }
 
+        /// <summary>What makes KUDUBROWSE different.</summary>
         public static readonly IReadOnlyList<Feature> Different = new[]
         {
             new Feature("IconUser", "Rooms", "Keep separate logins apart, like your personal and work email, each in its own room with its own colour.",
@@ -53,6 +63,7 @@ namespace Kudubrowse.Views
             new Feature("IconPause", "Sleeping tabs", "Tabs you haven't looked at for 10 minutes rest and use less memory. They wake up when you click them.")
         };
 
+        /// <summary>The everyday features.</summary>
         public static readonly IReadOnlyList<Feature> Everyday = new[]
         {
             new Feature("IconStar", "Bookmarks and the bookmarks bar", "Keep the pages you like one click away.", "Ctrl+D, Ctrl+Shift+O", m => LibraryWindow.Show(m, true)),
@@ -88,6 +99,7 @@ namespace Kudubrowse.Views
             new Feature("IconMonitor", "Zoom, print and full screen", "Make pages bigger or smaller, print them, or fill the screen.", "Ctrl+plus, Ctrl+P, F11")
         };
 
+        /// <summary>Shows the window (bringing it forward when it's already open).</summary>
         public static AboutWindow Show(MainWindow main, Window owner = null)
         {
             if (_open == null || !_open.IsLoaded)
@@ -99,6 +111,7 @@ namespace Kudubrowse.Views
             return _open;
         }
 
+        /// <summary>Makes the window.</summary>
         public AboutWindow(MainWindow main, Window owner = null)
         {
             _main = main;
@@ -185,6 +198,9 @@ namespace Kudubrowse.Views
         /// <summary>What the updates line says (for the self-test).</summary>
         public static string UpdateText => Updater.Status;
 
+        /// <summary>
+        /// Opens a file that came with the app (the licence...), or the app's page online when it isn't there.
+        /// </summary>
         private static void OpenLocal(string name)
         {
             var path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AppInfo.ExePath) ?? string.Empty, name);
@@ -195,6 +211,7 @@ namespace Kudubrowse.Views
         /// <summary>How many "Try it" buttons there are (for the self-test).</summary>
         public int TryButtons { get; private set; }
 
+        /// <summary>Adds a group of features with their "Try it" buttons.</summary>
         private void AddGroup(StackPanel list, string title, IEnumerable<Feature> features)
         {
             list.Children.Add(Ui.Heading(title, 15).Margin(0, 16, 0, 6));

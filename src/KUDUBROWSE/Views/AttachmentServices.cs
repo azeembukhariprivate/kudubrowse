@@ -1,3 +1,5 @@
+// Our own downloads get Windows' mark of where they came from and its virus check (IAttachmentExecute), else the
+// Zone.Identifier mark.
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -15,6 +17,7 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class AttachmentServices
     {
+        /// <summary>The browser's id for Windows' attachment check.</summary>
         private static readonly Guid Client = new Guid("6C5A6E0F-2E64-4B7B-9C4E-4B5542524F57");
 
         /// <summary>Marks and checks the file. Returns false when the virus scanner removed it.</summary>
@@ -86,6 +89,7 @@ namespace Kudubrowse.Views
         /// <summary>The file has the "came from the internet" mark (used by the self-test).</summary>
         public static bool HasMark(string path) => (ReadMark(path) ?? string.Empty).Contains("ZoneId=3");
 
+        /// <summary>A file's mark of where it came from, or null.</summary>
         public static string ReadMark(string path)
         {
             using (var h = CreateFile(path + ":Zone.Identifier", GenericRead, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, 0, IntPtr.Zero))
@@ -97,8 +101,10 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Windows' constants for opening a file's mark.</summary>
         private const uint GenericRead = 0x80000000, GenericWrite = 0x40000000;
 
+        /// <summary>Opens a file (or its mark).</summary>
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern SafeFileHandle CreateFile(string name, uint access, FileShare share, IntPtr security, FileMode mode, uint flags, IntPtr template);
 

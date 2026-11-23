@@ -1,22 +1,29 @@
+// Address-bar suggestions: from bookmarks and history, scored by how well they match what's typed, and a search.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Kudubrowse.Core.Library
 {
+    /// <summary>What a suggestion is.</summary>
     public enum SuggestionKind { Search, Address, Bookmark, History }
 
     public sealed class Suggestion
     {
+        /// <summary>What it is.</summary>
         public SuggestionKind Kind { get; set; }
+        /// <summary>What's shown big.</summary>
         public string Text { get; set; } // what's shown big (the title, or the words searched for)
+        /// <summary>Where it goes.</summary>
         public string Url { get; set; } // where it goes
+        /// <summary>How well it matches.</summary>
         public double Score { get; set; }
     }
 
     /// <summary>What the address bar suggests while typing: bookmarks and pages visited before that match, and a search.</summary>
     public static class Suggestions
     {
+        /// <summary>The suggestions for what's typed.</summary>
         public static List<Suggestion> For(string typed, IEnumerable<Bookmark> bookmarks, IEnumerable<Visit> history, SearchEngine engine, int max = 7)
         {
             var text = (typed ?? string.Empty).Trim();
@@ -71,6 +78,7 @@ namespace Kudubrowse.Core.Library
             return list.Where((s, i) => i == list.FindIndex(o => o.Url == s.Url)).Take(max).ToList();
         }
 
+        /// <summary>How well a page matches the words typed (its site more than its title).</summary>
         private static double Score(string url, string title, string[] terms)
         {
             if (string.IsNullOrEmpty(url)) return 0;
@@ -89,6 +97,7 @@ namespace Kudubrowse.Core.Library
             return score;
         }
 
+        /// <summary>An address's site.</summary>
         private static string Host(string url)
         {
             var i = url.IndexOf("://", StringComparison.Ordinal);

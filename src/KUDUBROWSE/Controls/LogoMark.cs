@@ -1,3 +1,4 @@
+// The KUDUBROWSE logo, drawn in code: the mark on its own, and the app tile.
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,6 +11,7 @@ namespace Kudubrowse.Controls
     /// <summary>The KUDUBROWSE mark: a globe with a shield-shaped curve. Uses the text colour.</summary>
     public class LogoMark : Viewbox
     {
+        /// <summary>The mark, size pixels wide.</summary>
         public LogoMark(double size = 40)
         {
             Width = size;
@@ -37,6 +39,7 @@ namespace Kudubrowse.Controls
             Child = canvas;
         }
 
+        /// <summary>Gives the shape the theme's text colour, following theme changes.</summary>
         private void Bind(Shape shape) =>
             shape.SetBinding(Shape.StrokeProperty, new Binding { Path = new PropertyPath(TextElement.ForegroundProperty), Source = this });
     }
@@ -44,8 +47,10 @@ namespace Kudubrowse.Controls
     /// <summary>The app tile: the mark in white on a teal rounded square.</summary>
     public static class LogoTile
     {
+        /// <summary>The tile's teal.</summary>
         public static readonly Color Teal = Color.FromRgb(0x0E, 0x8C, 0x7E);
 
+        /// <summary>The app tile, size pixels wide.</summary>
         public static Border Create(double size)
         {
             var mark = new LogoMark(size);

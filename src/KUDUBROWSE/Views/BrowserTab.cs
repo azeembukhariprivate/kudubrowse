@@ -1,3 +1,5 @@
+// One tab: its header (picture, title, sound and close), its WebView2 page made the first time it's shown, blocking,
+// dark pages, sleeping, muting, and the messages from the password script.
 using System;
 using System.IO;
 using System.Linq;
@@ -20,16 +22,26 @@ namespace Kudubrowse.Views
     /// </summary>
     public sealed class BrowserTab
     {
+        /// <summary>The site's picture.</summary>
         private readonly Image _icon = new Image { Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
+        /// <summary>The picture when the site has none.</summary>
         private readonly Glyph _blankIcon;
+        /// <summary>The title.</summary>
         private readonly TextBlock _title = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, FontSize = 12.5 };
+        /// <summary>Finished once the page is made.</summary>
         private Task _ready;
+        /// <summary>The address to open once the page is made.</summary>
         private string _pending;
+        /// <summary>True once closed.</summary>
         private bool _closed;
+        /// <summary>The engine the page is made in (its room).</summary>
         private CoreWebView2Environment _env;
+        /// <summary>The top page's address (for blocking and passwords).</summary>
         private string _mainUrl;
+        /// <summary>The ids of the scripts added for hiding, pop-ups and dark pages.</summary>
         private string _hidingScriptId, _popupScriptId, _darkScriptId;
 
+        /// <summary>A new tab (with an address, title and room, when given).</summary>
         public BrowserTab(string url = null, string title = null, string room = null, bool isPrivate = false)
         {
             Url = url ?? string.Empty;
@@ -82,6 +94,7 @@ namespace Kudubrowse.Views
             Refresh();
         }
 
+        /// <summary>The tab's header.</summary>
         public Border Header { get; }
 
         /// <summary>The room this tab is in (its logins and site data are kept apart from other rooms').</summary>
@@ -108,11 +121,13 @@ namespace Kudubrowse.Views
             Refresh();
         }
 
+        /// <summary>The room's name, shown on the tab.</summary>
         private string _roomName;
 
         /// <summary>Shown in the list down the side of the window (full width, rounded all round) or along the top.</summary>
         public bool OnSide { get; private set; }
 
+        /// <summary>Lays the header out for tabs down the side (or along the top).</summary>
         public void SetOnSide(bool side)
         {
             OnSide = side;
@@ -122,17 +137,23 @@ namespace Kudubrowse.Views
             Header.HorizontalAlignment = side ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
             ShowRoom();
         }
+        /// <summary>The line in the group's colour.</summary>
         private readonly Border _groupLine = new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(-6, 0, 0, 0), CornerRadius = new CornerRadius(1.5), IsHitTestVisible = false };
         /// <summary>The page, once the tab has been shown.</summary>
         public WebView2 View { get; private set; }
 
+        /// <summary>The page's address.</summary>
         public string Url { get; private set; }
+        /// <summary>Its title.</summary>
         public string Title { get; private set; }
+        /// <summary>True while loading.</summary>
         public bool IsLoading { get; private set; }
+        /// <summary>True for the tab shown.</summary>
         public bool IsActive { get; private set; }
         /// <summary>The site's little picture shown on the tab, or null.</summary>
         public System.Windows.Media.ImageSource Icon => _icon.Source;
 
+        /// <summary>True for a new, empty tab.</summary>
         public bool IsBlank => string.IsNullOrEmpty(Url) || Url == "about:blank";
         /// <summary>The host of the page shown (or being opened).</summary>
         public string PageHost { get; private set; } = string.Empty;
@@ -142,19 +163,24 @@ namespace Kudubrowse.Views
         public int Blocked { get; private set; }
         /// <summary>Pop-ups this page tried to open by itself.</summary>
         public int PopupsBlocked { get; private set; }
+        /// <summary>True when there's a page to go back to.</summary>
         public bool CanGoBack => View?.CoreWebView2?.CanGoBack == true;
+        /// <summary>True when there's a page to go forward to.</summary>
         public bool CanGoForward => View?.CoreWebView2?.CanGoForward == true;
 
         /// <summary>Something the toolbar shows changed (address, title, loading, back/forward).</summary>
         public event Action<BrowserTab> Changed;
+        /// <summary>The header was clicked.</summary>
         public event Action<BrowserTab> Selected;
         /// <summary>The page was made; the window puts it in place.</summary>
         public event Action<BrowserTab> ViewCreated;
+        /// <summary>The close button was clicked.</summary>
         public event Action<BrowserTab> CloseClicked;
         /// <summary>The page asked for a new window (a link with target=_blank, window.open).</summary>
         public event Action<BrowserTab, CoreWebView2NewWindowRequestedEventArgs> NewWindowRequested;
         /// <summary>The page asked to close itself (window.close).</summary>
         public event Action<BrowserTab> PageClosed;
+        /// <summary>The page went into or out of full screen.</summary>
         public event Action<BrowserTab, bool> FullScreenChanged;
         /// <summary>Something more was blocked on the page.</summary>
         public event Action<BrowserTab> BlockedChanged;
@@ -163,6 +189,7 @@ namespace Kudubrowse.Views
 
         /// <summary>A login box got focus: where it is on the page (in page pixels), and whether it's for a new password.</summary>
         public event Action<BrowserTab, Point, bool> LoginFieldFocused;
+        /// <summary>The page's login box lost the focus.</summary>
         public event Action<BrowserTab> LoginFieldLeft;
         /// <summary>A box for a two-step sign-in code got focus: where it is on the page (in page pixels).</summary>
         public event Action<BrowserTab, Point> CodeFieldFocused;
@@ -172,8 +199,12 @@ namespace Kudubrowse.Views
         /// <summary>A login the page sent that hasn't been saved or dismissed yet.</summary>
         public (string Url, string Username, string Password, Core.Passwords.Vault.SaveKind Kind)? PendingLogin { get; set; }
 
+        /// <summary>Reads the scripts' messages.</summary>
         private static readonly System.Web.Script.Serialization.JavaScriptSerializer Json = new System.Web.Script.Serialization.JavaScriptSerializer();
 
+        /// <summary>
+        /// A message from the page's script (a login box, a login sent, a code box...), taken only from the top page.
+        /// </summary>
         private void OnPageMessage(string source, string json)
         {
             System.Collections.Generic.Dictionary<string, object> m;
@@ -220,6 +251,7 @@ namespace Kudubrowse.Views
         public bool FillGenerated(string origin, string password) =>
             Send(origin, Json.Serialize(new { kudu = "fill", generated = true, password }));
 
+        /// <summary>Sends a message to the page's script, only when the page is still at this site.</summary>
         private bool Send(string origin, string json)
         {
             var core = View?.CoreWebView2;
@@ -231,6 +263,7 @@ namespace Kudubrowse.Views
         /// <summary>The page is going somewhere (another page or site).</summary>
         public event Action<BrowserTab> Navigating;
 
+        /// <summary>Counts a pop-up that was blocked.</summary>
         public void CountBlockedPopup()
         {
             PopupsBlocked++;
@@ -241,7 +274,9 @@ namespace Kudubrowse.Views
 
         /// <summary>Tabs not looked at for this long go to sleep (they use almost no processor and less memory).</summary>
         public static TimeSpan SleepAfter { get; set; } = TimeSpan.FromMinutes(10);
+        /// <summary>When the tab was last shown.</summary>
         public DateTime LastShown { get; private set; } = DateTime.UtcNow;
+        /// <summary>True while the tab sleeps.</summary>
         public bool IsSleeping { get; private set; }
 
         /// <summary>Puts the page to sleep if it's been hidden long enough and isn't playing sound.</summary>
@@ -264,6 +299,7 @@ namespace Kudubrowse.Views
             return true;
         }
 
+        /// <summary>Wakes the tab.</summary>
         private void Wake()
         {
             if (!IsSleeping) return;
@@ -293,10 +329,12 @@ namespace Kudubrowse.Views
             core.Reload();
         }
 
+        /// <summary>The tab as kept for next time.</summary>
         public SavedTab ToSaved() => new SavedTab { Url = Url, Title = Title, Room = Room, Group = Group?.Name, GroupColor = Group?.Color, Muted = Muted };
 
         // ================================================================ sound
 
+        /// <summary>The speaker button.</summary>
         private readonly Button _sound;
 
         /// <summary>The tab is muted (kept for next time).</summary>
@@ -312,6 +350,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Mutes or unmutes the tab.</summary>
         public void SetMuted(bool muted)
         {
             Muted = muted;
@@ -324,6 +363,7 @@ namespace Kudubrowse.Views
         /// <summary>The site of the page is on the "always mute" list.</summary>
         public bool SiteAlwaysMuted => PageHost.Length > 0 && Settings.MutedSites.Contains(Core.Blocking.Domains.Registrable(PageHost));
 
+        /// <summary>Shows the speaker when the tab plays sound or is muted.</summary>
         private void ShowSound()
         {
             var show = Muted || PlayingSound;
@@ -333,6 +373,7 @@ namespace Kudubrowse.Views
             System.Windows.Automation.AutomationProperties.SetName(_sound, Muted ? "Unmute tab" : "Mute tab");
         }
 
+        /// <summary>Shows or hides the tab's page.</summary>
         public void SetActive(bool active)
         {
             if (IsActive != active) LastShown = DateTime.UtcNow;
@@ -353,6 +394,7 @@ namespace Kudubrowse.Views
             return _ready;
         }
 
+        /// <summary>Makes the page: its room's engine, settings, blocking, scripts and events.</summary>
         private async Task Create()
         {
             var env = _env = await Web.Environment;
@@ -457,6 +499,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Checks a request against the blocker.</summary>
         private void OnRequest(object sender, CoreWebView2WebResourceRequestedEventArgs e)
         {
             if (!Blocker.Ready || SiteAllowed) return;
@@ -469,6 +512,7 @@ namespace Kudubrowse.Views
             BlockedChanged?.Invoke(this);
         }
 
+        /// <summary>The lists changed: uses them in this page.</summary>
         private async void OnBlockerChanged() => await RefreshBlocking();
 
         /// <summary>Takes in changed blocking settings (before the page is reloaded).</summary>
@@ -497,6 +541,7 @@ namespace Kudubrowse.Views
             catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
         }
 
+        /// <summary>Dark pages changed: uses the choice in this page.</summary>
         private void OnDarkPagesChanged() => View?.Dispatcher.BeginInvoke(new Action(async () => await UpdateDarkPages(true)));
 
         /// <summary>
@@ -528,9 +573,11 @@ namespace Kudubrowse.Views
         /// <summary>Pages are always dark and this tab's site isn't on the "don't darken" list.</summary>
         public bool SiteDarkened => Settings.DarkPages == DarkMode.Always && PageHost.Length > 0 && !DarkPages.IsLightSite(Settings.LightSites, PageHost);
 
+        /// <summary>An address's site.</summary>
         public static string HostOf(string url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https") ? u.Host.ToLowerInvariant() : string.Empty;
 
+        /// <summary>Loads the site's picture.</summary>
         private async Task LoadFavicon()
         {
             try
@@ -563,6 +610,7 @@ namespace Kudubrowse.Views
             Refresh();
         }
 
+        /// <summary>Opens an address (once the page is made).</summary>
         public async void Navigate(string url)
         {
             if (string.IsNullOrEmpty(url)) return;
@@ -584,15 +632,19 @@ namespace Kudubrowse.Views
             if (View == null && !IsBlank) Navigate(Url);
         }
 
+        /// <summary>Goes back.</summary>
         public void GoBack() => View?.CoreWebView2?.GoBack();
+        /// <summary>Goes forward.</summary>
         public void GoForward() => View?.CoreWebView2?.GoForward();
 
+        /// <summary>Loads the page again.</summary>
         public void Reload()
         {
             if (View?.CoreWebView2 != null) View.CoreWebView2.Reload();
             else LoadIfNeeded();
         }
 
+        /// <summary>Stops loading.</summary>
         public void Stop() => View?.CoreWebView2?.Stop();
 
         public double Zoom
@@ -605,6 +657,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Closes the tab and its page.</summary>
         public void Close()
         {
             _closed = true;
@@ -615,6 +668,7 @@ namespace Kudubrowse.Views
             View = null;
         }
 
+        /// <summary>Updates the header.</summary>
         private void Refresh()
         {
             _title.Text = Title;
@@ -626,6 +680,7 @@ namespace Kudubrowse.Views
             Changed?.Invoke(this);
         }
 
+        /// <summary>Updates the header's look (chosen, loading, room).</summary>
         private void UpdateLook()
         {
             if (IsActive) Header.SetResourceReference(Border.BackgroundProperty, "SurfaceBg");

@@ -1,3 +1,5 @@
+// A small web server on this PC for the tests and self-test: files with parts, changes, drops, redirects and cookies,
+// to check downloads.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,23 +21,34 @@ namespace Kudubrowse.Views
     {
         public sealed class Item
         {
+            /// <summary>The file's bytes.</summary>
             public byte[] Body;
+            /// <summary>Its kind.</summary>
             public string Type = "application/octet-stream";
+            /// <summary>True when it can be fetched in parts.</summary>
             public bool Parts = true;
+            /// <summary>Its version (ETag).</summary>
             public string Tag = "\"v1\"";
             /// <summary>The first this-many answers stop after <see cref="DropAfter"/> bytes.</summary>
             public int Drops;
+            /// <summary>Drops the connection after this many bytes (0: never).</summary>
             public long DropAfter;
             /// <summary>Pause after each 64 KB sent, to make a download take a while.</summary>
             public int SlowMs;
+            /// <summary>Sends the request elsewhere.</summary>
             public string RedirectTo;
+            /// <summary>Its Content-Disposition.</summary>
             public string Disposition;
         }
 
+        /// <summary>Listens on this PC only.</summary>
         private readonly TcpListener _listener = new TcpListener(IPAddress.Loopback, 0);
+        /// <summary>The files, by path.</summary>
         private readonly ConcurrentDictionary<string, Item> _items = new ConcurrentDictionary<string, Item>();
+        /// <summary>Stops the server.</summary>
         private readonly CancellationTokenSource _stop = new CancellationTokenSource();
 
+        /// <summary>Starts the server on a free port.</summary>
         public TestServer()
         {
             _listener.Start();
@@ -43,13 +56,20 @@ namespace Kudubrowse.Views
             Task.Run(Accept);
         }
 
+        /// <summary>Its port.</summary>
         public int Port { get; }
+        /// <summary>The address of a path.</summary>
         public string Url(string path) => "http://127.0.0.1:" + Port + "/" + path.TrimStart('/');
+        /// <summary>The cookies requests sent.</summary>
         public ConcurrentQueue<string> CookiesSeen { get; } = new ConcurrentQueue<string>();
+        /// <summary>The parts requests asked for.</summary>
         public ConcurrentQueue<string> RangesAsked { get; } = new ConcurrentQueue<string>();
+        /// <summary>How many requests came.</summary>
         public int Requests;
 
+        /// <summary>Adds a file.</summary>
         public Item Add(string path, Item item) => _items["/" + path.TrimStart('/')] = item;
+        /// <summary>Adds a web page.</summary>
         public Item Add(string path, string html) => Add(path, new Item { Body = Encoding.UTF8.GetBytes(html), Type = "text/html; charset=utf-8", Parts = false });
 
         /// <summary>Bytes that are the same every time for a given size, so a download can be checked.</summary>
@@ -67,6 +87,7 @@ namespace Kudubrowse.Views
             return b;
         }
 
+        /// <summary>Takes each connection.</summary>
         private async Task Accept()
         {
             while (!_stop.IsCancellationRequested)
@@ -78,6 +99,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Answers a request.</summary>
         private async Task Serve(TcpClient client)
         {
             using (client)
@@ -148,6 +170,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Reads a request's head.</summary>
         private static async Task<string> ReadHead(NetworkStream stream)
         {
             var bytes = new List<byte>();
@@ -163,12 +186,14 @@ namespace Kudubrowse.Views
             return null;
         }
 
+        /// <summary>Writes text to the connection.</summary>
         private static Task Write(Stream s, string text)
         {
             var b = Encoding.ASCII.GetBytes(text);
             return s.WriteAsync(b, 0, b.Length);
         }
 
+        /// <summary>Stops the server.</summary>
         public void Dispose()
         {
             _stop.Cancel();

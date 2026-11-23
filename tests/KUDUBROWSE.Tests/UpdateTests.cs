@@ -1,3 +1,4 @@
+// The tests for updating by itself: only a newer version's own installer is taken.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +13,7 @@ namespace Kudubrowse.Tests
     /// <summary>Updating by itself: only the app's own installer, only with GitHub's checksum, and checked after download.</summary>
     public static class UpdateTests
     {
+        /// <summary>Runs the update tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Updates: a newer release's installer is found, with GitHub's checksum", Newer);
@@ -19,20 +21,25 @@ namespace Kudubrowse.Tests
             test("Updates: the installer is kept only when its checksum matches", Downloaded);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>The start every installer's address must have.</summary>
         private const string Prefix = "https://github.com/azeembukhariprivate/kudubrowse/releases/download/";
+        /// <summary>A made-up SHA-256.</summary>
         private static readonly string Sha = new string('a', 64);
 
+        /// <summary>A made-up latest release as GitHub gives it.</summary>
         private static string Json(string tag, string asset, string url = null, string digest = null, bool draft = false) =>
             "{\"tag_name\":\"" + tag + "\",\"draft\":" + (draft ? "true" : "false") + ",\"prerelease\":false,\"html_url\":\"x\",\"assets\":[" +
             "{\"name\":\"KUDUBROWSE-1.9.0-portable.zip\",\"browser_download_url\":\"" + Prefix + "v1.9.0/KUDUBROWSE-1.9.0-portable.zip\",\"digest\":\"sha256:" + Sha + "\",\"size\":10}," +
             "{\"name\":\"" + asset + "\",\"browser_download_url\":\"" + (url ?? Prefix + tag + "/" + asset) + "\"" +
             (digest == null ? string.Empty : ",\"digest\":\"" + digest + "\"") + ",\"size\":1234}]}";
 
+        /// <summary>A newer release is taken.</summary>
         private static void Newer()
         {
             var r = AutoUpdate.Parse(Json("v1.9.0", "KUDUBROWSE-1.9.0-setup.exe", digest: "sha256:" + Sha.ToUpperInvariant()), "KUDUBROWSE", new Version(1, 2, 0), Prefix);
@@ -43,6 +50,7 @@ namespace Kudubrowse.Tests
             Equal("1.10.0", AutoUpdate.Parse(Json("v1.10.0", "KUDUBROWSE-1.10.0-setup.exe", digest: "sha256:" + Sha), "KUDUBROWSE", new Version(1, 9, 0), Prefix)?.Version.ToString(3), "1.10 is newer than 1.9");
         }
 
+        /// <summary>Older releases and other files are ignored.</summary>
         private static void Ignored()
         {
             var now = new Version(1, 2, 0);
@@ -56,6 +64,7 @@ namespace Kudubrowse.Tests
             Equal(null, AutoUpdate.Parse("{ not json", "KUDUBROWSE", now, Prefix), "a broken answer");
         }
 
+        /// <summary>A downloaded installer is checked by its SHA-256.</summary>
         private static void Downloaded()
         {
             var folder = Path.Combine(Path.GetTempPath(), "kudubrowse-update-" + Guid.NewGuid().ToString("N").Substring(0, 8));

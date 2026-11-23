@@ -1,3 +1,4 @@
+// The tabs kept for next time (address, title, room, group, muted), and the recently closed tabs.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,12 +9,15 @@ namespace Kudubrowse.Core
 {
     public sealed class SavedTab
     {
+        /// <summary>The tab's address.</summary>
         public string Url { get; set; }
+        /// <summary>Its title.</summary>
         public string Title { get; set; }
         /// <summary>The room the tab is in (null or "Default" for the first room).</summary>
         public string Room { get; set; }
         /// <summary>The tab group it's in (null for none), and the group's colour.</summary>
         public string Group { get; set; }
+        /// <summary>Its group's colour.</summary>
         public string GroupColor { get; set; }
         /// <summary>The tab was muted.</summary>
         public bool Muted { get; set; }
@@ -26,12 +30,14 @@ namespace Kudubrowse.Core
     /// </summary>
     public static class Session
     {
+        /// <summary>The browser's data folder.</summary>
         public static string DataFolder =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.Name);
 
         /// <summary>The session file (the self-test uses its own).</summary>
         public static string DefaultFile { get; set; } = Path.Combine(DataFolder, "session.txt");
 
+        /// <summary>Keeps the tabs and which one was chosen.</summary>
         public static void Save(IEnumerable<SavedTab> tabs, int selected, string file = null)
         {
             file = file ?? DefaultFile;
@@ -59,6 +65,7 @@ namespace Kudubrowse.Core
             }
         }
 
+        /// <summary>Reads the tabs kept last time.</summary>
         public static (List<SavedTab> Tabs, int Selected) Load(string file = null)
         {
             file = file ?? DefaultFile;
@@ -103,20 +110,26 @@ namespace Kudubrowse.Core
         public static bool IsSafeToReopen(string url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "file");
 
+        /// <summary>True for a colour like "#0E8C7E".</summary>
         private static bool IsColor(string s) => s.Length == 7 && s[0] == '#' && s.Skip(1).All(Uri.IsHexDigit);
 
+        /// <summary>A text without tabs and line breaks.</summary>
         private static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }
 
     /// <summary>Recently closed tabs, newest first, for "Reopen closed tab" (Ctrl+Shift+T).</summary>
     public sealed class ClosedTabs
     {
+        /// <summary>The closed tabs, newest first.</summary>
         private readonly List<SavedTab> _list = new List<SavedTab>();
+        /// <summary>How many are kept.</summary>
         public const int Max = 25;
 
+        /// <summary>How many there are.</summary>
         public int Count => _list.Count;
         public IReadOnlyList<SavedTab> Items => _list;
 
+        /// <summary>Adds a closed tab (the oldest go after 25).</summary>
         public void Add(SavedTab tab)
         {
             if (tab == null || !Session.IsSafeToReopen(tab.Url)) return;
@@ -127,6 +140,7 @@ namespace Kudubrowse.Core
         /// <summary>Takes one closed tab off the list (it's being opened again).</summary>
         public bool Take(SavedTab tab) => _list.Remove(tab);
 
+        /// <summary>Takes the last closed tab (null when none).</summary>
         public SavedTab TakeLatest()
         {
             if (_list.Count == 0) return null;

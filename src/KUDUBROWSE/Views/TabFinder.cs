@@ -1,3 +1,5 @@
+// Find any tab (Ctrl+Shift+A): every tab of the windows of the same kind and the recently closed ones, filtered as
+// words are typed, plus a few bookmarks and pages from history.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,26 +21,39 @@ namespace Kudubrowse.Views
         /// <summary>One tab that can be gone to: an open one (with its window) or a recently closed one.</summary>
         public sealed class Hit
         {
+            /// <summary>An open tab.</summary>
             public BrowserTab Tab { get; set; }
+            /// <summary>Its window.</summary>
             public MainWindow Window { get; set; }
+            /// <summary>A closed tab.</summary>
             public SavedTab Closed { get; set; }
             /// <summary>"Bookmarks" or "History" for a page that isn't open (opened in a new tab).</summary>
             public string Library { get; set; }
+            /// <summary>The title shown.</summary>
             public string Title { get; set; }
+            /// <summary>The address shown.</summary>
             public string Url { get; set; }
         }
 
+        /// <summary>The browser window it was opened from.</summary>
         private readonly MainWindow _owner;
+        /// <summary>The search box.</summary>
         private readonly TextBox _search = new TextBox { FontSize = 14 };
+        /// <summary>The results.</summary>
         private readonly ListBox _list = new ListBox { MaxHeight = 430, BorderThickness = new Thickness(0) };
+        /// <summary>What's shown when nothing matches.</summary>
         private readonly TextBlock _empty = Ui.Subtle("No tab has those words.", 12.5, true);
+        /// <summary>The results.</summary>
         private readonly List<Hit> _results = new List<Hit>();
+        /// <summary>How many bookmarks and pages from history are added.</summary>
         private const int MaxLibrary = 6;
+        /// <summary>True once closing.</summary>
         private bool _closing;
 
         /// <summary>For the self-test: stay open when another window becomes active.</summary>
         public bool StayOpen { get; set; }
 
+        /// <summary>Makes the window.</summary>
         public TabFinder(MainWindow owner)
         {
             _owner = owner;
@@ -95,6 +110,7 @@ namespace Kudubrowse.Views
             Refresh();
         }
 
+        /// <summary>Shows the window over the browser.</summary>
         public static TabFinder Show(MainWindow owner)
         {
             var f = new TabFinder(owner);
@@ -105,6 +121,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ for the self-test
 
+        /// <summary>The results (for the self-test).</summary>
         public IReadOnlyList<Hit> Results => _results;
 
         public string Query
@@ -125,6 +142,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ the list
 
+        /// <summary>Every tab it can find: open ones of windows of the same kind, then closed ones.</summary>
         private List<Hit> Everything()
         {
             var hits = new List<Hit>();
@@ -138,6 +156,7 @@ namespace Kudubrowse.Views
             return hits;
         }
 
+        /// <summary>Fills the results for the words typed.</summary>
         private void Refresh()
         {
             _results.Clear();
@@ -178,6 +197,7 @@ namespace Kudubrowse.Views
             Selected = 0;
         }
 
+        /// <summary>A result's row.</summary>
         private UIElement Row(Hit hit)
         {
             var grid = Ui.Columns(Ui.Auto, Ui.Star());
@@ -200,11 +220,13 @@ namespace Kudubrowse.Views
             return grid;
         }
 
+        /// <summary>An address's site.</summary>
         private static string Host(string url) =>
             Uri.TryCreate(url ?? string.Empty, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https") ? u.Host : string.Empty;
 
         // ================================================================ going to a tab
 
+        /// <summary>The keys: Up and Down move, Enter goes, Escape closes.</summary>
         private void OnKey(object sender, KeyEventArgs e)
         {
             switch (e.Key)
@@ -250,6 +272,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Closes once.</summary>
         private void SafeClose()
         {
             if (_closing) return;

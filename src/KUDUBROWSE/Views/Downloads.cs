@@ -1,3 +1,5 @@
+// Downloads: each one (the engine's or our own downloader's), deciding when one starts, the list of downloads, and the
+// Downloads window.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,12 +23,18 @@ namespace Kudubrowse.Views
     /// </summary>
     public sealed class DownloadItem
     {
+        /// <summary>Stops our own download.</summary>
         private CancellationTokenSource _cancel;
+        /// <summary>True while it's being stopped.</summary>
         private bool _cancelling;
+        /// <summary>When the window was last told, and the list last saved.</summary>
         private DateTime _lastTell = DateTime.MinValue, _lastSave = DateTime.UtcNow;
+        /// <summary>When the speed was last worked out.</summary>
         private DateTime _speedAt = DateTime.UtcNow;
+        /// <summary>How much was received then.</summary>
         private long _speedFrom;
 
+        /// <summary>A download (the engine's, when it has an operation).</summary>
         public DownloadItem(DownloadRecord record, CoreWebView2DownloadOperation operation = null)
         {
             Record = record;
@@ -34,20 +42,30 @@ namespace Kudubrowse.Views
             if (operation != null) Watch(operation);
         }
 
+        /// <summary>What's kept about it.</summary>
         public DownloadRecord Record { get; }
         /// <summary>The engine's download, while it's the engine fetching it (this session only).</summary>
         public CoreWebView2DownloadOperation Operation { get; private set; }
         /// <summary>Started or touched since the browser opened (shows the toolbar button).</summary>
         public bool ThisSession { get; set; } = true;
 
+        /// <summary>Its file.</summary>
         public string Path => Record.File;
+        /// <summary>Its file's name.</summary>
         public string FileName => Record.FileName;
+        /// <summary>How much is received.</summary>
         public long Received => Record.Received;
+        /// <summary>How big it is.</summary>
         public long Total => Record.Total;
+        /// <summary>Where it's up to.</summary>
         public DownloadState State => Record.State;
+        /// <summary>True when done.</summary>
         public bool Done => State == DownloadState.Done;
+        /// <summary>True when it failed.</summary>
         public bool Failed => State == DownloadState.Failed;
+        /// <summary>True while running.</summary>
         public bool Running => State == DownloadState.Running;
+        /// <summary>True while paused.</summary>
         public bool Paused => State == DownloadState.Paused;
         /// <summary>Bytes a second, lately.</summary>
         public double Speed { get; private set; }
@@ -59,11 +77,14 @@ namespace Kudubrowse.Views
         /// <summary>Finished, and nothing left to do (the virus check included).</summary>
         public bool Ready => Done && !Checking;
 
+        /// <summary>True when it can be paused.</summary>
         public bool CanPause => Running && !Finishing;
+        /// <summary>True when it can carry on.</summary>
         public bool CanCarryOn => Paused || Failed;
 
         // ---------------------------------------------------------------- the engine's downloads
 
+        /// <summary>Follows the engine's download.</summary>
         private void Watch(CoreWebView2DownloadOperation op)
         {
             op.BytesReceivedChanged += (s, a) =>
@@ -100,6 +121,7 @@ namespace Kudubrowse.Views
             };
         }
 
+        /// <summary>Why the engine's download stopped, in plain words.</summary>
         private static string Reason(CoreWebView2DownloadInterruptReason r)
         {
             switch (r)
@@ -130,6 +152,7 @@ namespace Kudubrowse.Views
 
         // ---------------------------------------------------------------- pause, carry on, cancel
 
+        /// <summary>Pauses it.</summary>
         public void Pause()
         {
             if (!CanPause) return;
@@ -161,6 +184,7 @@ namespace Kudubrowse.Views
             RunOwn();
         }
 
+        /// <summary>Stops it.</summary>
         public void Cancel()
         {
             if (!(Running || Paused)) return;
@@ -170,6 +194,7 @@ namespace Kudubrowse.Views
             else Cancelled();
         }
 
+        /// <summary>Notes it was stopped and removes the part file.</summary>
         private void Cancelled()
         {
             Record.State = DownloadState.Cancelled;
@@ -181,6 +206,7 @@ namespace Kudubrowse.Views
 
         // ---------------------------------------------------------------- the browser's own downloader
 
+        /// <summary>Runs our own download, then marks it and gets Windows' check.</summary>
         internal async void RunOwn()
         {
             Record.Own = true; // straight away, not only once the first piece starts (the list shows it from now on)
@@ -251,8 +277,10 @@ namespace Kudubrowse.Views
 
         /// <summary>Lets the list know (at most 4 times a second, unless the state changed) and keeps the list file current.</summary>
         private DownloadState _toldState;
+        /// <summary>True once "checking" was said.</summary>
         private bool _toldChecking;
 
+        /// <summary>Tells the windows how it's going (a few times a second unless now).</summary>
         private void Tell(bool now = false)
         {
             // A change of state (finished, paused, checking) is always shown straight away.
@@ -286,16 +314,21 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class Downloads
     {
+        /// <summary>Every download, once read.</summary>
         private static List<DownloadItem> _items;
+        /// <summary>The connection our downloads use.</summary>
         private static readonly HttpClient Http = MakeClient();
 
+        /// <summary>Makes the connection (redirects followed by hand, so cookies only go to the right site).</summary>
         private static HttpClient MakeClient()
         {
             // .NET allows only 2 connections to a site by default; the pieces need up to 6 at once.
             System.Net.ServicePointManager.DefaultConnectionLimit = Math.Max(System.Net.ServicePointManager.DefaultConnectionLimit, 32);
             return FastDownloader.CreateClient();
         }
+        /// <summary>Saves the list soon after a change.</summary>
         private static DispatcherTimer _saveTimer;
+        /// <summary>The browser's name sent with each request.</summary>
         private static string _userAgent;
 
         public static List<DownloadItem> Items
@@ -308,6 +341,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>A download started, changed or ended.</summary>
         public static event Action Changed;
 
         /// <summary>A download started from a page in this window (the window shows a short note about it).</summary>
@@ -318,8 +352,10 @@ namespace Kudubrowse.Views
 
         /// <summary>For the self-test: where files go, and its own list file.</summary>
         public static string Folder { get; set; }
+        /// <summary>Where the list is kept.</summary>
         public static string ListFile { get; set; } = Path.Combine(Session.DataFolder, "downloads.json");
 
+        /// <summary>Reads the list again next time.</summary>
         public static void Reload() => _items = null;
 
         /// <summary>The folder chosen in Settings, or Windows' Downloads folder.</summary>
@@ -340,6 +376,10 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>
+        /// A download starts: decides whether our downloader fetches it (big, and the site allows pieces) or the engine
+        /// does.
+        /// </summary>
         public static async void Start(BrowserTab tab, CoreWebView2 core, CoreWebView2DownloadStartingEventArgs e)
         {
             e.Handled = true; // our list instead of the engine's
@@ -421,6 +461,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Adds a download and says so under the downloads button.</summary>
         private static void Add(DownloadItem item, MainWindow from)
         {
             Started?.Invoke(item, from);
@@ -460,6 +501,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Tells the windows a download changed.</summary>
         public static void Tell()
         {
             var d = Application.Current?.Dispatcher;
@@ -489,6 +531,7 @@ namespace Kudubrowse.Views
             }));
         }
 
+        /// <summary>Saves the list now.</summary>
         public static void SaveNow()
         {
             if (_items != null) DownloadList.Save(ListFile, _items.Select(i => i.Record).ToList());
@@ -518,8 +561,10 @@ namespace Kudubrowse.Views
             return total > 0 && active.All(i => i.Total > 0) ? (active.Sum(i => i.Received) * 100 / total) + "%" : "…";
         }
 
+        /// <summary>True when the downloads button should show.</summary>
         public static bool ShowButton => Items.Any(i => i.ThisSession || i.Running || i.Paused);
 
+        /// <summary>Opens a downloaded file (asking first for risky kinds).</summary>
         public static void Open(Window owner, DownloadItem item)
         {
             if (!item.Done || !File.Exists(item.Path)) return;
@@ -529,21 +574,28 @@ namespace Kudubrowse.Views
             AppInfo.OpenFile(item.Path);
         }
 
+        /// <summary>The Downloads folder's path from Windows.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
         private static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid id, uint flags, IntPtr token, out string path);
     }
 
     public sealed class DownloadsWindow : Window
     {
+        /// <summary>The window when it's open (only one at a time).</summary>
         private static DownloadsWindow _open;
+        /// <summary>The list of downloads.</summary>
         private readonly StackPanel _list = new StackPanel();
+        /// <summary>Fills the list again soon after a change, and moves the bars.</summary>
         private readonly DispatcherTimer _refresh, _tick;
+        /// <summary>Each download's buttons shown (to refill only when they change).</summary>
         private readonly Dictionary<DownloadItem, List<string>> _buttons = new Dictionary<DownloadItem, List<string>>();
 
         /// <summary>The buttons shown for a download, as last drawn (for the self-test).</summary>
         public IReadOnlyList<string> ButtonsFor(DownloadItem item) => _buttons.TryGetValue(item, out var b) ? b : new List<string>();
+        /// <summary>True when a refill is waiting.</summary>
         private bool _pending;
 
+        /// <summary>Shows the Downloads window.</summary>
         public static DownloadsWindow Show(Window owner)
         {
             if (_open == null || !_open.IsLoaded)
@@ -555,6 +607,7 @@ namespace Kudubrowse.Views
             return _open;
         }
 
+        /// <summary>Makes the Downloads window.</summary>
         public DownloadsWindow(Window owner)
         {
             Width = 680;
@@ -612,14 +665,17 @@ namespace Kudubrowse.Views
             Fill();
         }
 
+        /// <summary>How many downloads are listed.</summary>
         public int ItemCount => _list.Children.OfType<Grid>().Count();
 
+        /// <summary>A download changed: refills soon.</summary>
         private void OnChanged()
         {
             _pending = true;
             if (!_refresh.IsEnabled) _refresh.Start();
         }
 
+        /// <summary>Fills the list: each download with its progress and buttons.</summary>
         private void Fill()
         {
             _pending = false;
@@ -671,6 +727,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>A download's state in words.</summary>
         private static string Status(DownloadItem item)
         {
             var size = item.Total > 0 ? $"{DownloadRules.Size(item.Received)} of {DownloadRules.Size(item.Total)}" : DownloadRules.Size(item.Received);

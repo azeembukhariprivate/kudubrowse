@@ -1,3 +1,4 @@
+// One running copy per user: later starts hand their address over through a named pipe.
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -17,11 +18,16 @@ namespace Kudubrowse.Core
     /// </summary>
     public sealed class SingleInstance : IDisposable
     {
+        /// <summary>Held by the first copy.</summary>
         private readonly Mutex _mutex;
+        /// <summary>Stops listening.</summary>
         private readonly CancellationTokenSource _stop = new CancellationTokenSource();
+        /// <summary>True when this is the first copy.</summary>
         public bool IsFirst { get; }
+        /// <summary>The pipe's name.</summary>
         public string PipeName { get; }
 
+        /// <summary>Takes the lock (a name of one's own for the tests).</summary>
         public SingleInstance(string name = null)
         {
             name = name ?? DefaultName();
@@ -123,6 +129,7 @@ namespace Kudubrowse.Core
 #endif
         }
 
+        /// <summary>Stops listening and lets go of the lock.</summary>
         public void Dispose()
         {
             _stop.Cancel();

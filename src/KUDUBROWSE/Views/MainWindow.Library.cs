@@ -1,3 +1,4 @@
+// The browser window's bookmarks bar, the star in the address bar, and the address-bar suggestions.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,14 +16,22 @@ namespace Kudubrowse.Views
     /// <summary>The window's bookmarks parts: the star in the address bar, the bookmarks bar, and suggestions while typing.</summary>
     public sealed partial class MainWindow
     {
+        /// <summary>The star in the address bar.</summary>
         private Button _star;
+        /// <summary>Its picture.</summary>
         private Glyph _starIcon;
+        /// <summary>The bookmarks on the bar.</summary>
         private WrapPanel _barItems;
+        /// <summary>The bookmarks bar.</summary>
         private Border _bar;
+        /// <summary>The suggestions under the address bar.</summary>
         private Popup _suggestPopup;
+        /// <summary>Their list.</summary>
         private ListBox _suggestList;
+        /// <summary>True while the address text is set by the browser (not typed).</summary>
         private bool _settingAddress;
 
+        /// <summary>Sets up the bookmarks bar, the star and the suggestions.</summary>
         private void InitLibrary(Grid addressGrid)
         {
             // The star: bookmark this page.
@@ -69,14 +78,17 @@ namespace Kudubrowse.Views
             _address.LostKeyboardFocus += (s, e) => _suggestPopup.IsOpen = false;
         }
 
+        /// <summary>The bookmarks changed: the bar and star follow.</summary>
         private void OnBookmarksChanged()
         {
             FillBar();
             UpdateStar();
         }
 
+        /// <summary>True when the bar is shown.</summary>
         public bool BarVisible => _bar.Visibility == Visibility.Visible;
 
+        /// <summary>Fills the bookmarks bar.</summary>
         private void FillBar()
         {
             _barItems.Children.Clear();
@@ -90,6 +102,7 @@ namespace Kudubrowse.Views
             foreach (var item in items) _barItems.Children.Add(BarButton(item));
         }
 
+        /// <summary>A bookmark's button on the bar (a folder opens a menu).</summary>
         private Button BarButton(Bookmark item)
         {
             var text = item.Title.Length > 28 ? item.Title.Substring(0, 26) + "…" : item.Title;
@@ -122,6 +135,7 @@ namespace Kudubrowse.Views
             return b;
         }
 
+        /// <summary>A folder's menu.</summary>
         private ContextMenu FolderMenu(Bookmark folder, UIElement anchor)
         {
             var menu = new ContextMenu { PlacementTarget = anchor, Placement = PlacementMode.Bottom };
@@ -143,6 +157,7 @@ namespace Kudubrowse.Views
             return menu;
         }
 
+        /// <summary>True when Ctrl is held (open in a new tab).</summary>
         private static bool NewTabWanted() => (Keyboard.Modifiers & ModifierKeys.Control) != 0;
 
         /// <summary>Opens an address here, or in a new tab.</summary>
@@ -157,6 +172,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Shows or hides the bookmarks bar.</summary>
         public void ToggleBookmarksBar()
         {
             Settings.ShowBookmarksBar = !Settings.ShowBookmarksBar;
@@ -165,6 +181,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ the star
 
+        /// <summary>Fills the star when the page is bookmarked.</summary>
         private void UpdateStar()
         {
             if (_star == null) return;
@@ -242,8 +259,10 @@ namespace Kudubrowse.Views
 
         // ================================================================ suggestions
 
+        /// <summary>The suggestions shown (for the self-test).</summary>
         public IReadOnlyList<Suggestion> CurrentSuggestions { get; private set; } = new List<Suggestion>();
 
+        /// <summary>Shows suggestions for what's typed.</summary>
         private void UpdateSuggestions()
         {
             var list = Suggestions.For(_address.Text, BrowserLibrary.Bookmarks.AllLinks(), BrowserLibrary.History.All, SearchEngines.Find(Settings.SearchEngine));
@@ -304,14 +323,17 @@ namespace Kudubrowse.Views
             return CurrentSuggestions;
         }
 
+        /// <summary>Closes the suggestions.</summary>
         public void CloseSuggestions() => _suggestPopup.IsOpen = false;
 
+        /// <summary>Opens a suggestion.</summary>
         private void OpenSuggestion(Suggestion s)
         {
             _suggestPopup.IsOpen = false;
             OpenAddress(s.Url, false);
         }
 
+        /// <summary>Sets the address text without starting suggestions.</summary>
         private void SetAddressText(string text)
         {
             _settingAddress = true;

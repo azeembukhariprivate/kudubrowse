@@ -1,3 +1,4 @@
+// Two-step sign-in codes (RFC 6238): from a setup key or an otpauth:// link, a new code every 30 seconds.
 using System;
 using System.Globalization;
 using System.Linq;
@@ -9,8 +10,11 @@ namespace Kudubrowse.Core.Passwords
     /// <summary>A site's two-step sign-in key: what the 6-digit codes are made from.</summary>
     public sealed class SignInKey
     {
+        /// <summary>The secret.</summary>
         public byte[] Secret { get; set; }
+        /// <summary>How many digits a code has.</summary>
         public int Digits { get; set; } = 6;
+        /// <summary>How many seconds a code lasts.</summary>
         public int Period { get; set; } = 30;
         /// <summary>"SHA1" (almost every site), "SHA256" or "SHA512".</summary>
         public string Algorithm { get; set; } = "SHA1";
@@ -54,6 +58,7 @@ namespace Kudubrowse.Core.Passwords
             return Valid(plain) ? plain : null;
         }
 
+        /// <summary>True when the key's settings are sensible.</summary>
         private static bool Valid(SignInKey k) =>
             k.Secret != null && k.Secret.Length >= 5 && (k.Digits == 6 || k.Digits == 7 || k.Digits == 8) && k.Period >= 10 && k.Period <= 300 &&
             (k.Algorithm == "SHA1" || k.Algorithm == "SHA256" || k.Algorithm == "SHA512");

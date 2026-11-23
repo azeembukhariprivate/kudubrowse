@@ -1,3 +1,4 @@
+// The tests for blocking: host rules, patterns, options, allow rules, rules left out, sites' domains and hiding.
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +9,7 @@ namespace Kudubrowse.Tests
 {
     public static class BlockingTests
     {
+        /// <summary>Runs the blocking tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Blocking: host rules block a site and its subdomains, not look-alikes", HostRules);
@@ -20,13 +22,16 @@ namespace Kudubrowse.Tests
             test("Real lists: EasyList and EasyPrivacy load quickly and block well-known ads and trackers", RealLists);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>True when the rules block this request.</summary>
         private static bool Block(FilterEngine e, string url, string page = "example.com", RequestKind kind = RequestKind.Script) => e.ShouldBlock(url, page, kind);
 
+        /// <summary>Host rules (||site^) block the site and below it.</summary>
         private static void HostRules()
         {
             var e = FilterEngine.FromText("||ads.example.net^\n||tracker.io^");
@@ -40,6 +45,7 @@ namespace Kudubrowse.Tests
             Equal(false, Block(e, "data:text/plain,ads.example.net"), "not a web address");
         }
 
+        /// <summary>Patterns with * and ^.</summary>
         private static void Patterns()
         {
             var e = FilterEngine.FromText("/banner/*/img^\n|https://start.example/\n.swf|\n&ad_type=\n-ad-300x250.");
@@ -54,6 +60,7 @@ namespace Kudubrowse.Tests
             Equal(true, Block(e, "https://x.com/img/BIG-AD-300x250.png"), "ignores letter case");
         }
 
+        /// <summary>Options: third-party, kinds, domains.</summary>
         private static void Options()
         {
             var e = FilterEngine.FromText("||cdn.widgets.com^$third-party\n||pics.net/ads/$image\n||everywhere.org^$~script\n||only.org^$domain=news.com|~sport.news.com");
@@ -68,6 +75,7 @@ namespace Kudubrowse.Tests
             Equal(false, Block(e, "https://only.org/x", "other.com"), "not on other sites");
         }
 
+        /// <summary>Allow rules beat block rules (unless $important).</summary>
         private static void Exceptions()
         {
             var e = FilterEngine.FromText("||ads.net^\n@@||ads.net/needed.js\n||must.net^$important\n@@||must.net^");
@@ -76,6 +84,7 @@ namespace Kudubrowse.Tests
             Equal(true, Block(e, "https://must.net/x"), "important wins over @@");
         }
 
+        /// <summary>Rules that can't be followed exactly are left out.</summary>
         private static void Unsupported()
         {
             var e = FilterEngine.FromText("||a.com^$popup\n||b.com^$csp=script-src 'none'\n||c.com^$redirect=noop.js\n/ads[0-9]+/\n||d.com^$document\n$domain=e.com\n*\n##+js(nobab)\nexample.com#?#div:-abp-has(.ad)\n");
@@ -87,6 +96,7 @@ namespace Kudubrowse.Tests
             Equal(0, e.GenericSelectors.Count, "no hiding taken");
         }
 
+        /// <summary>Sites' registrable domains.</summary>
         private static void RegistrableDomains()
         {
             Equal("example.co.uk", Domains.Registrable("news.example.co.uk"), "two-part ending");
@@ -96,6 +106,7 @@ namespace Kudubrowse.Tests
             Equal("me.github.io", Domains.Registrable("me.github.io"), "a shared host");
         }
 
+        /// <summary>Hiding rules for every site and for some.</summary>
         private static void Hiding()
         {
             var e = FilterEngine.FromText("##.ad-box\n###sponsor\nnews.com##.promo\nnews.com#@#.ad-box\n~safe.org##.banner\n@@||quiet.net^$generichide\n@@||bare.net^$elemhide\nbare.net##.x");

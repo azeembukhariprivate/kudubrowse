@@ -1,3 +1,5 @@
+// The tests for the parts that don't need Windows: the address bar, tabs kept for next time, closed tabs, dark pages
+// and finding tabs, plus the other test files. Run with "dotnet run".
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,8 +10,10 @@ namespace Kudubrowse.Tests
 {
     public static class Program
     {
+        /// <summary>How many tests passed and failed.</summary>
         private static int _passed, _failed;
 
+        /// <summary>Runs every test and returns 1 when any failed.</summary>
         public static int Main()
         {
             Test("Typed web addresses open as they are, or with https:// added", AddressesOpen);
@@ -32,6 +36,7 @@ namespace Kudubrowse.Tests
             return _failed == 0 ? 0 : 1;
         }
 
+        /// <summary>Runs one test, writing whether it passed.</summary>
         private static void Test(string name, Action test)
         {
             try
@@ -47,13 +52,16 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>The search engine used in the tests.</summary>
         private static readonly SearchEngine Google = SearchEngines.Find("google");
 
+        /// <summary>Addresses open as addresses.</summary>
         private static void AddressesOpen()
         {
             Equal("https://example.com", AddressBar.Resolve("example.com", Google), "plain host");
@@ -67,6 +75,7 @@ namespace Kudubrowse.Tests
             Equal(null, AddressBar.Resolve("   ", Google), "nothing typed");
         }
 
+        /// <summary>Words are searched for.</summary>
         private static void WordsAreSearched()
         {
             Equal("https://www.google.com/search?q=kerala%20backwaters", AddressBar.Resolve("kerala backwaters", Google), "two words");
@@ -78,6 +87,7 @@ namespace Kudubrowse.Tests
             Equal("google", SearchEngines.Find("unknown").Id, "unknown engine falls back to the default");
         }
 
+        /// <summary>Addresses are shown short.</summary>
         private static void AddressesShowShort()
         {
             Equal("example.com", AddressBar.Display("https://example.com/"), "trailing slash");
@@ -88,8 +98,10 @@ namespace Kudubrowse.Tests
             Equal(false, AddressBar.IsSecure("http://x.org"), "http is not");
         }
 
+        /// <summary>A new test file's path.</summary>
         private static string TempFile() => Path.Combine(Path.GetTempPath(), "kudubrowse-test-" + Guid.NewGuid().ToString("N") + ".txt");
 
+        /// <summary>Tabs come back next time.</summary>
         private static void TabsComeBack()
         {
             var file = TempFile();
@@ -117,6 +129,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Only safe addresses are reopened.</summary>
         private static void OnlySafeTabsReopen()
         {
             var file = TempFile();
@@ -133,6 +146,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Closed tabs reopen, newest first.</summary>
         private static void ClosedTabsReopen()
         {
             var closed = new ClosedTabs();
@@ -151,6 +165,7 @@ namespace Kudubrowse.Tests
             Equal(false, closed.Take(some), "only once");
         }
 
+        /// <summary>The dark pages choices.</summary>
         private static void DarkPagesChoices()
         {
             Equal(DarkMode.Always, DarkPages.Parse("always"), "read back");
@@ -167,6 +182,7 @@ namespace Kudubrowse.Tests
             Equal(true, script.Contains("img, video, picture, canvas"), "pictures and videos kept as they are");
         }
 
+        /// <summary>Tabs are found by their words.</summary>
         private static void TabsAreFound()
         {
             var tabs = new[]

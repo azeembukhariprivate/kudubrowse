@@ -1,3 +1,5 @@
+// The browser window: tabs, the address bar and buttons, new windows and private windows, the menu, full screen, zoom,
+// keys, sleeping tabs and keeping the tabs for next time.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,32 +19,51 @@ namespace Kudubrowse.Views
     {
         /// <summary>Every open browser window, so the tabs of all of them are saved together.</summary>
         public static readonly List<MainWindow> Open = new List<MainWindow>();
+        /// <summary>The tabs closed lately (for reopening).</summary>
         public static readonly ClosedTabs RecentlyClosed = new ClosedTabs();
 
+        /// <summary>The window's tabs.</summary>
         private readonly List<BrowserTab> _tabs = new List<BrowserTab>();
+        /// <summary>The tab strip.</summary>
         private readonly StackPanel _strip = new StackPanel { Orientation = Orientation.Horizontal };
+        /// <summary>Where the pages are.</summary>
         private readonly Grid _pages = new Grid();
+        /// <summary>What a new tab shows.</summary>
         private readonly Border _newTabPage;
+        /// <summary>The address bar.</summary>
         private readonly TextBox _address = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center, FontSize = 13.5 };
+        /// <summary>The picture at the start of the address bar.</summary>
         private readonly Glyph _addressIcon = Ui.Icon("IconGlobe", 15);
+        /// <summary>The search box on a new tab.</summary>
         private readonly TextBox _newTabSearch = new TextBox { MinHeight = 46, FontSize = 16, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(14, 0, 14, 0) };
+        /// <summary>The toolbar's buttons.</summary>
         private readonly Button _back, _forward, _reload, _newTabButton, _shield;
+        /// <summary>How many things were blocked on this page.</summary>
         private readonly TextBlock _shieldCount = new TextBlock { FontSize = 10.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        /// <summary>The shield's picture.</summary>
         private readonly Glyph _shieldIcon = Ui.Icon("IconShield", 16);
+        /// <summary>The downloads and menu buttons.</summary>
         private Button _downloads, _menuButton;
+        /// <summary>Puts tabs to sleep after 10 minutes hidden.</summary>
         private DispatcherTimer _sleepTimer;
+        /// <summary>The window's top part (tabs and toolbar).</summary>
         private readonly Grid _chrome;
+        /// <summary>Keeps the tabs soon after they change.</summary>
         private readonly DispatcherTimer _saveTimer;
+        /// <summary>True in full screen.</summary>
         private bool _fullScreen;
+        /// <summary>How the window was before full screen.</summary>
         private WindowState _stateBeforeFullScreen;
 
         /// <summary>The window used last (links from other apps open there).</summary>
         public static MainWindow LastActive => Open.LastOrDefault(w => w._activatedAt == Open.Max(x => x._activatedAt)) ?? Open.FirstOrDefault();
+        /// <summary>When the window was last brought forward.</summary>
         private DateTime _activatedAt = DateTime.UtcNow;
 
         /// <summary>A private window: its tabs keep no history and their site data goes when the window closes.</summary>
         public bool IsPrivate { get; }
 
+        /// <summary>Makes a browser window (private when asked).</summary>
         public MainWindow(bool isPrivate = false)
         {
             IsPrivate = isPrivate;
@@ -229,10 +250,14 @@ namespace Kudubrowse.Views
             };
         }
 
+        /// <summary>The tab shown.</summary>
         public BrowserTab Current { get; private set; }
+        /// <summary>The window's tabs.</summary>
         public IReadOnlyList<BrowserTab> Tabs => _tabs;
+        /// <summary>The address bar's text.</summary>
         public string AddressText => _address.Text;
 
+        /// <summary>A toolbar button.</summary>
         private static Button ToolButton(string icon, string tip, RoutedEventHandler click)
         {
             var b = Ui.Button(null, icon ?? "IconShield", "GhostButton", click);
@@ -275,6 +300,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ tabs
 
+        /// <summary>Opens a new tab (with an address, next to a tab, in a room).</summary>
         public BrowserTab NewTab(string url = null, bool select = true, BrowserTab after = null, string room = null)
         {
             var tab = new BrowserTab(url, null, room ?? (after ?? Current)?.Room, IsPrivate) { Group = after?.Group };
@@ -285,6 +311,7 @@ namespace Kudubrowse.Views
             return tab;
         }
 
+        /// <summary>Adds a tab at a place.</summary>
         private void AddTab(BrowserTab tab, int index, bool select)
         {
             index = Math.Max(0, Math.Min(index, _tabs.Count));
@@ -317,6 +344,7 @@ namespace Kudubrowse.Views
             ScheduleSave();
         }
 
+        /// <summary>Shows a tab.</summary>
         public void Select(BrowserTab tab)
         {
             if (tab == null) return;
@@ -338,6 +366,7 @@ namespace Kudubrowse.Views
             ScheduleSave();
         }
 
+        /// <summary>Closes a tab (closing the window with the last one).</summary>
         public void CloseTab(BrowserTab tab)
         {
             var index = _tabs.IndexOf(tab);
@@ -367,17 +396,22 @@ namespace Kudubrowse.Views
             ScheduleSave();
         }
 
+        /// <summary>Reopens the last tab closed.</summary>
         public void ReopenClosedTab()
         {
             var saved = RecentlyClosed.TakeLatest();
             if (saved != null) NewTab(saved.Url, true, Current, saved.Room);
         }
 
+        /// <summary>Closes every tab but one.</summary>
         private void CloseOtherTabs(BrowserTab keep)
         {
             foreach (var t in _tabs.Where(t => t != keep).ToList()) CloseTab(t);
         }
 
+        /// <summary>
+        /// A page opens a new window: as a tab in the opener's room (pop-ups not started by a click are blocked).
+        /// </summary>
         private async void OnNewWindow(BrowserTab opener, CoreWebView2NewWindowRequestedEventArgs e)
         {
             // Links that open a new window (and pop-ups like "Sign in with ...") open in a new tab next to this one,
@@ -405,6 +439,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>A tab's right-click menu.</summary>
         private ContextMenu TabMenu(BrowserTab tab)
         {
             var menu = new ContextMenu();
@@ -413,6 +448,7 @@ namespace Kudubrowse.Views
             return menu;
         }
 
+        /// <summary>Fills a tab's menu.</summary>
         private void FillTabMenu(ContextMenu menu, BrowserTab tab)
         {
             menu.Items.Clear();
@@ -468,6 +504,7 @@ namespace Kudubrowse.Views
             }));
         }
 
+        /// <summary>A menu item with its keys.</summary>
         private static MenuItem Item(string text, Action act, string keys = null)
         {
             var item = new MenuItem { Header = text, InputGestureText = keys ?? string.Empty };
@@ -489,6 +526,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ address bar and toolbar
 
+        /// <summary>Opens what was typed (an address, or a search).</summary>
         public void Go(string typed)
         {
             var url = AddressBar.Resolve(typed, SearchEngines.Find(Settings.SearchEngine));
@@ -503,6 +541,7 @@ namespace Kudubrowse.Views
             _newTabSearch.Text = string.Empty;
         }
 
+        /// <summary>Updates the toolbar for the tab shown.</summary>
         private void UpdateToolbar()
         {
             var t = Current;
@@ -520,6 +559,7 @@ namespace Kudubrowse.Views
             UpdateShield();
         }
 
+        /// <summary>Puts idle hidden tabs to sleep; returns how many.</summary>
         public async System.Threading.Tasks.Task<int> SleepIdleTabs()
         {
             if (!Settings.SleepTabs) return 0;
@@ -529,6 +569,7 @@ namespace Kudubrowse.Views
             return n;
         }
 
+        /// <summary>A download changed: the downloads button follows.</summary>
         private void OnDownloadsChanged() => Dispatcher.BeginInvoke(new Action(() =>
         {
             var progress = Downloads.Progress();
@@ -536,6 +577,7 @@ namespace Kudubrowse.Views
             _downloads.Content = progress == null ? (object)Ui.Icon("IconImport", 16) : Ui.Row(Ui.Icon("IconImport", 16), Ui.Text(progress, 11.5).Margin(4, 0, 0, 0));
         }));
 
+        /// <summary>Updates the shield: the count, and whether the site is allowed.</summary>
         private void UpdateShield()
         {
             var t = Current;
@@ -611,6 +653,7 @@ namespace Kudubrowse.Views
             return popup;
         }
 
+        /// <summary>Puts the cursor in the new tab's search box.</summary>
         private void FocusNewTabSearch() =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -618,12 +661,14 @@ namespace Kudubrowse.Views
                 Keyboard.Focus(_newTabSearch);
             }), DispatcherPriority.Input);
 
+        /// <summary>Puts the cursor in the address bar.</summary>
         public void FocusAddress()
         {
             _address.Focus();
             _address.SelectAll();
         }
 
+        /// <summary>The menu.</summary>
         private void ShowMenu(Button anchor)
         {
             var menu = new ContextMenu { PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
@@ -687,6 +732,7 @@ namespace Kudubrowse.Views
             menu.IsOpen = true;
         }
 
+        /// <summary>Opens a new window.</summary>
         public void NewWindow()
         {
             var w = new MainWindow();
@@ -694,6 +740,7 @@ namespace Kudubrowse.Views
             w.NewTab(select: true);
         }
 
+        /// <summary>Opens a private window.</summary>
         public MainWindow NewPrivateWindow()
         {
             var w = new MainWindow(true);
@@ -702,17 +749,20 @@ namespace Kudubrowse.Views
             return w;
         }
 
+        /// <summary>Zooms the page.</summary>
         private void ZoomBy(double factor)
         {
             if (Current?.View != null) Current.Zoom = Current.Zoom * factor;
         }
 
+        /// <summary>Prints the page.</summary>
         private void Print()
         {
             try { Current?.View?.CoreWebView2?.ShowPrintUI(CoreWebView2PrintDialogKind.Browser); }
             catch (Exception ex) when (ex is InvalidOperationException || ex is NotImplementedException) { }
         }
 
+        /// <summary>Goes into or out of full screen.</summary>
         private void SetFullScreen(bool on)
         {
             if (on == _fullScreen) return;
@@ -738,6 +788,10 @@ namespace Kudubrowse.Views
 
         // ================================================================ keyboard
 
+        /// <summary>
+        /// The keys: Ctrl+T, W, N, Shift+N, L, D, H, J, P, M, Tab and 1 to 9, zoom with + - 0, F5, F6, F11, Alt+Left
+        /// and Right, and the like.
+        /// </summary>
         private void OnKey(object sender, KeyEventArgs e)
         {
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
@@ -805,6 +859,7 @@ namespace Kudubrowse.Views
                 if (t.PageHost.Length > 0 && Core.Blocking.Domains.Registrable(t.PageHost) == site) t.SetMuted(on);
         }
 
+        /// <summary>Shows the next (or previous) tab.</summary>
         private void SelectBy(int step)
         {
             if (_tabs.Count == 0) return;
@@ -821,6 +876,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ saving the tabs
 
+        /// <summary>Keeps the tabs soon.</summary>
         private void ScheduleSave()
         {
             _saveTimer.Stop();
@@ -844,6 +900,7 @@ namespace Kudubrowse.Views
             Session.Save(tabs, Math.Max(0, selected));
         }
 
+        /// <summary>Keeps the tabs now.</summary>
         private void SaveSession() => SaveSession(null);
 
         /// <summary>Saves the tabs of every window now.</summary>

@@ -1,3 +1,5 @@
+// Updating by itself: checks 20 seconds after start and daily, downloads the new installer, and runs it silently after
+// the last window closes (installed copies only).
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -19,15 +21,21 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class Updater
     {
+        /// <summary>The installer's app id (to find the installed copy).</summary>
         private const string AppId = "{893DD256-DB89-414A-96D4-2D2DB03B0F9F}";
+        /// <summary>Checks daily.</summary>
         private static DispatcherTimer _timer;
+        /// <summary>True while checking or downloading.</summary>
         private static bool _busy;
 
+        /// <summary>Where the installer is downloaded.</summary>
         public static string Folder => Path.Combine(Session.DataFolder, "Update");
+        /// <summary>The start every installer's address must have (the app's own Releases page).</summary>
         public static string DownloadPrefix => $"https://github.com/{AppInfo.RepoOwner}/{AppInfo.RepoName}/releases/download/";
 
         /// <summary>What the About window says about updates.</summary>
         public static string Status { get; private set; } = string.Empty;
+        /// <summary>The update's state changed.</summary>
         public static event Action StatusChanged;
 
         /// <summary>Installed with the installer (not run from the portable zip), so it can update itself.</summary>
@@ -145,6 +153,7 @@ namespace Kudubrowse.Views
             return now;
         }
 
+        /// <summary>Notes the update's state and tells the windows.</summary>
         private static string SetStatus(string text)
         {
             Status = text;

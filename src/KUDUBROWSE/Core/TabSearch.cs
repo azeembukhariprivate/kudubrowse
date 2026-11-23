@@ -1,3 +1,4 @@
+// Finding a tab: open and recently closed tabs ranked by how well their title and address match the words typed.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +39,7 @@ namespace Kudubrowse.Core
                 .OrderByDescending(x => x.score).ThenBy(x => x.i)
                 .Select(x => x.item).ToList();
 
+        /// <summary>The words typed, in lower case.</summary>
         private static string[] Words(string query) =>
             (query ?? string.Empty).Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
     }

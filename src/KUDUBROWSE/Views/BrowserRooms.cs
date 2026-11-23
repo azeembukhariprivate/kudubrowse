@@ -1,3 +1,4 @@
+// Rooms in the browser: the list, and a hidden page per room for clearing its data and getting its cookies.
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -11,11 +12,15 @@ namespace Kudubrowse.Views
     /// <summary>The rooms, shared by every window, and clearing a room's site data.</summary>
     public static class BrowserRooms
     {
+        /// <summary>The rooms, once read.</summary>
         private static Rooms _rooms;
+        /// <summary>The rooms.</summary>
         public static Rooms All => _rooms ?? (_rooms = Rooms.Load(Path.Combine(BrowserLibrary.Folder, "rooms.txt")));
 
+        /// <summary>Reads the rooms again next time.</summary>
         public static void Reload() => _rooms = null;
 
+        /// <summary>The hidden page of each room, made when needed.</summary>
         private static readonly System.Collections.Generic.Dictionary<string, Task<CoreWebView2Controller>> HiddenPages =
             new System.Collections.Generic.Dictionary<string, Task<CoreWebView2Controller>>();
 
@@ -39,6 +44,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Makes a hidden page in a room.</summary>
         private static async Task<CoreWebView2Controller> MakeHidden(Window owner, string roomId)
         {
             var env = await Web.Environment;

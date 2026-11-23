@@ -1,3 +1,4 @@
+// History (history.txt): each page visited with its title, last visit and how many visits, kept 90 days.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,9 +10,13 @@ namespace Kudubrowse.Core.Library
 {
     public sealed class Visit
     {
+        /// <summary>The page's address.</summary>
         public string Url { get; set; }
+        /// <summary>Its title.</summary>
         public string Title { get; set; }
+        /// <summary>When it was last visited (UTC).</summary>
         public DateTime LastVisit { get; set; } // UTC
+        /// <summary>How many times.</summary>
         public int Visits { get; set; }
     }
 
@@ -23,21 +28,30 @@ namespace Kudubrowse.Core.Library
     {
         /// <summary>How long pages are kept (the self-test keeps its old made-up ones longer).</summary>
         public static TimeSpan KeepFor { get; set; } = TimeSpan.FromDays(90);
+        /// <summary>The most pages kept.</summary>
         public const int MaxEntries = 50000;
 
+        /// <summary>Each page, by address.</summary>
         private readonly Dictionary<string, Visit> _byUrl = new Dictionary<string, Visit>(StringComparer.Ordinal);
+        /// <summary>Where it's kept.</summary>
         public string File { get; }
+        /// <summary>True when there are changes not saved yet.</summary>
         public bool Dirty { get; private set; }
+        /// <summary>Something was added or removed.</summary>
         public event Action Changed;
 
+        /// <summary>Empty history kept in this file.</summary>
         public History(string file)
         {
             File = file;
         }
 
+        /// <summary>How many pages.</summary>
         public int Count => _byUrl.Count;
+        /// <summary>Every page.</summary>
         public IEnumerable<Visit> All => _byUrl.Values;
 
+        /// <summary>Reads history (empty when the file isn't there).</summary>
         public static History Load(string file)
         {
             var h = new History(file);
@@ -63,6 +77,7 @@ namespace Kudubrowse.Core.Library
             return h;
         }
 
+        /// <summary>Keeps history (pages older than 90 days left out).</summary>
         public void Save()
         {
             if (!Dirty) return;
@@ -134,6 +149,7 @@ namespace Kudubrowse.Core.Library
             return added;
         }
 
+        /// <summary>Removes a page.</summary>
         public void Remove(string url)
         {
             if (_byUrl.Remove(url))
@@ -143,6 +159,7 @@ namespace Kudubrowse.Core.Library
             }
         }
 
+        /// <summary>Removes everything.</summary>
         public void Clear()
         {
             _byUrl.Clear();
@@ -158,6 +175,7 @@ namespace Kudubrowse.Core.Library
                 .OrderByDescending(v => v.LastVisit).Take(max).ToList();
         }
 
+        /// <summary>A text without tabs and line breaks (they separate the file's parts).</summary>
         private static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }
 }

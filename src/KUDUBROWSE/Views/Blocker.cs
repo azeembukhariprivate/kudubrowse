@@ -1,3 +1,5 @@
+// Ad and tracker blocking in the pages: every request checked against the lists, page parts hidden by CSS, and sites
+// the person allowed.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,17 +20,23 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class Blocker
     {
+        /// <summary>The rules of the ad and tracker lists, and of the cookie notices list.</summary>
         private static FilterEngine _ads, _cookies;
         // Settings are read once (not for every request a page makes).
         private static bool _adsOn = Settings.BlockAds, _cookiesOn = Settings.HideCookieBanners, _popupsOn = Settings.BlockPopups;
+        /// <summary>Sites the person allowed (nothing blocked there).</summary>
         private static HashSet<string> _allowed = new HashSet<string>(Settings.AllowedSites);
+        /// <summary>Turns lists into JSON for the pages' scripts.</summary>
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         /// <summary>The lists were (re)loaded: tabs refresh their hiding script.</summary>
         public static event Action Changed;
 
+        /// <summary>True once the lists are read.</summary>
         public static bool Ready => _ads != null || _cookies != null;
+        /// <summary>How many network rules there are.</summary>
         public static int RuleCount => (_ads?.NetworkRules ?? 0) + (_cookies?.NetworkRules ?? 0);
+        /// <summary>How many hiding rules there are.</summary>
         public static int HidingCount => (_ads?.HidingRules ?? 0) + (_cookies?.HidingRules ?? 0);
 
         /// <summary>Loads the lists in the background, then fetches newer ones if they're more than a few days old.</summary>
@@ -39,6 +47,7 @@ namespace Kudubrowse.Views
             if (BlockLists.NeedsRefresh) await UpdateNow();
         }
 
+        /// <summary>Reads the lists in the background (and fetches them again when they're old).</summary>
         public static void Load()
         {
             var ads = FilterEngine.FromText(BlockLists.Read(BlockLists.EasyList), BlockLists.Read(BlockLists.EasyPrivacy));
@@ -84,6 +93,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ allowed sites
 
+        /// <summary>True when the person allowed this site.</summary>
         public static bool IsAllowed(string host) => !string.IsNullOrEmpty(host) && _allowed.Contains(Domains.Registrable(host));
 
         /// <summary>The blocking settings changed: read them again and refresh the tabs.</summary>
@@ -97,6 +107,7 @@ namespace Kudubrowse.Views
             Changed?.Invoke();
         }
 
+        /// <summary>Allows a site, or stops allowing it.</summary>
         public static void SetAllowed(string host, bool allowed)
         {
             if (string.IsNullOrEmpty(host)) return;
@@ -110,6 +121,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ requests
 
+        /// <summary>True when a request should be stopped.</summary>
         public static bool ShouldBlock(string url, string pageHost, CoreWebView2WebResourceContext context)
         {
             var kind = KindOf(context);
@@ -117,6 +129,7 @@ namespace Kudubrowse.Views
             return _cookiesOn && _cookies != null && _cookies.ShouldBlock(url, pageHost, kind);
         }
 
+        /// <summary>The kind of request, from the engine's.</summary>
         private static RequestKind KindOf(CoreWebView2WebResourceContext c)
         {
             switch (c)
@@ -138,14 +151,17 @@ namespace Kudubrowse.Views
 
         // ================================================================ hiding
 
+        /// <summary>The hiding CSS made so far.</summary>
         private static readonly Dictionary<string, string> _css = new Dictionary<string, string>();
 
+        /// <summary>The rules in use (cookie notices only when switched on).</summary>
         private static IEnumerable<FilterEngine> Engines()
         {
             if (_adsOn && _ads != null) yield return _ads;
             if (_cookiesOn && _cookies != null) yield return _cookies;
         }
 
+        /// <summary>The CSS hiding page parts on every site (without the rules switched off).</summary>
         private static string GenericCss(ICollection<string> leaveOut = null)
         {
             var key = "generic|" + _adsOn + _cookiesOn;

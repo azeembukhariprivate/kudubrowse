@@ -1,3 +1,5 @@
+// The browser window's extras: tab groups, tabs down the side, two pages side by side, reading mode, and saving a page
+// as a picture or PDF.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,15 +19,20 @@ namespace Kudubrowse.Views
     /// <summary>A named, coloured group of tabs; it can be folded away to just its name.</summary>
     public sealed class TabGroup
     {
+        /// <summary>The group's name.</summary>
         public string Name { get; set; }
+        /// <summary>Its colour.</summary>
         public string Color { get; set; }
+        /// <summary>True when its tabs are hidden.</summary>
         public bool Collapsed { get; set; }
     }
 
     /// <summary>Tab groups, two pages side by side, reading mode, full-page screenshots and saving pages as PDF.</summary>
     public sealed partial class MainWindow
     {
+        /// <summary>The tab shown beside the current one.</summary>
         private BrowserTab _splitPartner;
+        /// <summary>The line between the two pages.</summary>
         private GridSplitter _splitter;
 
         /// <summary>The reading mode button, at the end of the address bar.</summary>
@@ -48,6 +55,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ tab groups
 
+        /// <summary>The groups of this window's tabs.</summary>
         public IEnumerable<TabGroup> Groups => _tabs.Select(t => t.Group).Where(g => g != null).Distinct();
 
         /// <summary>Puts a tab into a group (a new one when <paramref name="group"/> is null), next to the group's other tabs.</summary>
@@ -70,6 +78,7 @@ namespace Kudubrowse.Views
             return group;
         }
 
+        /// <summary>Takes a tab out of its group.</summary>
         public void RemoveFromGroup(BrowserTab tab)
         {
             tab.Group = null;
@@ -77,6 +86,7 @@ namespace Kudubrowse.Views
             ScheduleSave();
         }
 
+        /// <summary>Hides or shows a group's tabs.</summary>
         public void ToggleGroup(TabGroup group)
         {
             group.Collapsed = !group.Collapsed;
@@ -120,7 +130,9 @@ namespace Kudubrowse.Views
 
         // ================================================================ tabs down the side
 
+        /// <summary>The list of tabs down the side.</summary>
         private readonly StackPanel _side = new StackPanel();
+        /// <summary>The bar holding it.</summary>
         private Border _sideBar;
 
         /// <summary>Every tab is in the list down the side (for the self-test).</summary>
@@ -159,6 +171,7 @@ namespace Kudubrowse.Views
             foreach (var w in Open) w.ApplyTabsPlace();
         }
 
+        /// <summary>Puts the tabs along the top or down the side, by the setting.</summary>
         private void ApplyTabsPlace()
         {
             var side = Settings.TabsOnSide;
@@ -167,6 +180,7 @@ namespace Kudubrowse.Views
             RebuildStrip();
         }
 
+        /// <summary>A group's chip in the tab strip.</summary>
         private Border GroupChip(TabGroup g)
         {
             var color = (Color)ColorConverter.ConvertFromString(g.Color);
@@ -209,6 +223,7 @@ namespace Kudubrowse.Views
             return chip;
         }
 
+        /// <summary>The tab menu's group items.</summary>
         private MenuItem GroupMenu(BrowserTab tab)
         {
             var add = new MenuItem { Header = "Add to group" };
@@ -239,7 +254,9 @@ namespace Kudubrowse.Views
 
         // ================================================================ side by side
 
+        /// <summary>True when two pages are side by side.</summary>
         public bool IsSplit => _splitPartner != null && _tabs.Contains(_splitPartner) && Current != _splitPartner;
+        /// <summary>The page beside the current one.</summary>
         public BrowserTab SplitPartner => IsSplit ? _splitPartner : null;
 
         /// <summary>Shows <paramref name="other"/> next to the current tab, each taking half the window (the line between them can be dragged).</summary>
@@ -252,6 +269,7 @@ namespace Kudubrowse.Views
             Layout();
         }
 
+        /// <summary>Ends side by side.</summary>
         public void EndSideBySide()
         {
             _splitPartner = null;
@@ -310,6 +328,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ reading mode
 
+        /// <summary>The reading-mode script (Readability), read once.</summary>
         private static string _readability;
 
         /// <summary>Shows the page's article as clean text (Mozilla's Readability finds it), or closes that view again.</summary>
@@ -351,6 +370,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Saves the whole page as a picture.</summary>
         private static async Task Capture(CoreWebView2 core, string file)
         {
             var metrics = await core.CallDevToolsProtocolMethodAsync("Page.getLayoutMetrics", "{}");
@@ -384,12 +404,14 @@ namespace Kudubrowse.Views
             return null;
         }
 
+        /// <summary>Asks where to save a file.</summary>
         private string AskFile(string title, string name, string filter, Environment.SpecialFolder folder)
         {
             var dlg = new SaveFileDialog { Title = title, FileName = name, Filter = filter, InitialDirectory = Environment.GetFolderPath(folder) };
             return dlg.ShowDialog(this) == true ? dlg.FileName : null;
         }
 
+        /// <summary>A title made safe as a file name.</summary>
         private static string Safe(string title)
         {
             var s = new string((title ?? "page").Select(c => Path.GetInvalidFileNameChars().Contains(c) ? ' ' : c).ToArray()).Trim();

@@ -1,3 +1,5 @@
+// Where KUDUBROWSE starts: one running copy per user (later starts hand their address over), the self-test, and the
+// first window.
 using System;
 using System.Linq;
 using System.Windows;
@@ -46,12 +48,16 @@ namespace Kudubrowse
             using (one) return app.Run(args.FirstOrDefault(a => !a.StartsWith("--")), one);
         }
 
+        /// <summary>
+        /// Lets another program's window come to the front (so the running copy can show the page asked for).
+        /// </summary>
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool AllowSetForegroundWindow(int processId);
     }
 
     public sealed class App : Application
     {
+        /// <summary>Starts the browser with this address (or the tabs from last time).</summary>
         public int Run(string address, SingleInstance one)
         {
             Startup += (s, e) =>
@@ -101,6 +107,9 @@ namespace Kudubrowse
             w.Activate();
         }
 
+        /// <summary>
+        /// Runs the self-test (with the made-up Chrome folder given) and returns its result as the exit code.
+        /// </summary>
         public int RunSelfTest(string chrome)
         {
             var code = 1;
@@ -115,6 +124,10 @@ namespace Kudubrowse
             return code;
         }
 
+        /// <summary>
+        /// What both ways of starting need: closing with the last window, the theme, the language and the error
+        /// handler.
+        /// </summary>
         internal void Init()
         {
             ShutdownMode = ShutdownMode.OnMainWindowClose;
@@ -125,6 +138,9 @@ namespace Kudubrowse
             ThemeManager.WatchSystem();
         }
 
+        /// <summary>
+        /// Shows an error that wasn't expected instead of closing the browser (the self-test keeps it as a failure).
+        /// </summary>
         private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             if (SelfTest.Running)

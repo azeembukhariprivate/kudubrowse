@@ -1,3 +1,5 @@
+// Copied passwords and sign-in codes don't linger: kept out of Windows' clipboard history and shared clipboard, and
+// cleared after 30 seconds or when the browser closes.
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,10 +20,14 @@ namespace Kudubrowse.Views
 
         // The names Windows and clipboard tools look for; see "Clipboard Formats" in Microsoft's documentation.
         public const string NotInHistory = "CanIncludeInClipboardHistory";
+        /// <summary>The clipboard mark that keeps it out of the shared clipboard.</summary>
         public const string NotInCloud = "CanUploadToCloudClipboard";
+        /// <summary>The clipboard mark that keeps it out of clipboard history.</summary>
         public const string NotForMonitors = "ExcludeClipboardContentFromMonitorProcessing";
 
+        /// <summary>Clears the clipboard after 30 seconds.</summary>
         private static DispatcherTimer _timer;
+        /// <summary>The clipboard's number when we copied (cleared only if nothing else was copied since).</summary>
         private static uint _ours;
 
         /// <summary>Puts the secret on the clipboard. False when the clipboard was busy.</summary>
@@ -63,6 +69,7 @@ namespace Kudubrowse.Views
             catch (ExternalException) { /* busy: the next copy replaces it anyway */ }
         }
 
+        /// <summary>The clipboard's number, which changes with every copy.</summary>
         [DllImport("user32.dll")]
         private static extern uint GetClipboardSequenceNumber();
     }

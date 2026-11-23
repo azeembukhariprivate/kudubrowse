@@ -9,9 +9,14 @@ namespace Kudubrowse.Core
     /// </summary>
     public static class ShellIntegration
     {
+        /// <summary>The name the browser's web pages are registered under.</summary>
         public const string ProgId = "KUDUBROWSEHTML";
+        /// <summary>Where browsers list themselves for Windows' default apps.</summary>
         private const string ClientKey = @"Software\Clients\StartMenuInternet\" + AppInfo.Name;
 
+        /// <summary>
+        /// Registers the browser for web pages and links, for this user only (Windows makes the person choose it).
+        /// </summary>
         public static void Register(string exe = null)
         {
             exe = exe ?? AppInfo.ExePath;
@@ -62,6 +67,7 @@ namespace Kudubrowse.Core
             }
         }
 
+        /// <summary>Takes the registration away again.</summary>
         public static void Unregister()
         {
             try

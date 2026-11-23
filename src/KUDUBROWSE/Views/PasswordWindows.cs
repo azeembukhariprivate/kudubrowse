@@ -1,3 +1,5 @@
+// The Passwords window (logins, weak or reused ones, leak check, sign-in codes) and bringing in passwords from a CSV
+// file.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,13 +19,20 @@ namespace Kudubrowse.Views
     /// <summary>The saved passwords: search, show or copy (after Windows Hello), delete, check for weak, reused and leaked ones, bring them from Chrome.</summary>
     public sealed class PasswordsWindow : Window
     {
+        /// <summary>The window when it's open (only one at a time).</summary>
         private static PasswordsWindow _open;
+        /// <summary>Finds a login.</summary>
         private readonly TextBox _search = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center };
+        /// <summary>The logins' rows.</summary>
         private readonly StackPanel _rows = new StackPanel();
+        /// <summary>A line about them.</summary>
         private readonly TextBlock _summary = Ui.Subtle(string.Empty, 12.5);
+        /// <summary>How many leaks each login's password was found in.</summary>
         private readonly Dictionary<Login, int> _leaks = new Dictionary<Login, int>();
+        /// <summary>Checks the passwords against Pwned Passwords.</summary>
         private readonly Button _check;
 
+        /// <summary>Shows the Passwords window (after the person shows it's them).</summary>
         public static PasswordsWindow Show(Window owner)
         {
             if (_open == null || !_open.IsLoaded)
@@ -35,6 +44,7 @@ namespace Kudubrowse.Views
             return _open;
         }
 
+        /// <summary>Makes the Passwords window.</summary>
         public PasswordsWindow(Window owner)
         {
             Width = 780;
@@ -79,8 +89,10 @@ namespace Kudubrowse.Views
             Fill();
         }
 
+        /// <summary>How many logins are listed.</summary>
         public int RowCount => _rows.Children.OfType<Grid>().Count();
 
+        /// <summary>Fills the logins (matching the search).</summary>
         private void Fill()
         {
             _rows.Children.Clear();
@@ -113,6 +125,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>A login's row: site, user name, password hidden, notes and buttons.</summary>
         private Grid Row(Login l, bool reused)
         {
             var g = Ui.Columns(Ui.Px(28), Ui.Star(), Ui.Star(), Ui.Px(150), Ui.Auto);
@@ -185,6 +198,7 @@ namespace Kudubrowse.Views
                 Dialogs.Error(this, "That isn't a setup key. It's a row of letters and digits (A to Z and 2 to 7), often in groups of four.");
         }
 
+        /// <summary>A login's notes: weak, reused, found in leaks.</summary>
         private string Notes(Login l, bool reused)
         {
             var notes = new List<string>();
@@ -238,8 +252,10 @@ namespace Kudubrowse.Views
     /// <summary>Brings passwords over from the file Chrome exports, then deletes that file (it holds every password as plain text).</summary>
     public sealed class ImportPasswordsWindow : Window
     {
+        /// <summary>What was brought in.</summary>
         private readonly TextBlock _result = Ui.Subtle(string.Empty, 12.5);
 
+        /// <summary>Makes the window for bringing in a CSV of passwords.</summary>
         public ImportPasswordsWindow(Window owner)
         {
             Width = 560;
@@ -322,6 +338,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Where Chrome is (to say how to save its passwords as CSV).</summary>
         private static string ChromeExe()
         {
             foreach (var root in new[] { Registry.CurrentUser, Registry.LocalMachine })

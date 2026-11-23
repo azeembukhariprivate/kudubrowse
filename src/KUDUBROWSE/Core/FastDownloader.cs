@@ -1,3 +1,5 @@
+// The browser's own downloader: big files fetched in up to 6 pieces at once, carried on after a drop, started again
+// when the file changed, with cookies sent only to the right site.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +16,9 @@ namespace Kudubrowse.Core
     {
         /// <summary>The site lets the file be fetched in parts (so in pieces at once, and carried on after a pause).</summary>
         public bool InParts { get; set; }
+        /// <summary>How big the file is (-1 when not known).</summary>
         public long Total { get; set; } = -1;
+        /// <summary>The file's version (its ETag or date), to tell when it changed.</summary>
         public string Version { get; set; }
         /// <summary>The address after any redirects.</summary>
         public string Url { get; set; }
@@ -28,21 +32,28 @@ namespace Kudubrowse.Core
     /// </summary>
     public sealed class FastDownloader
     {
+        /// <summary>How many pieces at once.</summary>
         public const int Connections = 6;
+        /// <summary>How many tries each piece gets.</summary>
         private const int Attempts = 4;
+        /// <summary>Fetches the pieces.</summary>
         private readonly HttpClient _http;
+        /// <summary>Guards the counts (pieces finish on different threads).</summary>
         private readonly object _lock = new object();
 
+        /// <summary>A downloader for this download.</summary>
         public FastDownloader(DownloadRecord record, HttpClient http)
         {
             Record = record;
             _http = http;
         }
 
+        /// <summary>The download.</summary>
         public DownloadRecord Record { get; }
 
         /// <summary>The cookies to send to an address ("a=1; b=2"), or null.</summary>
         public Func<Uri, Task<string>> Cookies { get; set; }
+        /// <summary>The browser's name sent with each request.</summary>
         public string UserAgent { get; set; }
 
         /// <summary>Waits between tries after a dropped connection (the tests make it short).</summary>
@@ -142,6 +153,7 @@ namespace Kudubrowse.Core
             Received();
         }
 
+        /// <summary>Fetches one piece, trying again after a drop.</summary>
         private async Task Piece(string url, DownloadPiece piece, CancellationToken cancel)
         {
             for (var attempt = 1; ; attempt++)
@@ -224,6 +236,7 @@ namespace Kudubrowse.Core
             }
         }
 
+        /// <summary>Counts bytes received and tells how far it is.</summary>
         private void Received()
         {
             if (Record.Pieces != null)
@@ -274,6 +287,7 @@ namespace Kudubrowse.Core
             }
         }
 
+        /// <summary>A response's version of the file (ETag, else its date).</summary>
         private static string VersionOf(HttpResponseMessage r)
         {
             var tag = r.Headers.ETag;
@@ -281,6 +295,7 @@ namespace Kudubrowse.Core
             return r.Content.Headers.LastModified?.ToString("R");
         }
 
+        /// <summary>An HTTP error in plain words.</summary>
         private static string Plain(HttpStatusCode code)
         {
             switch ((int)code)
@@ -302,6 +317,7 @@ namespace Kudubrowse.Core
     /// <summary>A download that couldn't be finished, with the reason in plain words.</summary>
     public sealed class DownloadException : Exception
     {
+        /// <summary>A download problem with a plain message.</summary>
         public DownloadException(string message) : base(message)
         {
         }

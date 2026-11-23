@@ -1,3 +1,4 @@
+// The ad and tracker block lists: which ones, the copies that come with the app, and fetching them again every 4 days.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ namespace Kudubrowse.Core.Blocking
     /// <summary>A public block list and where to get it (the official address first, then a copy).</summary>
     public sealed class BlockList
     {
+        /// <summary>A list: its file, its name and where it can be fetched.</summary>
         public BlockList(string file, string name, params string[] urls)
         {
             File = file;
@@ -18,8 +20,11 @@ namespace Kudubrowse.Core.Blocking
             Urls = urls;
         }
 
+        /// <summary>The file it's kept in.</summary>
         public string File { get; }
+        /// <summary>Its name as shown.</summary>
         public string Name { get; }
+        /// <summary>Where it's fetched from (tried in order).</summary>
         public string[] Urls { get; }
     }
 
@@ -29,19 +34,25 @@ namespace Kudubrowse.Core.Blocking
     /// </summary>
     public static class BlockLists
     {
+        /// <summary>EasyList: ads.</summary>
         public static readonly BlockList EasyList = new BlockList("easylist.txt", "EasyList (ads)",
             "https://easylist.to/easylist/easylist.txt", "https://raw.githubusercontent.com/easylist/easylist/gh-pages/easylist.txt");
+        /// <summary>EasyPrivacy: trackers.</summary>
         public static readonly BlockList EasyPrivacy = new BlockList("easyprivacy.txt", "EasyPrivacy (trackers)",
             "https://easylist.to/easylist/easyprivacy.txt", "https://raw.githubusercontent.com/easylist/easylist/gh-pages/easyprivacy.txt");
+        /// <summary>Cookie notices.</summary>
         public static readonly BlockList Cookies = new BlockList("easylist-cookie.txt", "EasyList Cookie List (cookie banners)",
             "https://secure.fanboy.co.nz/fanboy-cookiemonster.txt", "https://easylist-downloads.adblockplus.org/easylist-cookie.txt");
 
+        /// <summary>Every list used.</summary>
         public static IReadOnlyList<BlockList> All => new[] { EasyList, EasyPrivacy, Cookies };
 
         /// <summary>Lists say "Expires: 4 days"; they're fetched again after that.</summary>
         public static readonly TimeSpan RefreshAfter = TimeSpan.FromDays(4);
 
+        /// <summary>Where fetched lists are kept.</summary>
         public static string DownloadFolder { get; set; } = Path.Combine(Session.DataFolder, "Lists");
+        /// <summary>Where the lists that came with the app are.</summary>
         public static string BundledFolder { get; set; } = Path.Combine(AppContext.BaseDirectory, "Lists");
 
         /// <summary>The newest copy of a list on this PC (downloaded, or the one that came with the app), or null.</summary>
@@ -53,6 +64,7 @@ namespace Kudubrowse.Core.Blocking
             return candidates.OrderByDescending(p => VersionOf(p)).FirstOrDefault();
         }
 
+        /// <summary>A list's text: the newest copy fetched, else the one that came with the app.</summary>
         public static string Read(BlockList list)
         {
             var path = PathOf(list);
@@ -96,6 +108,7 @@ namespace Kudubrowse.Core.Blocking
             }
         }
 
+        /// <summary>True when the lists were fetched more than 4 days ago (or never).</summary>
         public static bool NeedsRefresh => LastFetched == null || DateTime.UtcNow - LastFetched.Value > RefreshAfter;
 
         /// <summary>Is this text really a block list (not an error page)?</summary>

@@ -1,3 +1,5 @@
+// Where the passwords are kept: the vault encrypted with Windows' DPAPI for this user, and Verify, which asks Windows
+// Hello or the Windows password before showing passwords.
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -17,15 +19,20 @@ namespace Kudubrowse.Views
     /// <summary>Encrypts with Windows' own protection for the signed-in user (DPAPI): another account or PC can't read the file.</summary>
     public sealed class WindowsProtector : IProtector
     {
+        /// <summary>Extra bytes mixed into the encryption, so other programs can't read the file as theirs.</summary>
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("KUDUBROWSE saved passwords v1");
+        /// <summary>Encrypts for this Windows user.</summary>
         public byte[] Protect(byte[] data) => ProtectedData.Protect(data, Entropy, DataProtectionScope.CurrentUser);
+        /// <summary>Decrypts.</summary>
         public byte[] Unprotect(byte[] data) => ProtectedData.Unprotect(data, Entropy, DataProtectionScope.CurrentUser);
     }
 
     /// <summary>The saved passwords, shared by every window.</summary>
     public static class PasswordStore
     {
+        /// <summary>The vault, once read.</summary>
         private static Vault _vault;
+        /// <summary>The vault.</summary>
         public static Vault Vault => _vault ?? (_vault = Vault.Load(Path.Combine(BrowserLibrary.Folder, "passwords.dat"), new WindowsProtector()));
 
         /// <summary>For the self-test: read the file again from <see cref="BrowserLibrary.Folder"/>.</summary>
@@ -38,11 +45,15 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class Verify
     {
+        /// <summary>Until when the person doesn't need to be asked again (a minute).</summary>
         private static DateTime _okUntil = DateTime.MinValue;
 
         /// <summary>For the self-test: the answer to give instead of asking.</summary>
         public static bool? AutoAnswer { get; set; }
 
+        /// <summary>
+        /// Asks the person to show it's them (Windows Hello, else the Windows password); true when they did.
+        /// </summary>
         public static async Task<bool> Ask(Window owner, string reason)
         {
             if (AutoAnswer.HasValue) return AutoAnswer.Value;
@@ -53,6 +64,7 @@ namespace Kudubrowse.Views
             return ok == true;
         }
 
+        /// <summary>Asks again next time.</summary>
         public static void Forget() => _okUntil = DateTime.MinValue;
 
         // ================================================================ Windows Hello
@@ -89,6 +101,7 @@ namespace Kudubrowse.Views
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct CREDUI_INFO
         {
+            /// <summary>The details of Windows' password question, as Windows wants them.</summary>
             public int cbSize;
             public IntPtr hwndParent;
             public string pszMessageText;
@@ -96,24 +109,31 @@ namespace Kudubrowse.Views
             public IntPtr hbmBanner;
         }
 
+        /// <summary>Asks for the Windows password.</summary>
         [DllImport("credui.dll", CharSet = CharSet.Unicode)]
         private static extern int CredUIPromptForWindowsCredentials(ref CREDUI_INFO info, int authError, ref uint authPackage, IntPtr inBuffer, uint inSize,
             out IntPtr outBuffer, out uint outSize, ref bool save, int flags);
 
+        /// <summary>Reads the answer.</summary>
         [DllImport("credui.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CredUnPackAuthenticationBuffer(int flags, IntPtr buffer, uint size, StringBuilder user, ref int userLen,
             StringBuilder domain, ref int domainLen, StringBuilder password, ref int passwordLen);
 
+        /// <summary>Checks a Windows password.</summary>
         [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool LogonUser(string user, string domain, string password, int logonType, int provider, out IntPtr token);
 
+        /// <summary>Frees a handle.</summary>
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr h);
 
+        /// <summary>Frees memory Windows gave.</summary>
         [DllImport("ole32.dll")]
         private static extern void CoTaskMemFree(IntPtr p);
 
+        /// <summary>Ask for this user's own password.</summary>
         private const int CREDUIWIN_ENUMERATE_CURRENT_USER = 0x200;
+        /// <summary>Windows' error for a wrong password.</summary>
         private const int ERROR_LOGON_FAILURE = 1326;
 
         /// <summary>Windows' own sign-in box for this account; the password typed is checked by Windows, then forgotten.</summary>

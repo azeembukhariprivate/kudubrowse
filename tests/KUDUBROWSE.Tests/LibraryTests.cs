@@ -1,3 +1,4 @@
+// The tests for bookmarks, history, suggestions and bringing in from Chrome (from a made-up Chrome folder).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +10,7 @@ namespace Kudubrowse.Tests
 {
     public static class LibraryTests
     {
+        /// <summary>Runs the library tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Bookmarks: add, find, folders, rename, move, remove, saved and read back", BookmarksWork);
@@ -21,14 +23,18 @@ namespace Kudubrowse.Tests
             test("Chrome: importing twice doesn't double anything", ImportTwice);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>A new test file's path.</summary>
         private static string Temp(string ext = ".json") => Path.Combine(Path.GetTempPath(), "kudubrowse-test-" + Guid.NewGuid().ToString("N") + ext);
+        /// <summary>The made-up Chrome folder.</summary>
         private static string Fixture => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Fixtures", "ChromeUserData"));
 
+        /// <summary>Bookmarks are added, moved, removed and kept.</summary>
         private static void BookmarksWork()
         {
             var file = Temp();
@@ -60,6 +66,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A damaged bookmarks file doesn't lose the rest.</summary>
         private static void DamagedBookmarks()
         {
             var file = Temp();
@@ -77,6 +84,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>History is kept, counted and cleared.</summary>
         private static void HistoryWorks()
         {
             var file = Temp(".txt");
@@ -111,6 +119,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Suggestions come in the right order.</summary>
         private static void SuggestionsWork()
         {
             var engine = SearchEngines.Find("google");
@@ -136,6 +145,7 @@ namespace Kudubrowse.Tests
             Equal(0, Suggestions.For("  ", marks, visits, engine).Count, "nothing typed");
         }
 
+        /// <summary>Chrome's profiles are found.</summary>
         private static void ChromeProfiles()
         {
             ChromeImport.UserDataFolder = Fixture;
@@ -146,6 +156,7 @@ namespace Kudubrowse.Tests
             Equal(0, ChromeImport.Profiles().Count, "no Chrome");
         }
 
+        /// <summary>Chrome's bookmarks are brought in.</summary>
         private static void ChromeBookmarks()
         {
             var b = ChromeImport.ReadBookmarks(Path.Combine(Fixture, "Default", "Bookmarks"));
@@ -156,6 +167,7 @@ namespace Kudubrowse.Tests
             Equal(2025, b.Bar[0].Added.Year, "date added from Chrome's time");
         }
 
+        /// <summary>Chrome's history is brought in.</summary>
         private static void ChromeHistory()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -169,6 +181,7 @@ namespace Kudubrowse.Tests
             Equal(new DateTime(2025, 8, 18), v.Single(x => x.Url == "https://site0.example.com/page/0").LastVisit.Date, "Chrome's date, read correctly");
         }
 
+        /// <summary>Bringing in twice doesn't add things twice.</summary>
         private static void ImportTwice()
         {
             var file = Temp();

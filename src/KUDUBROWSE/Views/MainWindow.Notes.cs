@@ -1,3 +1,4 @@
+// The small note under a button that goes away by itself (like "Downloading..." under the downloads button).
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,11 +15,14 @@ namespace Kudubrowse.Views
     /// <summary>Short notes under a toolbar button: a download has started, the browser was updated.</summary>
     public sealed partial class MainWindow
     {
+        /// <summary>The note.</summary>
         private Popup _note;
+        /// <summary>Closes it after a while.</summary>
         private DispatcherTimer _noteTimer;
 
         /// <summary>A note is showing, and what it says (for the self-test).</summary>
         public bool NoteShown => _note?.IsOpen == true;
+        /// <summary>The note's text (for the self-test).</summary>
         public string NoteText { get; private set; }
 
         /// <summary>"Downloading report.pdf": under the downloads button, which flashes; clicking it opens the downloads list.</summary>
@@ -34,6 +38,7 @@ namespace Kudubrowse.Views
         public void ShowUpdatedNote(string version) =>
             ShowNote(_menuButton, "IconCheck", AppInfo.Name + " was updated to " + version, "Click to see what it can do.", () => About.Show(this), 8);
 
+        /// <summary>Shows a note under a button.</summary>
         private void ShowNote(FrameworkElement anchor, string icon, string title, string text, Action click, double seconds = 4)
         {
             CloseNote();
@@ -77,6 +82,7 @@ namespace Kudubrowse.Views
             _noteTimer.Start();
         }
 
+        /// <summary>Closes the note.</summary>
         private void CloseNote()
         {
             _noteTimer?.Stop();
@@ -84,6 +90,7 @@ namespace Kudubrowse.Views
             _note = null;
         }
 
+        /// <summary>Shows a note when a download starts.</summary>
         private void WatchNotes()
         {
             LocationChanged += (s, e) => CloseNote();

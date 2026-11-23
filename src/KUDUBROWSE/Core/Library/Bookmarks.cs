@@ -1,3 +1,4 @@
+// Bookmarks (bookmarks.json): the bookmarks bar and other bookmarks, folders, adding, moving and removing.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,9 +17,12 @@ namespace Kudubrowse.Core.Library
         [DataMember(Name = "added", Order = 3, EmitDefaultValue = false)] public DateTime Added { get; set; }
         [DataMember(Name = "children", Order = 4, EmitDefaultValue = false)] public List<Bookmark> Children { get; set; }
 
+        /// <summary>True for a folder.</summary>
         public bool IsFolder => Url == null;
 
+        /// <summary>A new folder.</summary>
         public static Bookmark Folder(string title) => new Bookmark { Title = title, Children = new List<Bookmark>() };
+        /// <summary>A new bookmark.</summary>
         public static Bookmark Link(string title, string url) => new Bookmark { Title = string.IsNullOrWhiteSpace(title) ? url : title.Trim(), Url = url, Added = DateTime.UtcNow };
 
         /// <summary>Every bookmark in this folder and the folders inside it.</summary>
@@ -36,18 +40,23 @@ namespace Kudubrowse.Core.Library
             [DataMember(Name = "other", Order = 2)] public Bookmark Other { get; set; }
         }
 
+        /// <summary>The bookmarks bar.</summary>
         public Bookmark Bar { get; private set; } = Bookmark.Folder("Bookmarks bar");
+        /// <summary>Other bookmarks.</summary>
         public Bookmark Other { get; private set; } = Bookmark.Folder("Other bookmarks");
+        /// <summary>Where they're kept.</summary>
         public string File { get; }
 
         /// <summary>Something was added, removed or renamed.</summary>
         public event Action Changed;
 
+        /// <summary>Empty bookmarks kept in this file.</summary>
         public Bookmarks(string file)
         {
             File = file;
         }
 
+        /// <summary>Reads bookmarks (empty ones when the file isn't there or can't be read).</summary>
         public static Bookmarks Load(string file)
         {
             var b = new Bookmarks(file);
@@ -72,6 +81,7 @@ namespace Kudubrowse.Core.Library
             return b;
         }
 
+        /// <summary>Keeps the bookmarks (to a new file first, then put in place).</summary>
         public void Save()
         {
             try
@@ -89,18 +99,23 @@ namespace Kudubrowse.Core.Library
             }
         }
 
+        /// <summary>Notes a change and tells the windows.</summary>
         private void Touch()
         {
             Save();
             Changed?.Invoke();
         }
 
+        /// <summary>Every bookmark (not folders).</summary>
         public IEnumerable<Bookmark> AllLinks() => Bar.AllLinks().Concat(Other.AllLinks());
 
+        /// <summary>The bookmark of this address, or null.</summary>
         public Bookmark Find(string url) => string.IsNullOrEmpty(url) ? null : AllLinks().FirstOrDefault(b => SameUrl(b.Url, url));
 
+        /// <summary>True when the address is bookmarked.</summary>
         public bool Contains(string url) => Find(url) != null;
 
+        /// <summary>Adds a bookmark (to the bar unless a folder is given).</summary>
         public Bookmark Add(string title, string url, Bookmark folder = null)
         {
             var existing = Find(url);
@@ -111,6 +126,7 @@ namespace Kudubrowse.Core.Library
             return b;
         }
 
+        /// <summary>Adds a folder.</summary>
         public Bookmark AddFolder(string title, Bookmark parent = null)
         {
             var f = Bookmark.Folder(title);
@@ -119,6 +135,7 @@ namespace Kudubrowse.Core.Library
             return f;
         }
 
+        /// <summary>Removes a bookmark or folder.</summary>
         public bool Remove(Bookmark item)
         {
             var parent = ParentOf(item);
@@ -128,6 +145,7 @@ namespace Kudubrowse.Core.Library
             return true;
         }
 
+        /// <summary>Renames a bookmark or folder.</summary>
         public void Rename(Bookmark item, string title)
         {
             if (string.IsNullOrWhiteSpace(title)) return;
@@ -135,6 +153,7 @@ namespace Kudubrowse.Core.Library
             Touch();
         }
 
+        /// <summary>Moves a bookmark or folder into another folder.</summary>
         public void Move(Bookmark item, Bookmark folder)
         {
             var parent = ParentOf(item);
@@ -144,8 +163,10 @@ namespace Kudubrowse.Core.Library
             Touch();
         }
 
+        /// <summary>The folder a bookmark is in.</summary>
         public Bookmark ParentOf(Bookmark item) => ParentOf(item, Bar) ?? ParentOf(item, Other);
 
+        /// <summary>The folder a bookmark is in, looking below this folder.</summary>
         private static Bookmark ParentOf(Bookmark item, Bookmark folder)
         {
             if (folder.Children == null) return null;
@@ -186,8 +207,10 @@ namespace Kudubrowse.Core.Library
             return added;
         }
 
+        /// <summary>True when two addresses are the same page (a trailing / doesn't count).</summary>
         public static bool SameUrl(string a, string b) => Normal(a) == Normal(b);
 
+        /// <summary>An address made plain for comparing.</summary>
         private static string Normal(string url) => (url ?? string.Empty).TrimEnd('/').ToLowerInvariant();
     }
 }

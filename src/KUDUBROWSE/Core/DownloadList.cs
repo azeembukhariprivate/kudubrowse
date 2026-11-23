@@ -1,3 +1,4 @@
+// The downloads list (downloads.json): each download with its pieces, where it's up to, and its file.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,7 +16,9 @@ namespace Kudubrowse.Core
         [DataMember(Name = "end", Order = 2)] public long End { get; set; }
         [DataMember(Name = "done", Order = 3)] public long Done { get; set; }
 
+        /// <summary>How big the piece is.</summary>
         public long Length => End - Start + 1;
+        /// <summary>True when the piece is all there.</summary>
         public bool Finished => Done >= Length;
     }
 
@@ -58,7 +61,9 @@ namespace Kudubrowse.Core
             set => StateText = value.ToString().ToLowerInvariant();
         }
 
+        /// <summary>The file's name.</summary>
         public string FileName => Path.GetFileName(File ?? string.Empty);
+        /// <summary>The file being written (it gets its real name when done).</summary>
         public string PartFile => File + DownloadRules.PartExtension;
 
         /// <summary>Fetched in more than one piece at a time.</summary>
@@ -68,6 +73,7 @@ namespace Kudubrowse.Core
     /// <summary>The downloads list kept in %LocalAppData%\KUDUBROWSE\downloads.json (newest first, at most 300).</summary>
     public static class DownloadList
     {
+        /// <summary>How many downloads are kept in the list.</summary>
         public const int Max = 300;
 
         [DataContract]
@@ -106,6 +112,7 @@ namespace Kudubrowse.Core
             }
         }
 
+        /// <summary>Keeps the list (private windows' downloads never are).</summary>
         public static void Save(string file, IEnumerable<DownloadRecord> records)
         {
             var stored = new Stored { Downloads = records.Where(r => !r.Private).Take(Max).ToList() };

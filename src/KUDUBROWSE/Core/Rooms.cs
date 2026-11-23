@@ -1,3 +1,4 @@
+// Rooms (rooms.txt): each room its own WebView2 profile, with its own logins and cookies.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,32 +10,46 @@ namespace Kudubrowse.Core
     /// <summary>A room: tabs in it share their logins and site data, kept apart from other rooms.</summary>
     public sealed class Room
     {
+        /// <summary>Its id: the engine's profile name ("Default" for the usual room).</summary>
         public string Id { get; set; } // the engine's profile name; "Default" is the first room
+        /// <summary>Its name.</summary>
         public string Name { get; set; }
+        /// <summary>Its colour, like "#0E8C7E".</summary>
         public string Color { get; set; } // #RRGGBB
+        /// <summary>True for the usual room.</summary>
         public bool IsDefault => Id == Rooms.DefaultId;
     }
 
     /// <summary>The rooms, kept in %LocalAppData%\KUDUBROWSE\rooms.txt (a line each: id, name, colour).</summary>
     public sealed class Rooms
     {
+        /// <summary>The usual room's id.</summary>
         public const string DefaultId = "Default";
+        /// <summary>The colours rooms get, in turn.</summary>
         public static readonly string[] Colors = { "#0E8C7E", "#2563EB", "#D97706", "#DB2777", "#7C3AED", "#16A34A", "#DC2626", "#64748B" };
 
+        /// <summary>Every room.</summary>
         private readonly List<Room> _rooms = new List<Room>();
+        /// <summary>Where they're kept.</summary>
         public string File { get; }
+        /// <summary>A room was added, renamed or removed.</summary>
         public event Action Changed;
 
+        /// <summary>Rooms kept in this file.</summary>
         private Rooms(string file)
         {
             File = file;
         }
 
+        /// <summary>Every room.</summary>
         public IReadOnlyList<Room> All => _rooms;
+        /// <summary>The usual room.</summary>
         public Room Default => _rooms.First(r => r.IsDefault);
 
+        /// <summary>The room with this id (the usual one when none matches).</summary>
         public Room Find(string id) => _rooms.FirstOrDefault(r => r.Id == id) ?? Default;
 
+        /// <summary>Reads the rooms (the usual one is always there).</summary>
         public static Rooms Load(string file)
         {
             var r = new Rooms(file);
@@ -54,6 +69,7 @@ namespace Kudubrowse.Core
             return r;
         }
 
+        /// <summary>Keeps the rooms.</summary>
         public void Save()
         {
             try
@@ -65,6 +81,7 @@ namespace Kudubrowse.Core
             Changed?.Invoke();
         }
 
+        /// <summary>Adds a room with the next colour.</summary>
         public Room Add(string name)
         {
             var n = 1;
@@ -75,6 +92,7 @@ namespace Kudubrowse.Core
             return room;
         }
 
+        /// <summary>Renames a room.</summary>
         public void Rename(Room room, string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return;
@@ -93,6 +111,7 @@ namespace Kudubrowse.Core
         /// <summary>The engine accepts letters, digits and a few signs in profile names; ours are "Default" or "room-N".</summary>
         public static bool ValidId(string id) => id == DefaultId || (id != null && id.StartsWith("room-") && int.TryParse(id.Substring(5), out var n) && n > 0);
 
+        /// <summary>A text without tabs and line breaks.</summary>
         private static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }
 }

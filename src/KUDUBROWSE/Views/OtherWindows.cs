@@ -1,3 +1,4 @@
+// The smaller windows: Settings, About (now one window, AboutWindow), and the welcome window on first start.
 using System;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace Kudubrowse.Views
 {
     public sealed class SettingsWindow : Window
     {
+        /// <summary>Makes the Settings window.</summary>
         public SettingsWindow(Window owner)
         {
             Width = 600;
@@ -314,20 +316,24 @@ namespace Kudubrowse.Views
     /// <summary>Opens "About KUDUBROWSE" (one window with everything about the browser).</summary>
     public static class About
     {
+        /// <summary>The About window.</summary>
         public static Window Build(Window owner) => new AboutWindow(owner as MainWindow ?? MainWindow.LastActive, owner);
 
+        /// <summary>Shows the About window.</summary>
         public static void Show(Window owner) => AboutWindow.Show(owner as MainWindow ?? MainWindow.LastActive, owner);
     }
 
     /// <summary>Shown the first time: bring things over from Chrome, choose a search engine, make it the default browser.</summary>
     public sealed class WelcomeWindow : Window
     {
+        /// <summary>Shows the welcome window the first time only.</summary>
         public static void ShowOnce(Window owner)
         {
             Settings.WelcomeShown = true;
             new WelcomeWindow(owner).ShowDialog();
         }
 
+        /// <summary>Makes the welcome window: bring in from Chrome, make it the default browser.</summary>
         public WelcomeWindow(Window owner)
         {
             Width = 560;

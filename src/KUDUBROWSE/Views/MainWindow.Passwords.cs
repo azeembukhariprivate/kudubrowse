@@ -1,3 +1,5 @@
+// The browser window's passwords: the bar offering to save a login, and the list of logins to fill (never filled
+// without the person choosing one).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,12 +15,18 @@ namespace Kudubrowse.Views
     /// <summary>The window's password parts: the "Save password?" bar and the list of saved logins next to a login box.</summary>
     public sealed partial class MainWindow
     {
+        /// <summary>The bar offering to save a login.</summary>
         private Border _saveBar;
+        /// <summary>Its text.</summary>
         private TextBlock _saveText;
+        /// <summary>Its Save and Never buttons.</summary>
         private Button _saveButton, _neverButton;
+        /// <summary>The list of logins to fill.</summary>
         private Popup _fillPopup;
+        /// <summary>Its items.</summary>
         private StackPanel _fillItems;
 
+        /// <summary>Makes the save bar and the list.</summary>
         private UIElement InitPasswords()
         {
             _saveText = Ui.Text(string.Empty, 13, wrap: true);
@@ -64,6 +72,7 @@ namespace Kudubrowse.Views
             return _saveBar;
         }
 
+        /// <summary>Listens to a tab's login boxes and logins sent.</summary>
         private void WatchPasswords(BrowserTab tab)
         {
             tab.LoginSent += OnLoginSent;
@@ -82,6 +91,7 @@ namespace Kudubrowse.Views
 
         // ================================================================ saving
 
+        /// <summary>A login was sent: offers to save it.</summary>
         private void OnLoginSent(BrowserTab tab, string url, string username, string password)
         {
             if (!Settings.OfferToSavePasswords) return;
@@ -91,8 +101,10 @@ namespace Kudubrowse.Views
             if (tab == Current) UpdateSaveBar();
         }
 
+        /// <summary>True when the save bar is shown.</summary>
         public bool SaveBarShown => _saveBar.Visibility == Visibility.Visible;
 
+        /// <summary>Shows the save bar for the login waiting (or hides it).</summary>
         private void UpdateSaveBar()
         {
             var p = Current?.PendingLogin;
@@ -113,6 +125,7 @@ namespace Kudubrowse.Views
             _saveBar.Visibility = Visibility.Visible;
         }
 
+        /// <summary>Saves the login waiting.</summary>
         public void SavePendingLogin()
         {
             var p = Current?.PendingLogin;
@@ -121,6 +134,7 @@ namespace Kudubrowse.Views
             DismissPendingLogin();
         }
 
+        /// <summary>Forgets the login waiting.</summary>
         private void DismissPendingLogin()
         {
             if (Current != null) Current.PendingLogin = null;
@@ -135,8 +149,10 @@ namespace Kudubrowse.Views
         /// <summary>The list of saved logins is showing (for the self-test).</summary>
         public bool FillListOpen => _fillPopup.IsOpen;
 
+        /// <summary>The logins offered (for the self-test).</summary>
         public IReadOnlyList<string> FillChoices => _fillItems.Children.OfType<Button>().Select(b => b.Tag as string).ToList();
 
+        /// <summary>A login box got the focus: lists this site's logins under it.</summary>
         private void OnLoginField(BrowserTab tab, Point at, bool isNew)
         {
             if (tab != Current || tab.View == null) return;

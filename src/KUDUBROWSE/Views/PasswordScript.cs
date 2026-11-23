@@ -9,6 +9,10 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class PasswordScript
     {
+        /// <summary>
+        /// The script: watches login and code boxes and logins sent, and fills only what the browser sends after the
+        /// person picks a login.
+        /// </summary>
         public const string Source = @"(() => {
   if (window.top !== window || window.__kudubrowsePasswords) return;
   window.__kudubrowsePasswords = true;

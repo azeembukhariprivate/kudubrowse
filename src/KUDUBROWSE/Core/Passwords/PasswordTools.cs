@@ -1,3 +1,5 @@
+// Password help: making strong ones, telling weak ones, checking Pwned Passwords (only the first 5 characters of a hash
+// leave the PC), and bringing in a CSV.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,9 +12,13 @@ namespace Kudubrowse.Core.Passwords
     /// <summary>Making strong passwords, spotting weak or reused ones, and checking for leaked ones.</summary>
     public static class PasswordTools
     {
+        /// <summary>Small letters (no l, which looks like 1).</summary>
         private const string Lower = "abcdefghijkmnopqrstuvwxyz"; // no l (looks like 1)
+        /// <summary>Capital letters (no I or O).</summary>
         private const string Upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I or O
+        /// <summary>Digits (no 0 or 1).</summary>
         private const string Digits = "23456789"; // no 0 or 1
+        /// <summary>Symbols.</summary>
         private const string Symbols = "-_.!?@#%+=";
 
         /// <summary>A random password with lower and upper case letters, digits and a symbol (from Windows' secure random numbers).</summary>
@@ -46,6 +52,7 @@ namespace Kudubrowse.Core.Passwords
             return (int)(v % (uint)max);
         }
 
+        /// <summary>Passwords so common they're weak whatever else.</summary>
         private static readonly HashSet<string> Common = new HashSet<string>(new[]
         {
             "password", "passw0rd", "123456", "12345678", "123456789", "1234567890", "qwerty", "qwertyuiop", "abc123", "111111",
@@ -113,6 +120,7 @@ namespace Kudubrowse.Core.Passwords
             return result;
         }
 
+        /// <summary>The first item that passes the test, or fallback.</summary>
         private static int FirstOrDefault(this IEnumerable<int> items, Func<int, bool> test, int fallback)
         {
             foreach (var i in items) if (test(i)) return i;

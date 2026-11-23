@@ -1,3 +1,5 @@
+// The tests for passwords: sign-in codes (the RFC's own examples), the vault, matching, saving, strength, the leak
+// check and CSV.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,9 +14,12 @@ namespace Kudubrowse.Tests
         /// <summary>Stands in for Windows' protection in the tests: AES with a key, so a different key can't read the file.</summary>
         private sealed class TestProtector : IProtector
         {
+            /// <summary>The test's key.</summary>
             private readonly byte[] _key;
+            /// <summary>A made-up protector with this key (in place of Windows' DPAPI).</summary>
             public TestProtector(byte key) { _key = Enumerable.Repeat(key, 32).ToArray(); }
 
+            /// <summary>"Encrypts" with the key.</summary>
             public byte[] Protect(byte[] data)
             {
                 using (var aes = Aes.Create())
@@ -26,6 +31,7 @@ namespace Kudubrowse.Tests
                 }
             }
 
+            /// <summary>"Decrypts" with the key.</summary>
             public byte[] Unprotect(byte[] data)
             {
                 using (var aes = Aes.Create())
@@ -37,6 +43,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Runs the password tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Passwords: saved encrypted, read back, updated, removed", VaultWorks);
@@ -51,11 +58,13 @@ namespace Kudubrowse.Tests
             test("Sign-in codes: kept with the login, encrypted, and taken away again", CodesAreKept);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>Sign-in codes match the RFC's examples.</summary>
         private static void CodesMatchTheStandard()
         {
             // RFC 6238, appendix B: 8-digit codes for these times, with each kind of scrambling.
@@ -85,6 +94,7 @@ namespace Kudubrowse.Tests
             Equal("287 082", SignInCodes.Show("287082"), "shown in halves");
         }
 
+        /// <summary>Setup keys and otpauth:// links are read.</summary>
         private static void KeysAreRead()
         {
             var plain = SignInCodes.Parse(" gezd gnbv gy3t qojq-gezd gnbv gy3t qojq ");
@@ -102,6 +112,7 @@ namespace Kudubrowse.Tests
             Equal(null, SignInCodes.Parse("otpauth://totp/x?issuer=nothing"), "no secret");
         }
 
+        /// <summary>Code keys are kept in the vault.</summary>
         private static void CodesAreKept()
         {
             var file = Temp();
@@ -125,8 +136,10 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A new test file's path.</summary>
         private static string Temp() => Path.Combine(Path.GetTempPath(), "kudubrowse-test-" + Guid.NewGuid().ToString("N") + ".dat");
 
+        /// <summary>The vault keeps logins and reads them back.</summary>
         private static void VaultWorks()
         {
             var file = Temp();
@@ -150,6 +163,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Logins are matched only to their own site.</summary>
         private static void MatchingIsStrict()
         {
             var file = Temp();
@@ -175,6 +189,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>What saving a login does (new, change, nothing).</summary>
         private static void SaveDecisions()
         {
             var file = Temp();
@@ -196,6 +211,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A vault that can't be read isn't lost.</summary>
         private static void Unreadable()
         {
             var file = Temp();
@@ -213,6 +229,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Weak passwords are told.</summary>
         private static void Strength()
         {
             var seen = new HashSet<string>();
@@ -230,6 +247,7 @@ namespace Kudubrowse.Tests
             Equal(false, PasswordTools.IsWeak("Kochi-2025!"), "mixed is fine");
         }
 
+        /// <summary>The leak check sends only the hash's first 5 characters.</summary>
         private static void LeakCheck()
         {
             var hash = PasswordTools.Sha1Hex("password");
@@ -240,6 +258,7 @@ namespace Kudubrowse.Tests
             Equal(0, PasswordTools.LeakCount(PasswordTools.Sha1Hex("Kochi-2025!"), answer), "not found");
         }
 
+        /// <summary>A CSV of passwords is read.</summary>
         private static void Csv()
         {
             var chrome = "name,url,username,password,note\r\nexample.com,https://example.com/login,azeem,\"pa,ss\"\"word\",\r\n" +

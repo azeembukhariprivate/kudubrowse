@@ -1,3 +1,5 @@
+// The blocker's rules: network rules (which requests to stop) and hiding rules (which parts of pages to hide), read
+// from the lists, and checking a request against them quickly.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,23 +33,36 @@ namespace Kudubrowse.Core.Blocking
     /// </summary>
     public sealed class FilterEngine
     {
+        /// <summary>Block rules, by a word in the address they need (so only a few are checked per request).</summary>
         private readonly Dictionary<string, List<NetworkRule>> _blockByToken = new Dictionary<string, List<NetworkRule>>();
+        /// <summary>Allow rules, by such a word.</summary>
         private readonly Dictionary<string, List<NetworkRule>> _allowByToken = new Dictionary<string, List<NetworkRule>>();
+        /// <summary>Block rules with no such word (checked for every request).</summary>
         private readonly List<NetworkRule> _blockNoToken = new List<NetworkRule>();
+        /// <summary>Allow rules with no such word.</summary>
         private readonly List<NetworkRule> _allowNoToken = new List<NetworkRule>();
 
+        /// <summary>Hiding rules for every site.</summary>
         private readonly List<string> _genericHide = new List<string>();
+        /// <summary>Hiding rules for some sites, by site.</summary>
         private readonly Dictionary<string, List<string>> _hideByDomain = new Dictionary<string, List<string>>();
+        /// <summary>Hiding rules switched off for some sites, by site.</summary>
         private readonly Dictionary<string, HashSet<string>> _unhideByDomain = new Dictionary<string, HashSet<string>>();
+        /// <summary>Sites where the general hiding rules are off.</summary>
         private readonly HashSet<string> _noGenericHide = new HashSet<string>(); // $generichide sites
+        /// <summary>Sites where no hiding rules are used.</summary>
         private readonly HashSet<string> _noHide = new HashSet<string>(); // $elemhide sites
 
+        /// <summary>How many network rules were read.</summary>
         public int NetworkRules { get; private set; }
+        /// <summary>How many hiding rules were read.</summary>
         public int HidingRules { get; private set; }
+        /// <summary>How many rules were left out (they can't be followed exactly).</summary>
         public int Skipped { get; private set; }
 
         // ================================================================ reading lists
 
+        /// <summary>The rules of these lists.</summary>
         public static FilterEngine FromText(params string[] lists)
         {
             var e = new FilterEngine();
@@ -55,6 +70,7 @@ namespace Kudubrowse.Core.Blocking
             return e;
         }
 
+        /// <summary>Adds a list's rules.</summary>
         public void AddList(string text)
         {
             using (var reader = new StringReader(text ?? string.Empty))
@@ -64,6 +80,7 @@ namespace Kudubrowse.Core.Blocking
             }
         }
 
+        /// <summary>Adds one rule (comments and rules that can't be followed are left out).</summary>
         public void AddRule(string line)
         {
             line = line.Trim();
@@ -99,6 +116,7 @@ namespace Kudubrowse.Core.Blocking
             }
         }
 
+        /// <summary>Adds a hiding rule ("##" or "#@#"); false when it isn't one.</summary>
         private bool TryAddHiding(string line, int hash)
         {
             string separator;
@@ -166,6 +184,7 @@ namespace Kudubrowse.Core.Blocking
             return !Find(req, _allowByToken, _allowNoToken, out _);
         }
 
+        /// <summary>True when a rule in these lists matches the request.</summary>
         private static bool Find(Request req, Dictionary<string, List<NetworkRule>> byToken, List<NetworkRule> noToken, out NetworkRule found)
         {
             foreach (var token in req.Tokens)
@@ -218,8 +237,10 @@ namespace Kudubrowse.Core.Blocking
             return result;
         }
 
+        /// <summary>The general hiding rules without the ones switched off, made once.</summary>
         private Lazy<HashSet<string>> _genericSet;
 
+        /// <summary>An empty set of rules.</summary>
         public FilterEngine()
         {
             _genericSet = new Lazy<HashSet<string>>(() => new HashSet<string>(_genericHide));
@@ -253,24 +274,36 @@ namespace Kudubrowse.Core.Blocking
 
     public sealed class SiteHiding
     {
+        /// <summary>The hiding rules for this site.</summary>
         public List<string> Specific { get; } = new List<string>();
         /// <summary>General selectors that this site switches off.</summary>
         public List<string> Unhidden { get; } = new List<string>();
+        /// <summary>The general hiding rules are off for this site.</summary>
         public bool NoGeneric { get; set; }
+        /// <summary>No hiding rules for this site.</summary>
         public bool NoHiding { get; set; }
     }
 
     internal sealed class Request
     {
+        /// <summary>The address, in lower case.</summary>
         public string Url; // lower case
+        /// <summary>The address as it was.</summary>
         public string RawUrl;
+        /// <summary>The address's site.</summary>
         public string Host;
+        /// <summary>Where the site starts in the address.</summary>
         public int HostStart;
+        /// <summary>The page's site.</summary>
         public string PageHost;
+        /// <summary>True when the request goes to another site than the page's.</summary>
         public bool ThirdParty;
+        /// <summary>What kind of request (a script, a picture...).</summary>
         public RequestKind Kind;
+        /// <summary>The words in the address.</summary>
         public List<string> Tokens;
 
+        /// <summary>A request to check.</summary>
         public static Request Make(string url, string pageHost, RequestKind kind)
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
@@ -322,6 +355,7 @@ namespace Kudubrowse.Core.Blocking
             "firebaseapp.com", "s3.amazonaws.com", "wordpress.com", "tumblr.com"
         });
 
+        /// <summary>A site's registrable domain (news.example.co.uk becomes example.co.uk).</summary>
         public static string Registrable(string host)
         {
             if (string.IsNullOrEmpty(host)) return string.Empty;

@@ -1,3 +1,5 @@
+// Updating by itself: reads the latest release from the app's own GitHub Releases page and takes only its installer,
+// checked by GitHub's SHA-256.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,10 +17,15 @@ namespace Kudubrowse.Core
     /// <summary>A newer version published on GitHub, with its installer and the installer's SHA-256 checksum.</summary>
     public sealed class NewRelease
     {
+        /// <summary>The new version.</summary>
         public Version Version { get; set; }
+        /// <summary>Where its installer is.</summary>
         public string InstallerUrl { get; set; }
+        /// <summary>The installer's name.</summary>
         public string InstallerName { get; set; }
+        /// <summary>Its SHA-256, as GitHub gives it.</summary>
         public string Sha256 { get; set; }
+        /// <summary>Its size.</summary>
         public long Size { get; set; }
     }
 
@@ -46,6 +53,7 @@ namespace Kudubrowse.Core
             [DataMember(Name = "size")] public long Size { get; set; }
         }
 
+        /// <summary>GitHub's address for a repository's latest release.</summary>
         public static string LatestUrl(string owner, string repo) => $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
 
         /// <summary>
@@ -81,6 +89,7 @@ namespace Kudubrowse.Core
             return new NewRelease { Version = version, InstallerUrl = asset.Url, InstallerName = name, Sha256 = sha, Size = asset.Size };
         }
 
+        /// <summary>A file's SHA-256, as hex.</summary>
         public static string Sha256Of(string file)
         {
             using (var sha = SHA256.Create())

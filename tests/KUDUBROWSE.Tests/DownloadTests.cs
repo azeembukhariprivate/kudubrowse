@@ -1,3 +1,5 @@
+// The tests for downloads: the rules, the pieces, and our downloader against the test server (pieces, pausing, drops,
+// changes, other sites' cookies), and the list.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +14,7 @@ namespace Kudubrowse.Tests
     /// <summary>The download manager's own parts, against a small web server on this computer.</summary>
     public static class DownloadTests
     {
+        /// <summary>Runs the download tests.</summary>
         public static void Run(Action<string, Action> test)
         {
             test("Downloads: sorted into folders by type, safe names, never replacing a file", Rules);
@@ -23,11 +26,13 @@ namespace Kudubrowse.Tests
             test("Downloads: the list is kept for next time, without private windows' downloads", ListKept);
         }
 
+        /// <summary>Checks two values are equal.</summary>
         private static void Equal<T>(T expected, T actual, string what)
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected \"{expected}\", got \"{actual}\"");
         }
 
+        /// <summary>A new empty test folder.</summary>
         private static string TempFolder()
         {
             var d = Path.Combine(Path.GetTempPath(), "kudubrowse-dl-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -35,6 +40,7 @@ namespace Kudubrowse.Tests
             return d;
         }
 
+        /// <summary>Sorting, safe names and risky kinds.</summary>
         private static void Rules()
         {
             Equal("Pictures", DownloadRules.Kind("Holiday.JPG"), "pictures");
@@ -74,6 +80,7 @@ namespace Kudubrowse.Tests
             Equal(string.Empty, DownloadRules.TimeLeft(100, 0), "no speed yet");
         }
 
+        /// <summary>A big file is cut into the right pieces.</summary>
         private static void Pieces()
         {
             var plan = DownloadRules.Plan(100L * 1024 * 1024 + 7, 6);
@@ -88,6 +95,7 @@ namespace Kudubrowse.Tests
             Equal(-1L, DownloadRules.TotalFromContentRange("bytes 0-0/*"), "unknown size");
         }
 
+        /// <summary>A downloader for a file on the test server.</summary>
         private static (FastDownloader, DownloadRecord) Downloader(TestServer server, string path, string folder, string name)
         {
             var record = new DownloadRecord { Url = server.Url(path), File = Path.Combine(folder, name), Referrer = server.Url("page.html") };
@@ -100,6 +108,7 @@ namespace Kudubrowse.Tests
             return (d, record);
         }
 
+        /// <summary>A file is fetched in pieces and comes out whole.</summary>
         private static void InPieces()
         {
             var folder = TempFolder();
@@ -123,6 +132,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A download pauses and carries on.</summary>
         private static void PauseAndResume()
         {
             var folder = TempFolder();
@@ -163,6 +173,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>A dropped download carries on; a changed file starts again.</summary>
         private static void DroppedAndChanged()
         {
             var folder = TempFolder();
@@ -202,6 +213,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>Cookies aren't sent to another site after a redirect.</summary>
         private static void OtherSites()
         {
             var folder = TempFolder();
@@ -239,6 +251,7 @@ namespace Kudubrowse.Tests
             }
         }
 
+        /// <summary>The list is kept and read back.</summary>
         private static void ListKept()
         {
             var folder = TempFolder();

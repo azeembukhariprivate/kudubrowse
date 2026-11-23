@@ -1,3 +1,4 @@
+// What's typed in the address bar: an address (made whole), or words to search for with the search engine chosen.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,7 @@ namespace Kudubrowse.Core
 {
     public sealed class SearchEngine
     {
+        /// <summary>A search engine with its address for searches ({0} where the words go).</summary>
         public SearchEngine(string id, string name, string query)
         {
             Id = id;
@@ -14,16 +16,20 @@ namespace Kudubrowse.Core
             Query = query;
         }
 
+        /// <summary>Its short name, kept in settings.</summary>
         public string Id { get; }
+        /// <summary>Its name as shown.</summary>
         public string Name { get; }
         /// <summary>The search address, with {0} where the words go.</summary>
         public string Query { get; }
 
+        /// <summary>The address that searches for these words.</summary>
         public string UrlFor(string words) => string.Format(Query, Uri.EscapeDataString(words.Trim()));
     }
 
     public static class SearchEngines
     {
+        /// <summary>Every search engine offered, the usual one first.</summary>
         public static readonly IReadOnlyList<SearchEngine> All = new[]
         {
             new SearchEngine("google", "Google", "https://www.google.com/search?q={0}"),
@@ -33,18 +39,22 @@ namespace Kudubrowse.Core
             new SearchEngine("startpage", "Startpage", "https://www.startpage.com/do/search?q={0}")
         };
 
+        /// <summary>The usual search engine.</summary>
         public static SearchEngine Default => All[0];
 
+        /// <summary>The engine with this short name (the usual one when none matches).</summary>
         public static SearchEngine Find(string id) => All.FirstOrDefault(e => e.Id == id) ?? Default;
     }
 
     /// <summary>Works out what was typed in the address bar: a web address to open, or words to search for.</summary>
     public static class AddressBar
     {
+        /// <summary>The kinds of address that are opened as they are.</summary>
         private static readonly string[] Schemes = { "http", "https", "file", "about", "data", "view-source", "edge", "mailto" };
 
         // A host name like example.com, a.b.co.uk or xn--fiqs8s.cn: letters, digits and hyphens between dots, ending in letters.
         private static readonly Regex Host = new Regex(@"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$", RegexOptions.IgnoreCase);
+        /// <summary>An IPv4 address.</summary>
         private static readonly Regex Ip = new Regex(@"^\d{1,3}(?:\.\d{1,3}){3}$");
 
         /// <summary>The address to open for what was typed, or null when there's nothing to open.</summary>
@@ -66,6 +76,9 @@ namespace Kudubrowse.Core
             return engine.UrlFor(text);
         }
 
+        /// <summary>
+        /// True when the text looks like an address rather than words (local: a name on this network, like "router").
+        /// </summary>
         private static bool LooksLikeAddress(string text, out bool local)
         {
             local = false;

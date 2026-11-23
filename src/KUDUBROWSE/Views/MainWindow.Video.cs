@@ -1,3 +1,5 @@
+// Video in a floating window: the page's biggest video shown alone in a small window on top, and put back when it
+// closes.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +17,9 @@ namespace Kudubrowse.Views
     /// </summary>
     public sealed partial class MainWindow
     {
+        /// <summary>Each tab's floating window.</summary>
         private readonly Dictionary<BrowserTab, FloatingVideo> _floating = new Dictionary<BrowserTab, FloatingVideo>();
+        /// <summary>The note on a tab whose video floats.</summary>
         private Border _floatingNote;
 
         // Marks the biggest video on the page (a playing one first) and shows only it, filling the page. Answers "none"
@@ -39,6 +43,7 @@ namespace Kudubrowse.Views
   return v.paused ? 'paused' : 'playing';
 })()";
 
+        /// <summary>The script that puts the page back as it was.</summary>
         private const string UnfloatScript = @"(() => {
   document.getElementById('kudu-float-style')?.remove();
   document.querySelectorAll('[data-kudu-float]').forEach(v => v.removeAttribute('data-kudu-float'));
@@ -51,6 +56,7 @@ namespace Kudubrowse.Views
         /// <summary>The tab's video is in a floating window.</summary>
         public bool IsFloating(BrowserTab tab) => tab != null && _floating.ContainsKey(tab);
 
+        /// <summary>A tab's floating window, or null.</summary>
         public FloatingVideo FloatingWindowOf(BrowserTab tab) => tab != null && _floating.TryGetValue(tab, out var f) ? f : null;
 
         /// <summary>
@@ -99,6 +105,7 @@ namespace Kudubrowse.Views
             UpdateFloatingNote();
         }
 
+        /// <summary>Puts the tab's page back as it was.</summary>
         private static async Task UndoFloatScript(BrowserTab tab)
         {
             try { if (tab.View?.CoreWebView2 != null) await tab.View.CoreWebView2.ExecuteScriptAsync(UnfloatScript); }
@@ -139,6 +146,7 @@ namespace Kudubrowse.Views
     /// <summary>The small floating window that shows one tab's video and stays on top.</summary>
     public sealed class FloatingVideo : Window
     {
+        /// <summary>A floating window for a tab's video.</summary>
         public FloatingVideo(BrowserTab tab)
         {
             Tab = tab;
@@ -162,8 +170,10 @@ namespace Kudubrowse.Views
             Closed += (s, e) => tab.Changed -= OnTabChanged;
         }
 
+        /// <summary>The tab.</summary>
         public BrowserTab Tab { get; }
 
+        /// <summary>The tab's title changed: the window follows.</summary>
         private void OnTabChanged(BrowserTab t)
         {
             if (!string.IsNullOrEmpty(t.Title)) Title = "Video · " + t.Title;

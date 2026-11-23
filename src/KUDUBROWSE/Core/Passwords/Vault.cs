@@ -1,3 +1,5 @@
+// The passwords (passwords.dat): one file encrypted for the Windows user, logins matched by exact site, and sites never
+// to save for.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,6 +37,7 @@ namespace Kudubrowse.Core.Passwords
             return key == null ? null : SignInCodes.Code(key, at ?? DateTimeOffset.UtcNow);
         }
 
+        /// <summary>The login's site.</summary>
         public string Site => Vault.HostOf(Origin);
     }
 
@@ -51,20 +54,28 @@ namespace Kudubrowse.Core.Passwords
             [DataMember(Name = "never", Order = 2)] public List<string> Never { get; set; }
         }
 
+        /// <summary>Encrypts and decrypts the file (Windows' DPAPI in the app).</summary>
         private readonly IProtector _protector;
+        /// <summary>Every login.</summary>
         private List<Login> _logins = new List<Login>();
+        /// <summary>Sites never to offer saving for.</summary>
         private List<string> _never = new List<string>();
+        /// <summary>Where it's kept.</summary>
         public string File { get; }
 
+        /// <summary>A login was added, changed or removed.</summary>
         public event Action Changed;
 
+        /// <summary>A vault in this file.</summary>
         private Vault(string file, IProtector protector)
         {
             File = file;
             _protector = protector;
         }
 
+        /// <summary>Every login.</summary>
         public IReadOnlyList<Login> Logins => _logins;
+        /// <summary>Sites never to offer saving for.</summary>
         public IReadOnlyList<string> NeverSaveOrigins => _never;
 
         /// <summary>Reads the file. A file that can't be decrypted (another Windows account's, or damaged) is kept aside, not overwritten.</summary>
@@ -92,6 +103,7 @@ namespace Kudubrowse.Core.Passwords
             return v;
         }
 
+        /// <summary>Keeps the vault, encrypted (to a new file first, then put in place).</summary>
         public void Save()
         {
             byte[] plain;
@@ -119,6 +131,7 @@ namespace Kudubrowse.Core.Passwords
             return u.Scheme + "://" + u.Host.ToLowerInvariant() + (u.IsDefaultPort ? string.Empty : ":" + u.Port);
         }
 
+        /// <summary>An address's site.</summary>
         public static string HostOf(string origin) => Uri.TryCreate(origin, UriKind.Absolute, out var u) ? u.Host : origin ?? string.Empty;
 
         /// <summary>
@@ -138,9 +151,11 @@ namespace Kudubrowse.Core.Passwords
             return exact.OrderByDescending(l => l.LastUsed).Concat(related.OrderByDescending(l => l.LastUsed)).ToList();
         }
 
+        /// <summary>The login for this site and user name, or null.</summary>
         public Login Find(string origin, string username) =>
             _logins.FirstOrDefault(l => l.Origin == origin && string.Equals(l.Username, username, StringComparison.Ordinal));
 
+        /// <summary>What saving a login would do: nothing, add one, or change one.</summary>
         public enum SaveKind { Nothing, New, Update }
 
         /// <summary>What sending this login on this page would mean: nothing to do, a new login, or a changed password.</summary>
@@ -153,6 +168,7 @@ namespace Kudubrowse.Core.Passwords
             return existing.Password == password ? SaveKind.Nothing : SaveKind.Update;
         }
 
+        /// <summary>Saves a login (a new one, or the password of one there).</summary>
         public Login Save(string url, string username, string password)
         {
             var origin = OriginOf(url) ?? throw new ArgumentException("not a web address", nameof(url));
@@ -182,17 +198,20 @@ namespace Kudubrowse.Core.Passwords
             return true;
         }
 
+        /// <summary>Notes a login was used.</summary>
         public void MarkUsed(Login l)
         {
             l.LastUsed = DateTime.UtcNow;
             Save();
         }
 
+        /// <summary>Removes a login.</summary>
         public void Remove(Login l)
         {
             if (_logins.Remove(l)) Save();
         }
 
+        /// <summary>Never offers saving for this site.</summary>
         public void NeverFor(string url)
         {
             var origin = OriginOf(url);
@@ -201,6 +220,7 @@ namespace Kudubrowse.Core.Passwords
             Save();
         }
 
+        /// <summary>Offers saving for this site again.</summary>
         public void AllowSavingFor(string origin)
         {
             if (_never.Remove(origin)) Save();

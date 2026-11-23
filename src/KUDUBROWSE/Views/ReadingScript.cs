@@ -1,3 +1,5 @@
+// Reading mode: the page's text shown alone (by Readability) over the page, in a closed shadow root, with anything that
+// could run taken out.
 using System.Globalization;
 
 namespace Kudubrowse.Views
@@ -9,12 +11,14 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class ReadingScript
     {
+        /// <summary>The reading-mode script with its text size and theme.</summary>
         public static string Build(string readability, int size, string theme) =>
             "(() => {\n" + Script
                 .Replace("/*READABILITY*/", readability)
                 .Replace("/*SIZE*/", size.ToString(CultureInfo.InvariantCulture))
                 .Replace("/*THEME*/", theme == "sepia" || theme == "dark" ? theme : "light") + "\n})()";
 
+        /// <summary>The script itself.</summary>
         private const string Script = @"
   const old = document.getElementById('kudubrowse-reader');
   if (old) { old.__close(); return 'closed'; }

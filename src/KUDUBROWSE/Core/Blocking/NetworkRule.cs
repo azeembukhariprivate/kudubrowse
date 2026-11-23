@@ -1,3 +1,4 @@
+// One network rule from a block list (like "||ads.example.com^$third-party"): what it matches and how.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,31 +12,45 @@ namespace Kudubrowse.Core.Blocking
     /// </summary>
     public sealed class NetworkRule
     {
+        /// <summary>True for an allow rule (@@).</summary>
         public bool Exception { get; private set; }
+        /// <summary>True for $important (it beats allow rules).</summary>
         public bool Important { get; private set; }
+        /// <summary>A word every matching address has, for finding the rule quickly.</summary>
         public string Token { get; private set; }
+        /// <summary>The rule as written.</summary>
         public string Text { get; private set; }
 
+        /// <summary>The pattern, in lower case, without its anchors.</summary>
         private string _pattern; // lower case, without anchors
+        /// <summary>Anchored at a site (||), at the start (|), at the end (|).</summary>
         private bool _hostAnchor, _startAnchor, _endAnchor;
+        /// <summary>The kinds of request it's for.</summary>
         private RequestKind _kinds = RequestKind.All;
+        /// <summary>Only other sites' requests (true), only the page's own (false), or both (null).</summary>
         private bool? _thirdParty;
+        /// <summary>The sites it's for, and the sites it isn't.</summary>
         private string[] _include, _exclude;
 
         internal readonly struct HidingSwitch
         {
+            /// <summary>A rule that switches hiding off on some sites.</summary>
             public HidingSwitch(bool generic, string[] domains)
             {
                 Generic = generic;
                 Domains = domains;
             }
 
+            /// <summary>True when it's only the general hiding rules.</summary>
             public bool Generic { get; }
+            /// <summary>The sites.</summary>
             public string[] Domains { get; }
         }
 
+        /// <summary>True for a character a rule's word can have.</summary>
         public static bool IsTokenChar(char c) => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '%';
 
+        /// <summary>True for a separator (^ matches any of these).</summary>
         private static bool IsSeparator(char c) => !(char.IsLetterOrDigit(c) || c == '_' || c == '-' || c == '.' || c == '%');
 
         /// <summary>Reads a rule; null when it's one this browser leaves out.</summary>
@@ -156,6 +171,7 @@ namespace Kudubrowse.Core.Blocking
             return r;
         }
 
+        /// <summary>The kind of request an option names ($script, $image...).</summary>
         private static RequestKind KindOf(string name)
         {
             switch (name)
@@ -200,6 +216,7 @@ namespace Kudubrowse.Core.Blocking
             return best;
         }
 
+        /// <summary>True when the rule matches the request.</summary>
         internal bool Matches(Request req)
         {
             if ((req.Kind & _kinds) == 0) return false;
@@ -225,6 +242,7 @@ namespace Kudubrowse.Core.Blocking
             return false;
         }
 
+        /// <summary>True when the host is the domain or below it.</summary>
         private static bool OnDomain(string host, string domain) =>
             host == domain || (host.Length > domain.Length && host.EndsWith(domain, StringComparison.Ordinal) && host[host.Length - domain.Length - 1] == '.');
 
@@ -273,6 +291,7 @@ namespace Kudubrowse.Core.Blocking
             }
         }
 
+        /// <summary>The rule as written.</summary>
         public override string ToString() => Text;
     }
 }

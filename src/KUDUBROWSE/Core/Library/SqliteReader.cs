@@ -1,3 +1,4 @@
+// A small read-only SQLite reader, enough for Chrome's History file: tables' pages, rows and values. It never writes.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,10 +14,14 @@ namespace Kudubrowse.Core.Library
     /// </summary>
     public sealed class SqliteReader
     {
+        /// <summary>The file's bytes.</summary>
         private readonly byte[] _data;
+        /// <summary>How big a page is, and how much of it is used.</summary>
         private readonly int _pageSize, _usable;
+        /// <summary>How text is stored.</summary>
         private readonly Encoding _text;
 
+        /// <summary>A reader over a file's bytes.</summary>
         public SqliteReader(byte[] data)
         {
             if (data.Length < 100 || Encoding.ASCII.GetString(data, 0, 16) != "SQLite format 3\0") throw new InvalidDataException("not an SQLite file");
@@ -79,7 +84,9 @@ namespace Kudubrowse.Core.Library
 
         private struct Row
         {
+            /// <summary>The row's id.</summary>
             public long RowId;
+            /// <summary>Its values.</summary>
             public object[] Values;
         }
 
@@ -122,6 +129,7 @@ namespace Kudubrowse.Core.Library
             }
         }
 
+        /// <summary>Reads one row from a page.</summary>
         private Row ReadLeafCell(int pos)
         {
             var payloadSize = ReadVarint(ref pos);
@@ -161,6 +169,7 @@ namespace Kudubrowse.Core.Library
             return result;
         }
 
+        /// <summary>A row's values from its record.</summary>
         private object[] Record(byte[] r)
         {
             var pos = 0;
@@ -203,6 +212,7 @@ namespace Kudubrowse.Core.Library
             return values;
         }
 
+        /// <summary>A signed number of n bytes.</summary>
         private static long SignedInt(byte[] b, int pos, int n)
         {
             long v = (sbyte)b[pos];
@@ -210,6 +220,7 @@ namespace Kudubrowse.Core.Library
             return v;
         }
 
+        /// <summary>A number of n bytes at a place.</summary>
         private int ReadInt(int pos, int n)
         {
             var v = 0;
@@ -217,8 +228,10 @@ namespace Kudubrowse.Core.Library
             return v;
         }
 
+        /// <summary>A variable-length number at a place.</summary>
         private long ReadVarint(ref int pos) => ReadVarint(_data, ref pos);
 
+        /// <summary>A variable-length number in the bytes.</summary>
         private static long ReadVarint(byte[] b, ref int pos)
         {
             long v = 0;

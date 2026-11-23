@@ -1,3 +1,6 @@
+// KUDUBROWSE.exe --self-test: drives the real browser with test pages it makes itself (blocking, bookmarks, history,
+// Chrome import, passwords, rooms, downloads, tabs, video, dark pages), with its own profile and session file, keeping
+// screenshots.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,12 +23,17 @@ namespace Kudubrowse.Views
     /// </summary>
     public static class SelfTest
     {
+        /// <summary>True while the self-test runs (errors are kept instead of shown).</summary>
         public static bool Running { get; private set; }
+        /// <summary>Errors that weren't expected.</summary>
         public static List<string> Errors { get; } = new List<string>();
 
+        /// <summary>The self-test's log.</summary>
         private static StringBuilder _log;
+        /// <summary>The folder for the test's files.</summary>
         private static string _temp;
 
+        /// <summary>Runs every step (with the made-up Chrome folder given) and returns 0 when all passed.</summary>
         public static async Task<int> Run(string chrome)
         {
             Running = true;
@@ -1092,6 +1100,7 @@ namespace Kudubrowse.Views
             return Errors.Count == 0 ? 0 : 1;
         }
 
+        /// <summary>The value of a box on the page.</summary>
         private static async Task<string> Value(BrowserTab tab, string id)
         {
             var json = await tab.View.CoreWebView2.ExecuteScriptAsync($"document.getElementById('{id}').value");
@@ -1101,6 +1110,7 @@ namespace Kudubrowse.Views
         /// <summary>A JSON string from the page as plain text.</summary>
         private static string JsonText(string json) => new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<string>(json) ?? string.Empty;
 
+        /// <summary>How a part of the page is shown (its CSS display).</summary>
         private static async Task<string> Display(BrowserTab tab, string selector)
         {
             var json = await tab.View.CoreWebView2.ExecuteScriptAsync($"getComputedStyle(document.querySelector('{selector}')).display");
@@ -1134,6 +1144,7 @@ namespace Kudubrowse.Views
             return path;
         }
 
+        /// <summary>Takes a screenshot of the window.</summary>
         private static async Task Capture(MainWindow main, string name)
         {
             try
@@ -1148,6 +1159,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Runs one step, writing to the log whether it passed.</summary>
         private static async Task Step(string name, Func<Task> action)
         {
             var before = Errors.Count;
@@ -1167,13 +1179,16 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Adds a note to the log under the step.</summary>
         private static void Note(string text) => _log.AppendLine("      " + text);
 
+        /// <summary>Fails the step when the condition isn't true.</summary>
         private static void Expect(bool condition, string what)
         {
             if (!condition) throw new Exception("expected " + what);
         }
 
+        /// <summary>Waits until the condition is true (failing after some seconds).</summary>
         private static async Task Wait(Func<bool> condition, int seconds, string what)
         {
             var until = DateTime.UtcNow.AddSeconds(seconds);
@@ -1184,6 +1199,7 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Waits until an async condition is true.</summary>
         private static async Task WaitAsync(Func<Task<bool>> condition, int seconds, string what)
         {
             var until = DateTime.UtcNow.AddSeconds(seconds);
@@ -1194,12 +1210,14 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>Lets the windows handle what's waiting.</summary>
         private static void Pump()
         {
             foreach (Window w in Application.Current.Windows) w.UpdateLayout();
             Application.Current.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
         }
 
+        /// <summary>Puts a window where it can't be seen.</summary>
         private static void OffScreen(Window w)
         {
             w.WindowStartupLocation = WindowStartupLocation.Manual;
@@ -1210,6 +1228,7 @@ namespace Kudubrowse.Views
             w.ShowInTaskbar = false;
         }
 
+        /// <summary>Shows a window, takes its screenshot and closes it.</summary>
         private static void ShowAndClose(Window w)
         {
             OffScreen(w);

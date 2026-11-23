@@ -1,3 +1,4 @@
+// The History and Bookmarks window (search, open, delete), and bringing in from Chrome.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,15 +17,24 @@ namespace Kudubrowse.Views
     /// <summary>History and bookmarks in one window, with a search box. Double-click (or Enter) opens a page in a new tab.</summary>
     public sealed class LibraryWindow : Window
     {
+        /// <summary>The window when it's open (only one at a time).</summary>
         private static LibraryWindow _open;
+        /// <summary>The browser window it was opened from.</summary>
         private readonly MainWindow _browser;
+        /// <summary>The search box.</summary>
         private readonly TextBox _search = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center };
+        /// <summary>The list.</summary>
         private readonly ListBox _list = new ListBox { BorderThickness = new Thickness(0) };
+        /// <summary>The History and Bookmarks tabs.</summary>
         private readonly RadioButton _historyTab, _bookmarksTab;
+        /// <summary>Clears history.</summary>
         private readonly Button _clear;
+        /// <summary>How many are listed.</summary>
         private readonly TextBlock _count = Ui.Subtle(string.Empty, 12, false);
+        /// <summary>Searches a moment after typing stops.</summary>
         private readonly DispatcherTimer _searchDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
 
+        /// <summary>Shows the window (at bookmarks or history).</summary>
         public static LibraryWindow Show(MainWindow browser, bool bookmarks)
         {
             if (_open == null || !_open.IsLoaded)
@@ -37,6 +47,7 @@ namespace Kudubrowse.Views
             return _open;
         }
 
+        /// <summary>Makes the window.</summary>
         public LibraryWindow(MainWindow browser)
         {
             _browser = browser;
@@ -93,15 +104,19 @@ namespace Kudubrowse.Views
             Closed += (s, e) => _open = null;
         }
 
+        /// <summary>True when bookmarks are shown.</summary>
         public bool ShowingBookmarks => _bookmarksTab.IsChecked == true;
+        /// <summary>How many are listed.</summary>
         public int ItemCount => _list.Items.Count;
 
+        /// <summary>Searches.</summary>
         public void Search(string text)
         {
             _search.Text = text;
             Fill();
         }
 
+        /// <summary>Fills the list (history grouped by day).</summary>
         private void Fill()
         {
             _list.Items.Clear();
@@ -146,9 +161,11 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>A day's name: "Today", "Yesterday" or the date.</summary>
         private static string DayName(DateTime d) =>
             d == DateTime.Today ? "Today" : d == DateTime.Today.AddDays(-1) ? "Yesterday" : d.ToString("dddd d MMMM yyyy");
 
+        /// <summary>A row: picture, title, address and time.</summary>
         private ListBoxItem Row(string icon, string title, string url, string extra, object tag)
         {
             var g = Ui.Columns(Ui.Px(28), Ui.Star(), Ui.Auto, Ui.Auto);
@@ -179,6 +196,7 @@ namespace Kudubrowse.Views
             return item;
         }
 
+        /// <summary>Opens the row chosen in a new tab.</summary>
         private void OpenSelected()
         {
             if (!(_list.SelectedItem is ListBoxItem item)) return;
@@ -189,6 +207,7 @@ namespace Kudubrowse.Views
             browser?.Activate();
         }
 
+        /// <summary>Deletes the row chosen.</summary>
         private void DeleteSelected()
         {
             if (!(_list.SelectedItem is ListBoxItem item)) return;
@@ -205,16 +224,23 @@ namespace Kudubrowse.Views
     /// <summary>Brings bookmarks and history over from Chrome (it only reads Chrome's files).</summary>
     public sealed class ImportWindow : Window
     {
+        /// <summary>Chrome's profiles.</summary>
         private readonly ComboBox _profiles = new ComboBox { MinHeight = 32 };
+        /// <summary>Bring in bookmarks.</summary>
         private readonly CheckBox _bookmarks = new CheckBox { Content = "Bookmarks", IsChecked = true };
+        /// <summary>Bring in history.</summary>
         private readonly CheckBox _history = new CheckBox { Content = "History (the last 90 days)", IsChecked = true, Margin = new Thickness(0, 6, 0, 0) };
+        /// <summary>What was brought in.</summary>
         private readonly TextBlock _result = Ui.Subtle(string.Empty, 12.5);
+        /// <summary>Starts.</summary>
         private readonly Button _go;
+        /// <summary>The profiles found.</summary>
         private readonly List<ChromeProfile> _found;
 
         /// <summary>For the self-test: what the last import brought in.</summary>
         public static string LastResult { get; private set; }
 
+        /// <summary>Makes the window for bringing in from Chrome.</summary>
         public ImportWindow(Window owner)
         {
             Width = 520;
@@ -261,6 +287,7 @@ namespace Kudubrowse.Views
             Content = root;
         }
 
+        /// <summary>Brings in what's ticked from the profile chosen.</summary>
         public async Task Run()
         {
             if (_profiles.SelectedIndex < 0) return;
