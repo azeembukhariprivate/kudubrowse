@@ -1010,7 +1010,9 @@ namespace Kudubrowse.Views
                         w.NewTab(second, true);
                         await Wait(() => w.Current.Title == "Second page", 30, "the second page");
                         var closedBefore = MainWindow.RecentlyClosed.Count;
+                        Note("two pages open");
                         var set = w.SaveTabSet("Self-test set", true);
+                        Note("set saved");
                         Expect(set != null && set.Tabs.Count == 2, "a set of the two tabs");
                         Expect(w.Tabs.Count == 1 && w.Current.IsBlank, "the tabs were put away, a new tab left: " + w.Tabs.Count);
                         Expect(MainWindow.RecentlyClosed.Count == closedBefore, "tabs put away don't go into closed tabs");
@@ -1022,6 +1024,7 @@ namespace Kudubrowse.Views
                         list.Close();
                         w.OpenTabSet(set);
                         Pump();
+                        Note("set opened again");
                         Expect(w.Tabs.Count == 2, "its two tabs are back, instead of the new tab: " + w.Tabs.Count);
                         Expect(w.Tabs[0].Title == "First page" && w.Tabs[1].Title == "Second page", "in order, with their names");
                         await Wait(() => w.Current.Title == "First page" && w.Current.View != null, 30, "the first tab to open");
@@ -1043,7 +1046,9 @@ namespace Kudubrowse.Views
                         story = server.Url("story.html");
                         var tab = main.NewTab(story, true);
                         await Wait(() => tab.Title == "A long story" && !tab.IsLoading, 30, "the story page");
+                        Note("page open; keeping it");
                         page = await main.SaveForLater(tab);
+                        Note("kept: " + (page?.Size ?? -1) + " bytes");
                         Expect(page != null, "the page was kept");
                         Expect(page.Size > 0 && File.ReadAllText(BrowserLibrary.ReadLater.FileOf(page)).Contains("Kept for later"), "its copy is on this PC");
                         main.CloseTab(tab);
@@ -1054,6 +1059,7 @@ namespace Kudubrowse.Views
                     Expect(lib.ShowingReadLater && lib.ItemCount == 1, "listed under Read later: " + lib.ItemCount);
                     Screenshots.One(lib, "Read later");
                     lib.Close();
+                    Note("opening the copy");
                     var copy = main.NewTab(BrowserLibrary.ReadLater.AddressOf(page), true);
                     await Wait(() => copy.Title == "A long story" && !copy.IsLoading, 30, "the kept copy to open");
                     var width = await copy.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('pic') ? document.getElementById('pic').naturalWidth : -1");
@@ -1076,17 +1082,20 @@ namespace Kudubrowse.Views
                         await Wait(() => tab.Title == "First page", 30, "a page to go back to");
                         tab.Navigate(plain);
                         await Wait(() => tab.InsecureUrl != null, 30, "the warning (the site has no https)");
+                        Note("warning shown");
                         Pump();
                         Expect(tab.Warning.Visibility == Visibility.Visible && tab.View.Visibility != Visibility.Visible, "the warning is shown instead of the page");
                         Expect(main.AddressText.Contains("insecure.example"), "the address bar shows the http address: " + main.AddressText);
                         await Capture(main, "not a secure connection");
                         tab.LeaveInsecure();
                         await Wait(() => tab.Title == "First page", 30, "back to the page before");
+                        Note("went back");
                         Expect(tab.InsecureUrl == null && tab.Warning.Visibility != Visibility.Visible, "the warning has gone");
                         tab.Navigate(plain);
                         await Wait(() => tab.InsecureUrl != null, 30, "the warning again");
                         tab.OpenInsecureAnyway(false);
                         await Wait(() => tab.Title == "Plain page", 30, "the page opened anyway");
+                        Note("opened anyway");
                         Expect(tab.Url.StartsWith("http://insecure.example"), "opened over http: " + tab.Url);
                         Expect(Settings.InsecureSites.Count == 0, "not kept for good unless asked");
                         main.CloseTab(tab);
@@ -1118,8 +1127,10 @@ namespace Kudubrowse.Views
                         Settings.ForgetSites = new List<string>();
                         Forgetting.SetSite("localhost", true);
                         Expect(Forgetting.IsOn, "forgetting is on");
+                        Note("forgetting");
                         Expect(await Forgetting.Run(main.Tabs.Select(t => t.Url).ToArray()), "it finished");
                         Expect(!Settings.ForgetPending, "nothing left for the next start");
+                        Note("forgotten");
                         Expect((await cookies.GetCookiesAsync(forgotten)).Count == 0, "the listed site's cookie is gone");
                         Expect((await cookies.GetCookiesAsync(kept)).Count == 1, "the other site's cookie stays");
                         Expect(!BrowserLibrary.History.All.Any(v => v.Url == forgotten), "the listed site's page left the history");
@@ -1304,9 +1315,15 @@ namespace Kudubrowse.Views
         {
             var before = Errors.Count;
             var started = DateTime.UtcNow;
+            _log.AppendLine("...   " + name);
+            WriteLog();
             try
             {
-                await action();
+                // A step that gets stuck fails by itself, so the steps after it still run and the log says which.
+                var work = action();
+                if (await Task.WhenAny(work, Task.Delay(StepLimit)) != work)
+                    throw new TimeoutException($"the step took longer than {StepLimit.TotalSeconds:0} seconds");
+                await work;
                 Pump();
                 Screenshots.All(name);
                 if (Errors.Count > before) throw new Exception(string.Join(" | ", Errors.Skip(before)));
@@ -1317,10 +1334,25 @@ namespace Kudubrowse.Views
                 if (Errors.Count == before) Errors.Add(name + ": " + ex.Message);
                 _log.AppendLine("FAIL  " + name + ": " + ex);
             }
+            WriteLog();
+        }
+
+        /// <summary>The longest one step may take.</summary>
+        private static readonly TimeSpan StepLimit = TimeSpan.FromSeconds(100);
+
+        /// <summary>Writes the log so far (so it can be read even if the self-test is stopped part way).</summary>
+        private static void WriteLog()
+        {
+            try { File.WriteAllText(Path.Combine(Path.GetDirectoryName(AppInfo.ExePath) ?? ".", "self-test.log"), _log.ToString()); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { /* read-only folder */ }
         }
 
         /// <summary>Adds a note to the log under the step.</summary>
-        private static void Note(string text) => _log.AppendLine("      " + text);
+        private static void Note(string text)
+        {
+            _log.AppendLine("      " + text);
+            WriteLog();
+        }
 
         /// <summary>Fails the step when the condition isn't true.</summary>
         private static void Expect(bool condition, string what)
