@@ -230,5 +230,54 @@ namespace Kudubrowse.Core
             }
             set => Set("ReadingTheme", value);
         }
+
+        /// <summary>Open http:// pages as https:// when the site has it, and warn before opening a site without it.</summary>
+        public static bool SecureConnections
+        {
+            get => GetBool("SecureConnections", true);
+            set => SetBool("SecureConnections", value);
+        }
+
+        /// <summary>Sites (registrable domains) the person chose to open without a secure connection.</summary>
+        public static List<string> InsecureSites
+        {
+            get => Get("InsecureSites", string.Empty).Split('\n').Where(p => p.Length > 0).ToList();
+            set => Set("InsecureSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
+        }
+
+        /// <summary>When the browser closes, forget nothing, the sites on the list, or every site.</summary>
+        public static ForgetMode ForgetWhenClosing
+        {
+            get => GetEnum("ForgetWhenClosing", ForgetMode.Off);
+            set => Set("ForgetWhenClosing", value.ToString());
+        }
+
+        /// <summary>What's forgotten: cookies and site data (signs you out).</summary>
+        public static bool ForgetCookies
+        {
+            get => GetBool("ForgetCookies", true);
+            set => SetBool("ForgetCookies", value);
+        }
+
+        /// <summary>What's forgotten: the history.</summary>
+        public static bool ForgetHistory
+        {
+            get => GetBool("ForgetHistory", false);
+            set => SetBool("ForgetHistory", value);
+        }
+
+        /// <summary>The sites (registrable domains) forgotten when the browser closes.</summary>
+        public static List<string> ForgetSites
+        {
+            get => Get("ForgetSites", string.Empty).Split('\n').Where(p => p.Length > 0).ToList();
+            set => Set("ForgetSites", string.Join("\n", value.Distinct().OrderBy(d => d)));
+        }
+
+        /// <summary>Forgetting began when the browser last closed and hasn't finished (it's finished at the next start).</summary>
+        public static bool ForgetPending
+        {
+            get => GetBool("ForgetPending", false);
+            set => SetBool("ForgetPending", value);
+        }
     }
 }

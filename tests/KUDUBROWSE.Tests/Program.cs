@@ -31,6 +31,7 @@ namespace Kudubrowse.Tests
             RoomsTests.Run(Test);
             DownloadTests.Run(Test);
             UpdateTests.Run(Test);
+            SetsAndSafetyTests.Run(Test);
             Console.WriteLine();
             Console.WriteLine($"{_passed} passed, {_failed} failed");
             return _failed == 0 ? 0 : 1;

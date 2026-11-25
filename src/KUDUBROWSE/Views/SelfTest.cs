@@ -41,7 +41,14 @@ namespace Kudubrowse.Views
             _temp = Path.Combine(Path.GetTempPath(), "kudubrowse-selftest-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             Directory.CreateDirectory(_temp);
             Web.ProfileFolder = Path.Combine(_temp, "profile");
-            Web.ExtraArguments = "--autoplay-policy=no-user-gesture-required"; // the sound test page plays without a click
+            // The sound test page plays without a click; "insecure.example" is this PC, for the secure connections step.
+            Web.ExtraArguments = "--autoplay-policy=no-user-gesture-required --host-resolver-rules=\"MAP insecure.example 127.0.0.1\"";
+            var savedSecure = (Settings.SecureConnections, Settings.InsecureSites);
+            var savedForget = (Settings.ForgetWhenClosing, Settings.ForgetCookies, Settings.ForgetHistory, Settings.ForgetSites, Settings.ForgetPending);
+            Settings.SecureConnections = true;
+            Settings.InsecureSites = new List<string>();
+            Settings.ForgetWhenClosing = ForgetMode.Off;
+            Settings.ForgetPending = false;
             var savedMuted = Settings.MutedSites;
             var savedSide = Settings.TabsOnSide;
             Settings.TabsOnSide = false;
@@ -991,6 +998,137 @@ namespace Kudubrowse.Views
                         main.Select(keep.Last());
                     }
                 });
+                await Step("Tab sets: tabs put away under a name, opened again, renamed and deleted", async () =>
+                {
+                    var w = new MainWindow();
+                    OffScreen(w);
+                    w.Show();
+                    try
+                    {
+                        w.NewTab(first, true);
+                        await Wait(() => w.Current.Title == "First page", 30, "the first page");
+                        w.NewTab(second, true);
+                        await Wait(() => w.Current.Title == "Second page", 30, "the second page");
+                        var closedBefore = MainWindow.RecentlyClosed.Count;
+                        var set = w.SaveTabSet("Self-test set", true);
+                        Expect(set != null && set.Tabs.Count == 2, "a set of the two tabs");
+                        Expect(w.Tabs.Count == 1 && w.Current.IsBlank, "the tabs were put away, a new tab left: " + w.Tabs.Count);
+                        Expect(MainWindow.RecentlyClosed.Count == closedBefore, "tabs put away don't go into closed tabs");
+                        Expect(TabSets.Load(BrowserLibrary.TabSets.File).All.Any(x => x.Name == "Self-test set"), "the set is kept in its file");
+                        var list = TabSetsWindow.Show(w);
+                        Pump();
+                        Expect(list.SetCount == 1, "the set is listed: " + list.SetCount);
+                        Screenshots.One(list, "Tab sets");
+                        list.Close();
+                        w.OpenTabSet(set);
+                        Pump();
+                        Expect(w.Tabs.Count == 2, "its two tabs are back, instead of the new tab: " + w.Tabs.Count);
+                        Expect(w.Tabs[0].Title == "First page" && w.Tabs[1].Title == "Second page", "in order, with their names");
+                        await Wait(() => w.Current.Title == "First page" && w.Current.View != null, 30, "the first tab to open");
+                        BrowserLibrary.TabSets.Rename(set, "Renamed set");
+                        Expect(TabSets.Load(BrowserLibrary.TabSets.File).All.Single().Name == "Renamed set", "renamed");
+                        BrowserLibrary.TabSets.Remove(set);
+                        Expect(TabSets.Load(BrowserLibrary.TabSets.File).All.Count == 0, "deleted");
+                    }
+                    finally { w.Close(); }
+                });
+                await Step("Read later: a page kept whole opens from this PC, without the internet", async () =>
+                {
+                    LaterPage page;
+                    string story;
+                    using (var server = new TestServer())
+                    {
+                        server.Add("dot.png", new TestServer.Item { Body = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), Type = "image/png" });
+                        server.Add("story.html", "<!doctype html><title>A long story</title><h1>Kept for later</h1><img id='pic' src='/dot.png' width='40' height='40'>");
+                        story = server.Url("story.html");
+                        var tab = main.NewTab(story, true);
+                        await Wait(() => tab.Title == "A long story" && !tab.IsLoading, 30, "the story page");
+                        page = await main.SaveForLater(tab);
+                        Expect(page != null, "the page was kept");
+                        Expect(page.Size > 0 && File.ReadAllText(BrowserLibrary.ReadLater.FileOf(page)).Contains("Kept for later"), "its copy is on this PC");
+                        main.CloseTab(tab);
+                    }
+                    // The site is gone now: the copy opens all the same.
+                    var lib = LibraryWindow.ShowReadLater(main);
+                    Pump();
+                    Expect(lib.ShowingReadLater && lib.ItemCount == 1, "listed under Read later: " + lib.ItemCount);
+                    Screenshots.One(lib, "Read later");
+                    lib.Close();
+                    var copy = main.NewTab(BrowserLibrary.ReadLater.AddressOf(page), true);
+                    await Wait(() => copy.Title == "A long story" && !copy.IsLoading, 30, "the kept copy to open");
+                    var width = await copy.View.CoreWebView2.ExecuteScriptAsync("document.getElementById('pic') ? document.getElementById('pic').naturalWidth : -1");
+                    Expect(width == "1", "its picture came with it (natural width " + width + ")");
+                    await Capture(main, "read later copy");
+                    Expect(BrowserLibrary.ReadLater.FindByCopy(copy.Url) == page, "the tab shows the kept page");
+                    main.CloseTab(copy);
+                    var file = BrowserLibrary.ReadLater.FileOf(page);
+                    BrowserLibrary.ReadLater.Remove(page);
+                    Expect(!File.Exists(file) && BrowserLibrary.ReadLater.All.Count == 0, "removed with its copy");
+                });
+                await Step("Secure connections: a site without https is warned about; going back, or opening it anyway", async () =>
+                {
+                    using (var server = new TestServer())
+                    {
+                        server.Add("plain.html", "<!doctype html><title>Plain page</title><p>Only http here.</p>");
+                        var port = new Uri(server.Url("plain.html")).Port;
+                        var plain = "http://insecure.example:" + port + "/plain.html";
+                        var tab = main.NewTab(first, true);
+                        await Wait(() => tab.Title == "First page", 30, "a page to go back to");
+                        tab.Navigate(plain);
+                        await Wait(() => tab.InsecureUrl != null, 30, "the warning (the site has no https)");
+                        Pump();
+                        Expect(tab.Warning.Visibility == Visibility.Visible && tab.View.Visibility != Visibility.Visible, "the warning is shown instead of the page");
+                        Expect(main.AddressText.Contains("insecure.example"), "the address bar shows the http address: " + main.AddressText);
+                        await Capture(main, "not a secure connection");
+                        tab.LeaveInsecure();
+                        await Wait(() => tab.Title == "First page", 30, "back to the page before");
+                        Expect(tab.InsecureUrl == null && tab.Warning.Visibility != Visibility.Visible, "the warning has gone");
+                        tab.Navigate(plain);
+                        await Wait(() => tab.InsecureUrl != null, 30, "the warning again");
+                        tab.OpenInsecureAnyway(false);
+                        await Wait(() => tab.Title == "Plain page", 30, "the page opened anyway");
+                        Expect(tab.Url.StartsWith("http://insecure.example"), "opened over http: " + tab.Url);
+                        Expect(Settings.InsecureSites.Count == 0, "not kept for good unless asked");
+                        main.CloseTab(tab);
+                        var again = main.NewTab(plain, true);
+                        await Wait(() => again.Title == "Plain page", 30, "no warning again until the browser closes");
+                        main.CloseTab(again);
+                        BrowserTab.WarnAgainFor("insecure.example");
+                        var local = main.NewTab(server.Url("plain.html"), true);
+                        await Wait(() => local.Title == "Plain page", 30, "a page on this PC opens without a warning");
+                        Expect(local.InsecureUrl == null && local.Url.StartsWith("http://127.0.0.1"), "left as it is: " + local.Url);
+                        main.CloseTab(local);
+                    }
+                });
+                await Step("Clear when closing: a listed site's cookies and history are forgotten, other sites kept", async () =>
+                {
+                    using (var server = new TestServer())
+                    {
+                        server.Add("cookie.html", "<!doctype html><title>Cookie page</title><script>document.cookie='visit=1; max-age=3600; path=/'</script>");
+                        var kept = server.Url("cookie.html");
+                        var forgotten = kept.Replace("127.0.0.1", "localhost");
+                        var a = main.NewTab(kept, true);
+                        await Wait(() => a.Title == "Cookie page" && !a.IsLoading, 30, "the page that stays");
+                        var b = main.NewTab(forgotten, true);
+                        await Wait(() => b.Title == "Cookie page" && !b.IsLoading, 30, "the page to forget");
+                        var cookies = a.View.CoreWebView2.CookieManager;
+                        Expect((await cookies.GetCookiesAsync(kept)).Count == 1 && (await cookies.GetCookiesAsync(forgotten)).Count == 1, "both sites set a cookie");
+                        Expect(BrowserLibrary.History.All.Any(v => v.Url == forgotten), "the page is in the history");
+                        (Settings.ForgetWhenClosing, Settings.ForgetCookies, Settings.ForgetHistory) = (ForgetMode.Sites, true, true);
+                        Settings.ForgetSites = new List<string>();
+                        Forgetting.SetSite("localhost", true);
+                        Expect(Forgetting.IsOn, "forgetting is on");
+                        Expect(await Forgetting.Run(main.Tabs.Select(t => t.Url).ToArray()), "it finished");
+                        Expect(!Settings.ForgetPending, "nothing left for the next start");
+                        Expect((await cookies.GetCookiesAsync(forgotten)).Count == 0, "the listed site's cookie is gone");
+                        Expect((await cookies.GetCookiesAsync(kept)).Count == 1, "the other site's cookie stays");
+                        Expect(!BrowserLibrary.History.All.Any(v => v.Url == forgotten), "the listed site's page left the history");
+                        Expect(BrowserLibrary.History.All.Any(v => v.Url == kept), "the other site's page stays in the history");
+                        Settings.ForgetWhenClosing = ForgetMode.Off;
+                        main.CloseTab(a);
+                        main.CloseTab(b);
+                    }
+                });
                 await Step("About KUDUBROWSE: who made it, updates, and everything it can do in one window", () =>
                 {
                     var f = new AboutWindow(main);
@@ -1085,6 +1223,8 @@ namespace Kudubrowse.Views
             (Settings.AskWhereToSave, Settings.SortDownloads, Settings.FastDownloads) = savedDownloads;
             Settings.MutedSites = savedMuted;
             Settings.TabsOnSide = savedSide;
+            (Settings.SecureConnections, Settings.InsecureSites) = savedSecure;
+            (Settings.ForgetWhenClosing, Settings.ForgetCookies, Settings.ForgetHistory, Settings.ForgetSites, Settings.ForgetPending) = savedForget;
             Settings.Theme = savedTheme;
             Settings.RestoreTabs = savedRestore;
             Settings.OfferToSavePasswords = savedOffer;

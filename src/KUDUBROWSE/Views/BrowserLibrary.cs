@@ -37,6 +37,17 @@ namespace Kudubrowse.Views
             }
         }
 
+        /// <summary>The saved tab sets, once read.</summary>
+        private static TabSets _tabSets;
+        /// <summary>The pages kept to read later, once read.</summary>
+        private static ReadLater _readLater;
+
+        /// <summary>The saved tab sets.</summary>
+        public static TabSets TabSets => _tabSets ?? (_tabSets = TabSets.Load(Path.Combine(Folder, "tabsets.txt")));
+
+        /// <summary>The pages kept to read later (in the ReadLater folder).</summary>
+        public static ReadLater ReadLater => _readLater ?? (_readLater = ReadLater.Load(Path.Combine(Folder, "ReadLater")));
+
         /// <summary>Saves history now.</summary>
         public static void SaveAll() => _history?.Save();
 
@@ -46,6 +57,8 @@ namespace Kudubrowse.Views
             _saveTimer?.Stop();
             _bookmarks = null;
             _history = null;
+            _tabSets = null;
+            _readLater = null;
         }
     }
 }

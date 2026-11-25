@@ -81,6 +81,14 @@ namespace Kudubrowse.Views
                 m => MainWindow.PlaceTabs(!Settings.TabsOnSide)),
             new Feature("IconList", "Tab groups", "Put tabs in a named, coloured group, and fold the group away when you don't need it.", "Right-click a tab › Add to group",
                 m => { if (m.Current != null) m.AddToGroup(m.Current); }),
+            new Feature("IconList", "Tab sets", "Put a window's tabs away under a name, like Work or Trip planning, and open them all again when you need them.", "Menu › Tab sets",
+                m => TabSetsWindow.Show(m)),
+            new Feature("IconNote", "Read later", "Keep a page on this PC, whole, to read later: it opens even without the internet.", "Menu › Save for reading later",
+                m => LibraryWindow.ShowReadLater(m)),
+            new Feature("IconLock", "Secure connections", "Pages open with a secure connection (https) when the site has one, and you're warned before a site that hasn't.", "Settings › Secure connections",
+                m => new SettingsWindow(m).ShowDialog()),
+            new Feature("IconTrash", "Forget sites when closing", "The sites you choose, or every site, are forgotten when the browser closes: their cookies, and their history if you like.", "Right-click a tab, or Settings",
+                m => new SettingsWindow(m).ShowDialog()),
             new Feature("IconCompare", "Two pages side by side", "Show two tabs next to each other, and drag the line between them.", "Right-click a tab › Show side by side",
                 m =>
                 {

@@ -519,3 +519,83 @@ You have the latest version.	Vous avez la dernière version.
 Downloading {0} {1}…	Téléchargement de {0} {1}…
 {0} {1} is out, but its download didn't check out. It'll be tried again later.	{0} {1} est sorti, mais son téléchargement n'a pas passé la vérification. Nouvel essai plus tard.
 Couldn't look for a new version (no internet?). It'll be tried again later.	Impossible de chercher une nouvelle version (pas d'internet ?). Nouvel essai plus tard.
+Only web pages can be kept to read later.	Seules les pages web peuvent être gardées pour plus tard.
+The page couldn't be saved.	La page n'a pas pu être enregistrée.
+The page is too big to keep (over 100 MB).	La page est trop grande pour être gardée (plus de 100 Mo).
+Tab sets	Ensembles d'onglets
+Put a window's tabs away under a name, like Work or Trip planning, and open them all again when you need them.	Rangez les onglets d'une fenêtre sous un nom, comme Travail ou Préparation du voyage, et rouvrez-les tous quand vous en avez besoin.
+Menu › Tab sets	Menu › Ensembles d'onglets
+Read later	À lire plus tard
+Keep a page on this PC, whole, to read later: it opens even without the internet.	Gardez une page entière sur ce PC pour la lire plus tard : elle s'ouvre même sans internet.
+Menu › Save for reading later	Menu › Garder pour lire plus tard
+Secure connections	Connexions sécurisées
+Pages open with a secure connection (https) when the site has one, and you're warned before a site that hasn't.	Les pages s'ouvrent avec une connexion sécurisée (https) quand le site en a une, et vous êtes averti avant un site qui n'en a pas.
+Settings › Secure connections	Paramètres › Connexions sécurisées
+Forget sites when closing	Oublier des sites à la fermeture
+The sites you choose, or every site, are forgotten when the browser closes: their cookies, and their history if you like.	Les sites que vous choisissez, ou tous les sites, sont oubliés à la fermeture du navigateur : leurs cookies, et leur historique si vous le souhaitez.
+Right-click a tab, or Settings	Clic droit sur un onglet, ou Paramètres
+{0} can only be opened without a secure connection (https). What you see and send there, such as passwords, could be read or changed by others on the network.	{0} ne peut s'ouvrir que sans connexion sécurisée (https). Ce que vous y voyez et envoyez, comme des mots de passe, pourrait être lu ou modifié par d'autres sur le réseau.
+Don't warn me again for {0}	Ne plus m'avertir pour {0}
+Go back	Revenir en arrière
+Open it anyway	L'ouvrir quand même
+This site doesn't offer a secure connection	Ce site ne propose pas de connexion sécurisée
+Most sites have one; this one doesn't, or it isn't working right now. Sites on this PC and your own network are opened without this warning.	La plupart des sites en ont une ; celui-ci non, ou elle ne fonctionne pas en ce moment. Les sites de ce PC et de votre propre réseau s'ouvrent sans cet avertissement.
+Not a secure connection	Connexion non sécurisée
+History, bookmarks and read later · {0}	Historique, favoris et à lire plus tard · {0}
+New	Nouveau
+Nothing kept yet. To keep a page, use the menu › Save for reading later; it opens here even without the internet.	Rien de gardé pour l'instant. Pour garder une page, utilisez le menu › Garder pour lire plus tard ; elle s'ouvre ici même sans internet.
+1 page kept on this PC ({0})	1 page gardée sur ce PC ({0})
+{0} pages kept on this PC ({1})	{0} pages gardées sur ce PC ({1})
+{0} not read yet	{0} pas encore lues
+Open the page online	Ouvrir la page en ligne
+Mark as not read	Marquer comme non lue
+Mark as read	Marquer comme lue
+This page is already kept to read later.	Cette page est déjà gardée pour plus tard.
+Only a web page that's open can be kept to read later.	Seule une page web ouverte peut être gardée pour plus tard.
+Kept to read later	Gardée pour plus tard
+The page couldn't be kept: {0}	La page n'a pas pu être gardée : {0}
+There are no pages in this window to keep yet.	Il n'y a pas encore de pages à garder dans cette fenêtre.
+Name of the set	Nom de l'ensemble
+Put these tabs away (close them now)	Ranger ces onglets (les fermer maintenant)
+Save tabs as a set	Enregistrer les onglets comme ensemble
+1 tab from this window is kept under a name, to open again later.	1 onglet de cette fenêtre est gardé sous un nom, pour le rouvrir plus tard.
+{0} tabs from this window are kept under a name, to open them all again later.	{0} onglets de cette fenêtre sont gardés sous un nom, pour les rouvrir tous plus tard.
+Name (for example Work, or Trip planning)	Nom (par exemple Travail, ou Préparation du voyage)
+Saved the set "{0}"	Ensemble « {0} » enregistré
+Open it again from the menu › Tab sets.	Rouvrez-le depuis le menu › Ensembles d'onglets.
+Save these tabs as a set...	Enregistrer ces onglets comme ensemble...
+{0} (1 tab)	{0} (1 onglet)
+{0} ({1} tabs)	{0} ({1} onglets)
+All tab sets...	Tous les ensembles d'onglets...
+Tab sets · {0}	Ensembles d'onglets · {0}
+Save this window's tabs as a set...	Enregistrer les onglets de cette fenêtre comme ensemble...
+Put a window's tabs away under a name, and open them all again when you need them.	Rangez les onglets d'une fenêtre sous un nom, et rouvrez-les tous quand vous en avez besoin.
+Open its tabs in this window	Ouvrir ses onglets dans cette fenêtre
+Open its tabs in a new window	Ouvrir ses onglets dans une nouvelle fenêtre
+Rename or delete	Renommer ou supprimer
+Rename the set	Renommer l'ensemble
+Delete the set "{0}"? Its tabs aren't open anywhere else.	Supprimer l'ensemble « {0} » ? Ses onglets ne sont ouverts nulle part ailleurs.
+No tab sets yet. Use "Save this window's tabs as a set", or the menu › Tab sets.	Pas encore d'ensembles d'onglets. Utilisez « Enregistrer les onglets de cette fenêtre comme ensemble », ou le menu › Ensembles d'onglets.
+1 set	1 ensemble
+{0} sets	{0} ensembles
+Save for reading later	Garder pour lire plus tard
+Stop forgetting {0} when closing	Ne plus oublier {0} à la fermeture
+Forget {0} when closing	Oublier {0} à la fermeture
+Read later ({0} new)	À lire plus tard ({0} nouvelles)
+Use secure connections (https), and warn before opening a site without one	Utiliser des connexions sécurisées (https), et avertir avant d'ouvrir un site qui n'en a pas
+An http:// address is opened as https:// when the site has it. Sites on this PC and your own network are left as they are.	Une adresse http:// est ouverte en https:// quand le site le propose. Les sites de ce PC et de votre propre réseau restent tels quels.
+Sites opened without a secure connection, without a warning:	Sites ouverts sans connexion sécurisée, sans avertissement :
+Warn again for {0}	Avertir à nouveau pour {0}
+When the browser closes	À la fermeture du navigateur
+Forget sites when the last window closes, in every room:	Oublier des sites à la fermeture de la dernière fenêtre, dans toutes les pièces :
+Cookies and site data (signs you out of them)	Cookies et données des sites (vous en déconnecte)
+Forget nothing	Ne rien oublier
+Forget the sites in my list	Oublier les sites de ma liste
+Forget every site	Oublier tous les sites
+Add a site...	Ajouter un site...
+Forget a site when closing	Oublier un site à la fermeture
+The site's address (for example example.com)	L'adresse du site (par exemple example.com)
+That doesn't look like a site's address.	Cela ne ressemble pas à l'adresse d'un site.
+The sites in my list:	Les sites de ma liste :
+You can also right-click a tab › Forget the site when closing.	Vous pouvez aussi faire un clic droit sur un onglet › Oublier le site à la fermeture.
+Bookmarks, saved passwords, tab sets and pages kept to read later are always kept.	Les favoris, les mots de passe enregistrés, les ensembles d'onglets et les pages gardées pour plus tard sont toujours conservés.

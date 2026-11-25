@@ -298,13 +298,24 @@ namespace Kudubrowse.Views
             {
                 if (t.View == null || IsFloating(t)) continue; // a floating video's page is in its own window
                 var shown = t == Current || (split && t == _splitPartner);
-                t.View.Visibility = shown ? Visibility.Visible : Visibility.Hidden;
+                // A tab warning that its site has no secure connection shows the warning in place of its page
+                // (nothing can be drawn over the page itself).
+                var warning = t.InsecureUrl != null;
+                t.View.Visibility = shown && !warning ? Visibility.Visible : Visibility.Hidden;
                 // The current tab on the left (or alone); its partner on the right.
                 var left = !split || t == Current;
                 if (split && t == _splitPartner && _tabs.IndexOf(_splitPartner) < _tabs.IndexOf(Current)) left = true;
                 if (split && t == Current && _tabs.IndexOf(_splitPartner) < _tabs.IndexOf(Current)) left = false;
                 Grid.SetColumn(t.View, left ? 0 : 2);
                 Grid.SetColumnSpan(t.View, split ? 1 : 3);
+                if (warning || t.HasWarning)
+                {
+                    var w = t.Warning;
+                    if (!_pages.Children.Contains(w)) _pages.Children.Add(w);
+                    Grid.SetColumn(w, left ? 0 : 2);
+                    Grid.SetColumnSpan(w, split ? 1 : 3);
+                    w.Visibility = shown && warning ? Visibility.Visible : Visibility.Collapsed;
+                }
             }
         }
 

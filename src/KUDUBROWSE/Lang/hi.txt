@@ -519,3 +519,83 @@ You have the latest version.	आपके पास नवीनतम संस
 Downloading {0} {1}…	{0} {1} डाउनलोड हो रहा है…
 {0} {1} is out, but its download didn't check out. It'll be tried again later.	{0} {1} आ गया है, पर इसका डाउनलोड जाँच में ठीक नहीं निकला। बाद में फिर कोशिश होगी।
 Couldn't look for a new version (no internet?). It'll be tried again later.	नया संस्करण नहीं देखा जा सका (इंटरनेट नहीं है?)। बाद में फिर कोशिश होगी।
+Only web pages can be kept to read later.	केवल वेब पेज बाद में पढ़ने के लिए रखे जा सकते हैं।
+The page couldn't be saved.	पेज सहेजा नहीं जा सका।
+The page is too big to keep (over 100 MB).	यह पेज रखने के लिए बहुत बड़ा है (100 MB से ज़्यादा)।
+Tab sets	टैब सेट
+Put a window's tabs away under a name, like Work or Trip planning, and open them all again when you need them.	किसी खिड़की के टैब को 'काम' या 'यात्रा की योजना' जैसे नाम से अलग रख दें, और ज़रूरत पड़ने पर सब फिर से खोलें।
+Menu › Tab sets	मेनू › टैब सेट
+Read later	बाद में पढ़ें
+Keep a page on this PC, whole, to read later: it opens even without the internet.	किसी पेज को पूरा का पूरा इस PC पर बाद में पढ़ने के लिए रखें: यह बिना इंटरनेट के भी खुलता है।
+Menu › Save for reading later	मेनू › बाद में पढ़ने के लिए रखें
+Secure connections	सुरक्षित कनेक्शन
+Pages open with a secure connection (https) when the site has one, and you're warned before a site that hasn't.	साइट पर सुरक्षित कनेक्शन (https) हो तो पेज उसी से खुलते हैं, और जिस साइट पर नहीं है उसे खोलने से पहले चेतावनी मिलती है।
+Settings › Secure connections	सेटिंग्स › सुरक्षित कनेक्शन
+Forget sites when closing	बंद करते समय साइटें भूल जाएँ
+The sites you choose, or every site, are forgotten when the browser closes: their cookies, and their history if you like.	ब्राउज़र बंद होने पर आपकी चुनी हुई साइटें, या सभी साइटें, भुला दी जाती हैं: उनकी कुकीज़, और चाहें तो उनका इतिहास भी।
+Right-click a tab, or Settings	किसी टैब पर राइट-क्लिक करें, या सेटिंग्स
+{0} can only be opened without a secure connection (https). What you see and send there, such as passwords, could be read or changed by others on the network.	{0} केवल सुरक्षित कनेक्शन (https) के बिना ही खुल सकती है। वहाँ आप जो देखते और भेजते हैं, जैसे पासवर्ड, उसे नेटवर्क पर दूसरे लोग पढ़ या बदल सकते हैं।
+Don't warn me again for {0}	{0} के लिए फिर से चेतावनी न दें
+Go back	वापस जाएँ
+Open it anyway	फिर भी खोलें
+This site doesn't offer a secure connection	यह साइट सुरक्षित कनेक्शन नहीं देती
+Most sites have one; this one doesn't, or it isn't working right now. Sites on this PC and your own network are opened without this warning.	ज़्यादातर साइटों पर यह होता है; इस पर नहीं है, या अभी काम नहीं कर रहा। इस PC और आपके अपने नेटवर्क की साइटें इस चेतावनी के बिना खुलती हैं।
+Not a secure connection	सुरक्षित कनेक्शन नहीं
+History, bookmarks and read later · {0}	इतिहास, बुकमार्क और बाद में पढ़ें · {0}
+New	नया
+Nothing kept yet. To keep a page, use the menu › Save for reading later; it opens here even without the internet.	अभी कुछ नहीं रखा गया। किसी पेज को रखने के लिए मेनू › बाद में पढ़ने के लिए रखें चुनें; यह बिना इंटरनेट के भी यहाँ खुलता है।
+1 page kept on this PC ({0})	इस PC पर 1 पेज रखा है ({0})
+{0} pages kept on this PC ({1})	इस PC पर {0} पेज रखे हैं ({1})
+{0} not read yet	{0} अभी पढ़े नहीं गए
+Open the page online	पेज ऑनलाइन खोलें
+Mark as not read	नहीं पढ़ा के रूप में चिह्नित करें
+Mark as read	पढ़ा हुआ चिह्नित करें
+This page is already kept to read later.	यह पेज पहले से बाद में पढ़ने के लिए रखा है।
+Only a web page that's open can be kept to read later.	केवल खुला हुआ वेब पेज ही बाद में पढ़ने के लिए रखा जा सकता है।
+Kept to read later	बाद में पढ़ने के लिए रखा
+The page couldn't be kept: {0}	पेज रखा नहीं जा सका: {0}
+There are no pages in this window to keep yet.	इस खिड़की में अभी रखने के लिए कोई पेज नहीं है।
+Name of the set	सेट का नाम
+Put these tabs away (close them now)	इन टैब को अलग रख दें (अभी बंद करें)
+Save tabs as a set	टैब को एक सेट के रूप में सहेजें
+1 tab from this window is kept under a name, to open again later.	इस खिड़की का 1 टैब एक नाम से रखा जाता है, ताकि बाद में फिर से खोला जा सके।
+{0} tabs from this window are kept under a name, to open them all again later.	इस खिड़की के {0} टैब एक नाम से रखे जाते हैं, ताकि बाद में सब फिर से खोले जा सकें।
+Name (for example Work, or Trip planning)	नाम (जैसे काम, या यात्रा की योजना)
+Saved the set "{0}"	"{0}" सेट सहेजा गया
+Open it again from the menu › Tab sets.	इसे मेनू › टैब सेट से फिर खोलें।
+Save these tabs as a set...	इन टैब को सेट के रूप में सहेजें...
+{0} (1 tab)	{0} (1 टैब)
+{0} ({1} tabs)	{0} ({1} टैब)
+All tab sets...	सभी टैब सेट...
+Tab sets · {0}	टैब सेट · {0}
+Save this window's tabs as a set...	इस खिड़की के टैब को सेट के रूप में सहेजें...
+Put a window's tabs away under a name, and open them all again when you need them.	किसी खिड़की के टैब एक नाम से अलग रख दें, और ज़रूरत पड़ने पर सब फिर से खोलें।
+Open its tabs in this window	इसके टैब इस खिड़की में खोलें
+Open its tabs in a new window	इसके टैब नई खिड़की में खोलें
+Rename or delete	नाम बदलें या हटाएँ
+Rename the set	सेट का नाम बदलें
+Delete the set "{0}"? Its tabs aren't open anywhere else.	"{0}" सेट हटाएँ? इसके टैब कहीं और खुले नहीं हैं।
+No tab sets yet. Use "Save this window's tabs as a set", or the menu › Tab sets.	अभी कोई टैब सेट नहीं। "इस खिड़की के टैब को सेट के रूप में सहेजें" या मेनू › टैब सेट का उपयोग करें।
+1 set	1 सेट
+{0} sets	{0} सेट
+Save for reading later	बाद में पढ़ने के लिए रखें
+Stop forgetting {0} when closing	बंद करते समय {0} को भूलना बंद करें
+Forget {0} when closing	बंद करते समय {0} को भूल जाएँ
+Read later ({0} new)	बाद में पढ़ें ({0} नए)
+Use secure connections (https), and warn before opening a site without one	सुरक्षित कनेक्शन (https) का उपयोग करें, और बिना इसके वाली साइट खोलने से पहले चेतावनी दें
+An http:// address is opened as https:// when the site has it. Sites on this PC and your own network are left as they are.	साइट पर https:// हो तो http:// पता https:// के रूप में खुलता है। इस PC और आपके अपने नेटवर्क की साइटें जैसी हैं वैसी ही रहती हैं।
+Sites opened without a secure connection, without a warning:	बिना चेतावनी के, बिना सुरक्षित कनेक्शन के खुलने वाली साइटें:
+Warn again for {0}	{0} के लिए फिर से चेतावनी दें
+When the browser closes	ब्राउज़र बंद होने पर
+Forget sites when the last window closes, in every room:	आख़िरी खिड़की बंद होने पर, हर कमरे में, साइटें भूल जाएँ:
+Cookies and site data (signs you out of them)	कुकीज़ और साइट डेटा (उनसे साइन आउट हो जाएँगे)
+Forget nothing	कुछ न भूलें
+Forget the sites in my list	मेरी सूची की साइटें भूल जाएँ
+Forget every site	सभी साइटें भूल जाएँ
+Add a site...	साइट जोड़ें...
+Forget a site when closing	बंद करते समय कोई साइट भूल जाएँ
+The site's address (for example example.com)	साइट का पता (जैसे example.com)
+That doesn't look like a site's address.	यह किसी साइट का पता नहीं लगता।
+The sites in my list:	मेरी सूची की साइटें:
+You can also right-click a tab › Forget the site when closing.	आप किसी टैब पर राइट-क्लिक करके › बंद करते समय साइट भूल जाएँ भी चुन सकते हैं।
+Bookmarks, saved passwords, tab sets and pages kept to read later are always kept.	बुकमार्क, सहेजे गए पासवर्ड, टैब सेट और बाद में पढ़ने के लिए रखे पेज हमेशा रखे जाते हैं।

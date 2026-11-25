@@ -45,10 +45,8 @@ namespace Kudubrowse.Core
             sb.Append("selected\t").Append(selected).Append('\n');
             foreach (var t in tabs)
             {
-                if (string.IsNullOrEmpty(t.Url) || t.Url == "about:blank") continue;
-                sb.Append(Clean(t.Url)).Append('\t').Append(Clean(t.Title)).Append('\t').Append(t.Room ?? Rooms.DefaultId)
-                  .Append('\t').Append(string.IsNullOrEmpty(t.Group) ? string.Empty : Clean(t.Group).Replace('|', ' ') + "|" + Clean(t.GroupColor))
-                  .Append('\t').Append(t.Muted ? "muted" : string.Empty).Append('\n');
+                var line = Line(t);
+                if (line != null) sb.Append(line).Append('\n');
             }
             try
             {
@@ -82,21 +80,8 @@ namespace Kudubrowse.Core
                         if (parts.Length == 2) int.TryParse(parts[1], out selected);
                         continue;
                     }
-                    if (!IsSafeToReopen(parts[0])) continue;
-                    var tab = new SavedTab
-                    {
-                        Url = parts[0],
-                        Title = parts.Length >= 2 ? parts[1] : string.Empty,
-                        Room = parts.Length >= 3 && Rooms.ValidId(parts[2]) ? parts[2] : Rooms.DefaultId
-                    };
-                    var group = parts.Length >= 4 ? parts[3].Split('|') : new string[0];
-                    if (group.Length == 2 && group[0].Trim().Length > 0)
-                    {
-                        tab.Group = group[0].Trim();
-                        tab.GroupColor = IsColor(group[1]) ? group[1] : Rooms.Colors[1];
-                    }
-                    tab.Muted = parts.Length >= 5 && parts[4] == "muted";
-                    tabs.Add(tab);
+                    var tab = Parse(parts);
+                    if (tab != null) tabs.Add(tab);
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -104,6 +89,38 @@ namespace Kudubrowse.Core
                 return (new List<SavedTab>(), 0);
             }
             return (tabs, tabs.Count == 0 ? 0 : Math.Max(0, Math.Min(selected, tabs.Count - 1)));
+        }
+
+        /// <summary>
+        /// A tab as one line of the file: the address, the title, the room, the group ("name|colour") and "muted", between
+        /// tab characters. Null for a tab with no page. Tab sets (TabSets.cs) keep their tabs the same way.
+        /// </summary>
+        public static string Line(SavedTab t)
+        {
+            if (t == null || string.IsNullOrEmpty(t.Url) || t.Url == "about:blank") return null;
+            return Clean(t.Url) + "\t" + Clean(t.Title) + "\t" + (t.Room ?? Rooms.DefaultId)
+                   + "\t" + (string.IsNullOrEmpty(t.Group) ? string.Empty : Clean(t.Group).Replace('|', ' ') + "|" + Clean(t.GroupColor))
+                   + "\t" + (t.Muted ? "muted" : string.Empty);
+        }
+
+        /// <summary>A tab from a line's parts, or null when its address isn't one that may be opened again.</summary>
+        public static SavedTab Parse(string[] parts)
+        {
+            if (parts.Length == 0 || !IsSafeToReopen(parts[0])) return null;
+            var tab = new SavedTab
+            {
+                Url = parts[0],
+                Title = parts.Length >= 2 ? parts[1] : string.Empty,
+                Room = parts.Length >= 3 && Rooms.ValidId(parts[2]) ? parts[2] : Rooms.DefaultId
+            };
+            var group = parts.Length >= 4 ? parts[3].Split('|') : new string[0];
+            if (group.Length == 2 && group[0].Trim().Length > 0)
+            {
+                tab.Group = group[0].Trim();
+                tab.GroupColor = IsColor(group[1]) ? group[1] : Rooms.Colors[1];
+            }
+            tab.Muted = parts.Length >= 5 && parts[4] == "muted";
+            return tab;
         }
 
         /// <summary>Only ordinary web pages and files come back; never script or data addresses.</summary>
@@ -114,7 +131,7 @@ namespace Kudubrowse.Core
         private static bool IsColor(string s) => s.Length == 7 && s[0] == '#' && s.Skip(1).All(Uri.IsHexDigit);
 
         /// <summary>A text without tabs and line breaks.</summary>
-        private static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
+        internal static string Clean(string s) => (s ?? string.Empty).Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
     }
 
     /// <summary>Recently closed tabs, newest first, for "Reopen closed tab" (Ctrl+Shift+T).</summary>

@@ -60,7 +60,7 @@ namespace Kudubrowse
         /// <summary>Starts the browser with this address (or the tabs from last time).</summary>
         public int Run(string address, SingleInstance one)
         {
-            Startup += (s, e) =>
+            Startup += async (s, e) =>
             {
                 Init();
                 ShutdownMode = ShutdownMode.OnExplicitShutdown; // the browser closes when its last window does (MainWindow.Closed)
@@ -69,13 +69,19 @@ namespace Kudubrowse
                 var main = new MainWindow();
                 MainWindow = main;
                 main.Show();
+                // Clear when closing didn't finish last time (Windows was shutting down): finished now, before any page opens.
+                if (Settings.ForgetPending)
+                {
+                    try { await Forgetting.Run(); }
+                    catch (Exception ex) when (ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException) { }
+                }
                 main.Start(address);
                 // Keep Windows' note of where the browser is up to date (it may have been moved), then say hello once.
-                System.Threading.Tasks.Task.Run(() => ShellIntegration.Register());
-                if (!Settings.WelcomeShown) main.Dispatcher.BeginInvoke(new Action(() => WelcomeWindow.ShowOnce(main)), DispatcherPriority.ApplicationIdle);
+                _ = System.Threading.Tasks.Task.Run(() => ShellIntegration.Register());
+                if (!Settings.WelcomeShown) _ = main.Dispatcher.BeginInvoke(new Action(() => WelcomeWindow.ShowOnce(main)), DispatcherPriority.ApplicationIdle);
                 // Updating by itself: "Updated to ..." once after an update, and the daily look for a new version.
                 var updated = Updater.UpdatedTo();
-                if (updated != null) main.Dispatcher.BeginInvoke(new Action(() => main.ShowUpdatedNote(updated)), DispatcherPriority.ApplicationIdle);
+                if (updated != null) _ = main.Dispatcher.BeginInvoke(new Action(() => main.ShowUpdatedNote(updated)), DispatcherPriority.ApplicationIdle);
                 Updater.Start();
             };
             var code = Run();

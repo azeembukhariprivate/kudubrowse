@@ -519,3 +519,83 @@ You have the latest version.	നിങ്ങളുടെ കൈയിൽ ഏറ�
 Downloading {0} {1}…	{0} {1} ഡൗൺലോഡ് ചെയ്യുന്നു…
 {0} {1} is out, but its download didn't check out. It'll be tried again later.	{0} {1} പുറത്തിറങ്ങി, പക്ഷേ അതിന്റെ ഡൗൺലോഡ് പരിശോധനയിൽ ശരിയായില്ല. പിന്നീട് വീണ്ടും ശ്രമിക്കും.
 Couldn't look for a new version (no internet?). It'll be tried again later.	പുതിയ പതിപ്പിനായി നോക്കാനായില്ല (ഇന്റർനെറ്റ് ഇല്ലേ?). പിന്നീട് വീണ്ടും ശ്രമിക്കും.
+Only web pages can be kept to read later.	വെബ് പേജുകൾ മാത്രമേ പിന്നീട് വായിക്കാൻ സൂക്ഷിക്കാനാകൂ.
+The page couldn't be saved.	പേജ് സൂക്ഷിക്കാനായില്ല.
+The page is too big to keep (over 100 MB).	ഈ പേജ് സൂക്ഷിക്കാൻ വളരെ വലുതാണ് (100 MB-യിൽ കൂടുതൽ).
+Tab sets	ടാബ് സെറ്റുകൾ
+Put a window's tabs away under a name, like Work or Trip planning, and open them all again when you need them.	ഒരു ജാലകത്തിലെ ടാബുകൾ 'ജോലി', 'യാത്രാ ആസൂത്രണം' പോലുള്ള ഒരു പേരിൽ മാറ്റിവെക്കുക, ആവശ്യമുള്ളപ്പോൾ എല്ലാം വീണ്ടും തുറക്കുക.
+Menu › Tab sets	മെനു › ടാബ് സെറ്റുകൾ
+Read later	പിന്നീട് വായിക്കാൻ
+Keep a page on this PC, whole, to read later: it opens even without the internet.	ഒരു പേജ് മുഴുവനായി ഈ PC-യിൽ സൂക്ഷിക്കുക, പിന്നീട് വായിക്കാൻ: ഇന്റർനെറ്റ് ഇല്ലാതെയും അത് തുറക്കും.
+Menu › Save for reading later	മെനു › പിന്നീട് വായിക്കാൻ സൂക്ഷിക്കുക
+Secure connections	സുരക്ഷിത കണക്ഷനുകൾ
+Pages open with a secure connection (https) when the site has one, and you're warned before a site that hasn't.	സൈറ്റിന് സുരക്ഷിത കണക്ഷൻ (https) ഉണ്ടെങ്കിൽ പേജുകൾ അതിലൂടെ തുറക്കും; ഇല്ലാത്ത സൈറ്റ് തുറക്കും മുമ്പ് മുന്നറിയിപ്പ് നൽകും.
+Settings › Secure connections	ക്രമീകരണങ്ങൾ › സുരക്ഷിത കണക്ഷനുകൾ
+Forget sites when closing	അടയ്ക്കുമ്പോൾ സൈറ്റുകൾ മറക്കുക
+The sites you choose, or every site, are forgotten when the browser closes: their cookies, and their history if you like.	ബ്രൗസർ അടയ്ക്കുമ്പോൾ നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന സൈറ്റുകൾ, അല്ലെങ്കിൽ എല്ലാ സൈറ്റുകളും, മറക്കും: അവയുടെ കുക്കികൾ, വേണമെങ്കിൽ ചരിത്രവും.
+Right-click a tab, or Settings	ഒരു ടാബിൽ റൈറ്റ്-ക്ലിക്ക് ചെയ്യുക, അല്ലെങ്കിൽ ക്രമീകരണങ്ങൾ
+{0} can only be opened without a secure connection (https). What you see and send there, such as passwords, could be read or changed by others on the network.	{0} സുരക്ഷിത കണക്ഷൻ (https) ഇല്ലാതെ മാത്രമേ തുറക്കാനാകൂ. അവിടെ നിങ്ങൾ കാണുന്നതും അയയ്ക്കുന്നതും, പാസ്‌വേഡുകൾ പോലും, നെറ്റ്‌വർക്കിലുള്ള മറ്റുള്ളവർക്ക് വായിക്കാനോ മാറ്റാനോ കഴിഞ്ഞേക്കും.
+Don't warn me again for {0}	{0}-നായി ഇനി മുന്നറിയിപ്പ് നൽകരുത്
+Go back	തിരികെ പോകുക
+Open it anyway	എങ്കിലും തുറക്കുക
+This site doesn't offer a secure connection	ഈ സൈറ്റ് സുരക്ഷിത കണക്ഷൻ നൽകുന്നില്ല
+Most sites have one; this one doesn't, or it isn't working right now. Sites on this PC and your own network are opened without this warning.	മിക്ക സൈറ്റുകൾക്കും ഇതുണ്ട്; ഈ സൈറ്റിനില്ല, അല്ലെങ്കിൽ ഇപ്പോൾ അത് പ്രവർത്തിക്കുന്നില്ല. ഈ PC-യിലെയും നിങ്ങളുടെ സ്വന്തം നെറ്റ്‌വർക്കിലെയും സൈറ്റുകൾ ഈ മുന്നറിയിപ്പില്ലാതെ തുറക്കും.
+Not a secure connection	സുരക്ഷിത കണക്ഷനല്ല
+History, bookmarks and read later · {0}	ചരിത്രം, ബുക്ക്മാർക്കുകൾ, പിന്നീട് വായിക്കാൻ · {0}
+New	പുതിയത്
+Nothing kept yet. To keep a page, use the menu › Save for reading later; it opens here even without the internet.	ഇതുവരെ ഒന്നും സൂക്ഷിച്ചിട്ടില്ല. ഒരു പേജ് സൂക്ഷിക്കാൻ മെനു › പിന്നീട് വായിക്കാൻ സൂക്ഷിക്കുക ഉപയോഗിക്കുക; ഇന്റർനെറ്റ് ഇല്ലാതെയും അത് ഇവിടെ തുറക്കും.
+1 page kept on this PC ({0})	ഈ PC-യിൽ 1 പേജ് സൂക്ഷിച്ചിരിക്കുന്നു ({0})
+{0} pages kept on this PC ({1})	ഈ PC-യിൽ {0} പേജുകൾ സൂക്ഷിച്ചിരിക്കുന്നു ({1})
+{0} not read yet	{0} എണ്ണം ഇനിയും വായിച്ചിട്ടില്ല
+Open the page online	പേജ് ഓൺലൈനിൽ തുറക്കുക
+Mark as not read	വായിച്ചിട്ടില്ലെന്ന് അടയാളപ്പെടുത്തുക
+Mark as read	വായിച്ചതായി അടയാളപ്പെടുത്തുക
+This page is already kept to read later.	ഈ പേജ് ഇതിനകം പിന്നീട് വായിക്കാൻ സൂക്ഷിച്ചിട്ടുണ്ട്.
+Only a web page that's open can be kept to read later.	തുറന്നിരിക്കുന്ന ഒരു വെബ് പേജ് മാത്രമേ പിന്നീട് വായിക്കാൻ സൂക്ഷിക്കാനാകൂ.
+Kept to read later	പിന്നീട് വായിക്കാൻ സൂക്ഷിച്ചു
+The page couldn't be kept: {0}	പേജ് സൂക്ഷിക്കാനായില്ല: {0}
+There are no pages in this window to keep yet.	ഈ ജാലകത്തിൽ സൂക്ഷിക്കാൻ ഇതുവരെ പേജുകളൊന്നുമില്ല.
+Name of the set	സെറ്റിന്റെ പേര്
+Put these tabs away (close them now)	ഈ ടാബുകൾ മാറ്റിവെക്കുക (ഇപ്പോൾ അവ അടയ്ക്കുക)
+Save tabs as a set	ടാബുകൾ ഒരു സെറ്റായി സൂക്ഷിക്കുക
+1 tab from this window is kept under a name, to open again later.	ഈ ജാലകത്തിലെ 1 ടാബ് ഒരു പേരിൽ സൂക്ഷിക്കും, പിന്നീട് വീണ്ടും തുറക്കാൻ.
+{0} tabs from this window are kept under a name, to open them all again later.	ഈ ജാലകത്തിലെ {0} ടാബുകൾ ഒരു പേരിൽ സൂക്ഷിക്കും, പിന്നീട് എല്ലാം വീണ്ടും തുറക്കാൻ.
+Name (for example Work, or Trip planning)	പേര് (ഉദാഹരണത്തിന് ജോലി, അല്ലെങ്കിൽ യാത്രാ ആസൂത്രണം)
+Saved the set "{0}"	"{0}" എന്ന സെറ്റ് സൂക്ഷിച്ചു
+Open it again from the menu › Tab sets.	മെനു › ടാബ് സെറ്റുകൾ വഴി അത് വീണ്ടും തുറക്കാം.
+Save these tabs as a set...	ഈ ടാബുകൾ ഒരു സെറ്റായി സൂക്ഷിക്കുക...
+{0} (1 tab)	{0} (1 ടാബ്)
+{0} ({1} tabs)	{0} ({1} ടാബുകൾ)
+All tab sets...	എല്ലാ ടാബ് സെറ്റുകളും...
+Tab sets · {0}	ടാബ് സെറ്റുകൾ · {0}
+Save this window's tabs as a set...	ഈ ജാലകത്തിലെ ടാബുകൾ ഒരു സെറ്റായി സൂക്ഷിക്കുക...
+Put a window's tabs away under a name, and open them all again when you need them.	ഒരു ജാലകത്തിലെ ടാബുകൾ ഒരു പേരിൽ മാറ്റിവെക്കുക, ആവശ്യമുള്ളപ്പോൾ എല്ലാം വീണ്ടും തുറക്കുക.
+Open its tabs in this window	അതിലെ ടാബുകൾ ഈ ജാലകത്തിൽ തുറക്കുക
+Open its tabs in a new window	അതിലെ ടാബുകൾ ഒരു പുതിയ ജാലകത്തിൽ തുറക്കുക
+Rename or delete	പേര് മാറ്റുക അല്ലെങ്കിൽ ഇല്ലാതാക്കുക
+Rename the set	സെറ്റിന്റെ പേര് മാറ്റുക
+Delete the set "{0}"? Its tabs aren't open anywhere else.	"{0}" എന്ന സെറ്റ് ഇല്ലാതാക്കണോ? അതിലെ ടാബുകൾ മറ്റെവിടെയും തുറന്നിട്ടില്ല.
+No tab sets yet. Use "Save this window's tabs as a set", or the menu › Tab sets.	ഇതുവരെ ടാബ് സെറ്റുകളില്ല. "ഈ ജാലകത്തിലെ ടാബുകൾ ഒരു സെറ്റായി സൂക്ഷിക്കുക" അല്ലെങ്കിൽ മെനു › ടാബ് സെറ്റുകൾ ഉപയോഗിക്കുക.
+1 set	1 സെറ്റ്
+{0} sets	{0} സെറ്റുകൾ
+Save for reading later	പിന്നീട് വായിക്കാൻ സൂക്ഷിക്കുക
+Stop forgetting {0} when closing	അടയ്ക്കുമ്പോൾ {0} മറക്കുന്നത് നിർത്തുക
+Forget {0} when closing	അടയ്ക്കുമ്പോൾ {0} മറക്കുക
+Read later ({0} new)	പിന്നീട് വായിക്കാൻ ({0} പുതിയത്)
+Use secure connections (https), and warn before opening a site without one	സുരക്ഷിത കണക്ഷനുകൾ (https) ഉപയോഗിക്കുക, അതില്ലാത്ത സൈറ്റ് തുറക്കും മുമ്പ് മുന്നറിയിപ്പ് നൽകുക
+An http:// address is opened as https:// when the site has it. Sites on this PC and your own network are left as they are.	സൈറ്റിന് https:// ഉണ്ടെങ്കിൽ http:// വിലാസം https:// ആയി തുറക്കും. ഈ PC-യിലെയും നിങ്ങളുടെ സ്വന്തം നെറ്റ്‌വർക്കിലെയും സൈറ്റുകൾ അതേപടി വിടും.
+Sites opened without a secure connection, without a warning:	മുന്നറിയിപ്പില്ലാതെ, സുരക്ഷിത കണക്ഷനില്ലാതെ തുറക്കുന്ന സൈറ്റുകൾ:
+Warn again for {0}	{0}-നായി വീണ്ടും മുന്നറിയിപ്പ് നൽകുക
+When the browser closes	ബ്രൗസർ അടയ്ക്കുമ്പോൾ
+Forget sites when the last window closes, in every room:	അവസാന ജാലകം അടയ്ക്കുമ്പോൾ, എല്ലാ മുറികളിലും, സൈറ്റുകൾ മറക്കുക:
+Cookies and site data (signs you out of them)	കുക്കികളും സൈറ്റ് ഡാറ്റയും (അവയിൽ നിന്ന് സൈൻ ഔട്ട് ആകും)
+Forget nothing	ഒന്നും മറക്കരുത്
+Forget the sites in my list	എന്റെ പട്ടികയിലെ സൈറ്റുകൾ മറക്കുക
+Forget every site	എല്ലാ സൈറ്റുകളും മറക്കുക
+Add a site...	ഒരു സൈറ്റ് ചേർക്കുക...
+Forget a site when closing	അടയ്ക്കുമ്പോൾ ഒരു സൈറ്റ് മറക്കുക
+The site's address (for example example.com)	സൈറ്റിന്റെ വിലാസം (ഉദാഹരണത്തിന് example.com)
+That doesn't look like a site's address.	അത് ഒരു സൈറ്റിന്റെ വിലാസമായി തോന്നുന്നില്ല.
+The sites in my list:	എന്റെ പട്ടികയിലെ സൈറ്റുകൾ:
+You can also right-click a tab › Forget the site when closing.	ഒരു ടാബിൽ റൈറ്റ്-ക്ലിക്ക് ചെയ്ത് › അടയ്ക്കുമ്പോൾ സൈറ്റ് മറക്കുക എന്നതും തിരഞ്ഞെടുക്കാം.
+Bookmarks, saved passwords, tab sets and pages kept to read later are always kept.	ബുക്ക്മാർക്കുകൾ, സേവ് ചെയ്ത പാസ്‌വേഡുകൾ, ടാബ് സെറ്റുകൾ, പിന്നീട് വായിക്കാൻ സൂക്ഷിച്ച പേജുകൾ എന്നിവ എപ്പോഴും സൂക്ഷിക്കും.

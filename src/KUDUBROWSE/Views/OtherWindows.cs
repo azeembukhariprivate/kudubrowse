@@ -131,6 +131,31 @@ namespace Kudubrowse.Views
                 root.Children.Add(sites);
             }
 
+            root.Children.Add(Ui.Heading("Secure connections", 14).Margin(0, 16, 0, 4));
+            var secure = new CheckBox { Content = "Use secure connections (https), and warn before opening a site without one", IsChecked = Settings.SecureConnections };
+            secure.Click += (s, e) => Settings.SecureConnections = secure.IsChecked == true;
+            root.Children.Add(secure);
+            root.Children.Add(Ui.Subtle("An http:// address is opened as https:// when the site has it. Sites on this PC and your own network are left as they are.", 12).Margin(27, 0, 0, 0));
+            var insecure = Settings.InsecureSites;
+            if (insecure.Count > 0)
+            {
+                root.Children.Add(Ui.Text("Sites opened without a secure connection, without a warning:", 12.5).Margin(0, 10, 0, 4));
+                var insecureSites = new WrapPanel();
+                foreach (var site in insecure)
+                {
+                    var chip = Ui.Small(Ui.Button(site, "IconClose", "SecondaryButton"));
+                    chip.ToolTip = "Warn again for " + site;
+                    chip.Margin = new Thickness(0, 0, 6, 6);
+                    chip.Click += (s, e) =>
+                    {
+                        BrowserTab.WarnAgainFor(site);
+                        insecureSites.Children.Remove(chip);
+                    };
+                    insecureSites.Children.Add(chip);
+                }
+                root.Children.Add(insecureSites);
+            }
+
             var muted = Settings.MutedSites;
             if (muted.Count > 0)
             {
@@ -273,6 +298,75 @@ namespace Kudubrowse.Views
                 FillRooms();
             };
             root.Children.Add(addRoom);
+
+            root.Children.Add(Ui.Heading("When the browser closes", 14).Margin(0, 16, 0, 4));
+            root.Children.Add(Ui.Subtle("Forget sites when the last window closes, in every room:", 12.5).Margin(0, 0, 0, 8));
+            var forgetModes = new WrapPanel();
+            var forgetCookies = new CheckBox { Content = "Cookies and site data (signs you out of them)", IsChecked = Settings.ForgetCookies, Margin = new Thickness(0, 6, 0, 0) };
+            var forgetHistory = new CheckBox { Content = "History", IsChecked = Settings.ForgetHistory, Margin = new Thickness(0, 6, 0, 0) };
+            var forgetList = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+            void UpdateForget()
+            {
+                var on = Settings.ForgetWhenClosing != ForgetMode.Off;
+                forgetCookies.IsEnabled = forgetHistory.IsEnabled = on;
+                forgetList.Visibility = Settings.ForgetWhenClosing == ForgetMode.Sites ? Visibility.Visible : Visibility.Collapsed;
+            }
+            foreach (var (mode, text) in new[] { (ForgetMode.Off, "Forget nothing"), (ForgetMode.Sites, "Forget the sites in my list"), (ForgetMode.Everything, "Forget every site") })
+            {
+                var chip = new RadioButton { Content = text, GroupName = "forget", IsChecked = Settings.ForgetWhenClosing == mode }.Styled("ChipRadio");
+                chip.Checked += (s, e) =>
+                {
+                    Settings.ForgetWhenClosing = mode;
+                    UpdateForget();
+                };
+                forgetModes.Children.Add(chip);
+            }
+            root.Children.Add(forgetModes);
+            forgetCookies.Click += (s, e) => Settings.ForgetCookies = forgetCookies.IsChecked == true;
+            forgetHistory.Click += (s, e) => Settings.ForgetHistory = forgetHistory.IsChecked == true;
+            root.Children.Add(forgetCookies);
+            root.Children.Add(forgetHistory);
+            var forgetSites = new WrapPanel();
+            void FillForgetSites()
+            {
+                forgetSites.Children.Clear();
+                foreach (var site in Settings.ForgetSites)
+                {
+                    var chip = Ui.Small(Ui.Button(site, "IconClose", "SecondaryButton"));
+                    chip.ToolTip = "Stop forgetting " + site + " when closing";
+                    chip.Margin = new Thickness(0, 0, 6, 6);
+                    chip.Click += (s, e) =>
+                    {
+                        Forgetting.SetSite(site, false);
+                        FillForgetSites();
+                    };
+                    forgetSites.Children.Add(chip);
+                }
+            }
+            FillForgetSites();
+            var addForget = Ui.Small(Ui.Button("Add a site...", "IconPlus"));
+            addForget.HorizontalAlignment = HorizontalAlignment.Left;
+            addForget.Click += (s, e) =>
+            {
+                var typed = Dialogs.Ask(this, "Forget a site when closing", "The site's address (for example example.com)", string.Empty);
+                if (typed == null) return;
+                var url = AddressBar.Resolve(typed, SearchEngines.Default);
+                var site = url != null && Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https") ? ForgetOnClose.SiteOf(u.Host) : null;
+                if (site == null || site.IndexOf('.') < 0)
+                {
+                    Dialogs.Info(this, "That doesn't look like a site's address.");
+                    return;
+                }
+                Forgetting.SetSite(site, true);
+                FillForgetSites();
+            };
+            forgetList.Children.Add(Ui.Text("The sites in my list:", 12.5).Margin(0, 0, 0, 4));
+            forgetList.Children.Add(forgetSites);
+            forgetList.Children.Add(addForget);
+            forgetList.Children.Add(Ui.Subtle("You can also right-click a tab › Forget the site when closing.", 12).Margin(0, 4, 0, 0));
+            root.Children.Add(forgetList);
+            root.Children.Add(Ui.Subtle("Bookmarks, saved passwords, tab sets and pages kept to read later are always kept.", 12).Margin(0, 8, 0, 0));
+            UpdateForget();
 
             root.Children.Add(Ui.Heading("Clear browsing data", 14).Margin(0, 16, 0, 4));
             root.Children.Add(Ui.Subtle("Deletes the history, and every room's cookies, logins to sites and saved site data. Bookmarks and saved passwords are kept.", 12.5));

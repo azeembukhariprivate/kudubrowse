@@ -20,7 +20,7 @@ namespace Kudubrowse.Views
     /// One tab: its page (an Edge WebView2, made the first time the tab is shown, so tabs brought back from last
     /// time don't all load at once) and its header in the tab strip.
     /// </summary>
-    public sealed class BrowserTab
+    public sealed partial class BrowserTab
     {
         /// <summary>The site's picture.</summary>
         private readonly Image _icon = new Image { Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
@@ -299,6 +299,9 @@ namespace Kudubrowse.Views
             return true;
         }
 
+        /// <summary>Wakes the tab if it's sleeping (so the engine can work with its page).</summary>
+        public void WakeUp() => Wake();
+
         /// <summary>Wakes the tab.</summary>
         private void Wake()
         {
@@ -437,6 +440,13 @@ namespace Kudubrowse.Views
             core.HistoryChanged += (s, e) => Refresh();
             core.NavigationStarting += (s, e) =>
             {
+                if (CheckSecure(core, e)) return;
+                if (InsecureUrl != null && !e.IsRedirected)
+                {
+                    // Going on from the warning to another page.
+                    InsecureUrl = null;
+                    InsecureChanged?.Invoke(this);
+                }
                 IsLoading = true;
                 Navigating?.Invoke(this);
                 _mainUrl = e.Uri;
@@ -479,8 +489,10 @@ namespace Kudubrowse.Views
             Blocker.Changed += OnBlockerChanged;
             await UpdateDarkPages(false);
             DarkPages.Changed += OnDarkPagesChanged;
+            core.ContentLoading += (s, e) => SecureAnswered(e);
             core.NavigationCompleted += (s, e) =>
             {
+                SecureFinished(e);
                 // Pages opened are kept in the history (only ordinary web pages).
                 if (e.IsSuccess && !IsPrivate) BrowserLibrary.History.Add(core.Source, core.DocumentTitle);
                 IsLoading = false;

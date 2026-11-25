@@ -519,3 +519,83 @@ You have the latest version.	لديك أحدث إصدار.
 Downloading {0} {1}…	جارٍ تنزيل {0} {1}…
 {0} {1} is out, but its download didn't check out. It'll be tried again later.	صدر {0} {1}، لكن تنزيله لم ينجح في التحقق. ستُعاد المحاولة لاحقًا.
 Couldn't look for a new version (no internet?). It'll be tried again later.	تعذّر البحث عن إصدار جديد (لا يوجد إنترنت؟). ستُعاد المحاولة لاحقًا.
+Only web pages can be kept to read later.	يمكن الاحتفاظ بصفحات الويب فقط للقراءة لاحقًا.
+The page couldn't be saved.	تعذّر حفظ الصفحة.
+The page is too big to keep (over 100 MB).	الصفحة أكبر من أن تُحفظ (أكثر من 100 ميغابايت).
+Tab sets	حزم علامات التبويب
+Put a window's tabs away under a name, like Work or Trip planning, and open them all again when you need them.	احفظ علامات تبويب نافذة باسم، مثل العمل أو التخطيط لرحلة، وافتحها كلها مجددًا عند الحاجة.
+Menu › Tab sets	القائمة › حزم علامات التبويب
+Read later	القراءة لاحقًا
+Keep a page on this PC, whole, to read later: it opens even without the internet.	احتفظ بصفحة كاملة على هذا الحاسوب لقراءتها لاحقًا: تُفتح حتى دون إنترنت.
+Menu › Save for reading later	القائمة › احفظ للقراءة لاحقًا
+Secure connections	الاتصالات الآمنة
+Pages open with a secure connection (https) when the site has one, and you're warned before a site that hasn't.	تُفتح الصفحات باتصال آمن (https) عندما يتوفر لدى الموقع، وتُنبَّه قبل فتح موقع لا يتوفر لديه.
+Settings › Secure connections	الإعدادات › الاتصالات الآمنة
+Forget sites when closing	نسيان المواقع عند الإغلاق
+The sites you choose, or every site, are forgotten when the browser closes: their cookies, and their history if you like.	تُنسى المواقع التي تختارها، أو كل المواقع، عند إغلاق المتصفح: ملفات تعريف الارتباط الخاصة بها، وسجلها إن شئت.
+Right-click a tab, or Settings	انقر بزر الماوس الأيمن على علامة تبويب، أو الإعدادات
+{0} can only be opened without a secure connection (https). What you see and send there, such as passwords, could be read or changed by others on the network.	لا يمكن فتح {0} إلا دون اتصال آمن (https). ما تراه وترسله هناك، مثل كلمات المرور، قد يقرؤه أو يغيّره آخرون على الشبكة.
+Don't warn me again for {0}	لا تنبّهني مجددًا بشأن {0}
+Go back	الرجوع
+Open it anyway	افتحه على أي حال
+This site doesn't offer a secure connection	لا يوفّر هذا الموقع اتصالًا آمنًا
+Most sites have one; this one doesn't, or it isn't working right now. Sites on this PC and your own network are opened without this warning.	معظم المواقع لديها اتصال آمن؛ هذا الموقع ليس لديه، أو أنه لا يعمل الآن. تُفتح مواقع هذا الحاسوب وشبكتك الخاصة دون هذا التنبيه.
+Not a secure connection	اتصال غير آمن
+History, bookmarks and read later · {0}	السجل والإشارات المرجعية والقراءة لاحقًا · {0}
+New	جديد
+Nothing kept yet. To keep a page, use the menu › Save for reading later; it opens here even without the internet.	لم يُحفظ شيء بعد. لحفظ صفحة استخدم القائمة › احفظ للقراءة لاحقًا؛ تُفتح هنا حتى دون إنترنت.
+1 page kept on this PC ({0})	صفحة واحدة محفوظة على هذا الحاسوب ({0})
+{0} pages kept on this PC ({1})	{0} صفحات محفوظة على هذا الحاسوب ({1})
+{0} not read yet	{0} لم تُقرأ بعد
+Open the page online	افتح الصفحة على الإنترنت
+Mark as not read	وضع علامة غير مقروءة
+Mark as read	وضع علامة مقروءة
+This page is already kept to read later.	هذه الصفحة محفوظة بالفعل للقراءة لاحقًا.
+Only a web page that's open can be kept to read later.	يمكن حفظ صفحة ويب مفتوحة فقط للقراءة لاحقًا.
+Kept to read later	حُفظت للقراءة لاحقًا
+The page couldn't be kept: {0}	تعذّر حفظ الصفحة: {0}
+There are no pages in this window to keep yet.	لا توجد صفحات في هذه النافذة لحفظها بعد.
+Name of the set	اسم الحزمة
+Put these tabs away (close them now)	إبعاد علامات التبويب هذه (إغلاقها الآن)
+Save tabs as a set	حفظ علامات التبويب كحزمة
+1 tab from this window is kept under a name, to open again later.	تُحفظ علامة تبويب واحدة من هذه النافذة باسم، لفتحها مجددًا لاحقًا.
+{0} tabs from this window are kept under a name, to open them all again later.	تُحفظ {0} علامات تبويب من هذه النافذة باسم، لفتحها كلها مجددًا لاحقًا.
+Name (for example Work, or Trip planning)	الاسم (مثل العمل، أو التخطيط لرحلة)
+Saved the set "{0}"	حُفظت الحزمة "{0}"
+Open it again from the menu › Tab sets.	افتحها مجددًا من القائمة › حزم علامات التبويب.
+Save these tabs as a set...	حفظ علامات التبويب هذه كحزمة...
+{0} (1 tab)	{0} (علامة تبويب واحدة)
+{0} ({1} tabs)	{0} ({1} علامات تبويب)
+All tab sets...	كل حزم علامات التبويب...
+Tab sets · {0}	حزم علامات التبويب · {0}
+Save this window's tabs as a set...	حفظ علامات تبويب هذه النافذة كحزمة...
+Put a window's tabs away under a name, and open them all again when you need them.	احفظ علامات تبويب نافذة باسم، وافتحها كلها مجددًا عند الحاجة.
+Open its tabs in this window	افتح علامات تبويبها في هذه النافذة
+Open its tabs in a new window	افتح علامات تبويبها في نافذة جديدة
+Rename or delete	إعادة التسمية أو الحذف
+Rename the set	إعادة تسمية الحزمة
+Delete the set "{0}"? Its tabs aren't open anywhere else.	هل تريد حذف الحزمة "{0}"؟ علامات تبويبها ليست مفتوحة في أي مكان آخر.
+No tab sets yet. Use "Save this window's tabs as a set", or the menu › Tab sets.	لا توجد حزم علامات تبويب بعد. استخدم "حفظ علامات تبويب هذه النافذة كحزمة" أو القائمة › حزم علامات التبويب.
+1 set	حزمة واحدة
+{0} sets	{0} حزم
+Save for reading later	احفظ للقراءة لاحقًا
+Stop forgetting {0} when closing	التوقف عن نسيان {0} عند الإغلاق
+Forget {0} when closing	نسيان {0} عند الإغلاق
+Read later ({0} new)	القراءة لاحقًا ({0} جديدة)
+Use secure connections (https), and warn before opening a site without one	استخدام الاتصالات الآمنة (https)، والتنبيه قبل فتح موقع لا يوفّرها
+An http:// address is opened as https:// when the site has it. Sites on this PC and your own network are left as they are.	يُفتح عنوان http:// على أنه https:// عندما يتوفر لدى الموقع. تبقى مواقع هذا الحاسوب وشبكتك الخاصة كما هي.
+Sites opened without a secure connection, without a warning:	مواقع تُفتح دون اتصال آمن ودون تنبيه:
+Warn again for {0}	التنبيه مجددًا بشأن {0}
+When the browser closes	عند إغلاق المتصفح
+Forget sites when the last window closes, in every room:	نسيان المواقع عند إغلاق آخر نافذة، في كل الغرف:
+Cookies and site data (signs you out of them)	ملفات تعريف الارتباط وبيانات المواقع (تُسجّل خروجك منها)
+Forget nothing	لا تنسَ شيئًا
+Forget the sites in my list	نسيان المواقع في قائمتي
+Forget every site	نسيان كل المواقع
+Add a site...	إضافة موقع...
+Forget a site when closing	نسيان موقع عند الإغلاق
+The site's address (for example example.com)	عنوان الموقع (مثل example.com)
+That doesn't look like a site's address.	لا يبدو هذا عنوان موقع.
+The sites in my list:	المواقع في قائمتي:
+You can also right-click a tab › Forget the site when closing.	يمكنك أيضًا النقر بزر الماوس الأيمن على علامة تبويب › نسيان الموقع عند الإغلاق.
+Bookmarks, saved passwords, tab sets and pages kept to read later are always kept.	تُحفظ دائمًا الإشارات المرجعية وكلمات المرور المحفوظة وحزم علامات التبويب والصفحات المحفوظة للقراءة لاحقًا.

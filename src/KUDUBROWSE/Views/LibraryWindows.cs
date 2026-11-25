@@ -14,7 +14,10 @@ using Kudubrowse.Core.Library;
 
 namespace Kudubrowse.Views
 {
-    /// <summary>History and bookmarks in one window, with a search box. Double-click (or Enter) opens a page in a new tab.</summary>
+    /// <summary>
+    /// History, bookmarks and pages kept to read later in one window, with a search box. Double-click (or Enter) opens a
+    /// page in a new tab.
+    /// </summary>
     public sealed class LibraryWindow : Window
     {
         /// <summary>The window when it's open (only one at a time).</summary>
@@ -25,8 +28,8 @@ namespace Kudubrowse.Views
         private readonly TextBox _search = new TextBox { MinHeight = 34, VerticalContentAlignment = VerticalAlignment.Center };
         /// <summary>The list.</summary>
         private readonly ListBox _list = new ListBox { BorderThickness = new Thickness(0) };
-        /// <summary>The History and Bookmarks tabs.</summary>
-        private readonly RadioButton _historyTab, _bookmarksTab;
+        /// <summary>The History, Bookmarks and Read later tabs.</summary>
+        private readonly RadioButton _historyTab, _bookmarksTab, _laterTab;
         /// <summary>Clears history.</summary>
         private readonly Button _clear;
         /// <summary>How many are listed.</summary>
@@ -47,17 +50,30 @@ namespace Kudubrowse.Views
             return _open;
         }
 
+        /// <summary>Shows the window at the pages kept to read later.</summary>
+        public static LibraryWindow ShowReadLater(MainWindow browser)
+        {
+            var w = Show(browser, false);
+            w._laterTab.IsChecked = true;
+            return w;
+        }
+
         /// <summary>Makes the window.</summary>
         public LibraryWindow(MainWindow browser)
         {
             _browser = browser;
             Width = 820;
             Height = 640;
-            Dialogs.Prepare(this, "History and bookmarks · " + AppInfo.Name, browser);
+            Dialogs.Prepare(this, "History, bookmarks and read later · " + AppInfo.Name, browser);
             _historyTab = new RadioButton { Content = Ui.Label("IconHistory", "History"), GroupName = "lib" }.Styled("TabRadio");
             _bookmarksTab = new RadioButton { Content = Ui.Label("IconStar", "Bookmarks"), GroupName = "lib" }.Styled("TabRadio");
+            _laterTab = new RadioButton { Content = Ui.Label("IconNote", "Read later"), GroupName = "lib" }.Styled("TabRadio");
             _historyTab.Checked += (s, e) => Fill();
             _bookmarksTab.Checked += (s, e) => Fill();
+            _laterTab.Checked += (s, e) => Fill();
+            Action laterChanged = () => Dispatcher.BeginInvoke(new Action(() => { if (ShowingReadLater) Fill(); }));
+            BrowserLibrary.ReadLater.Changed += laterChanged;
+            Closed += (s, e) => BrowserLibrary.ReadLater.Changed -= laterChanged;
             System.Windows.Automation.AutomationProperties.SetName(_search, "Search history and bookmarks");
             _search.TextChanged += (s, e) =>
             {
@@ -84,10 +100,11 @@ namespace Kudubrowse.Views
                 else if (e.Key == Key.Delete) DeleteSelected();
             };
 
-            var top = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Star(), Ui.Px(280));
+            var top = Ui.Columns(Ui.Auto, Ui.Auto, Ui.Auto, Ui.Star(), Ui.Px(260));
             top.Children.Add(_historyTab.At(0, 0));
             top.Children.Add(_bookmarksTab.Margin(8, 0, 0, 0).At(0, 1));
-            top.Children.Add(_search.At(0, 3));
+            top.Children.Add(_laterTab.Margin(8, 0, 0, 0).At(0, 2));
+            top.Children.Add(_search.Margin(12, 0, 0, 0).At(0, 4));
             var bottom = Ui.Columns(Ui.Star(), Ui.Auto);
             bottom.Children.Add(_count.At(0, 0));
             bottom.Children.Add(_clear.At(0, 1));
@@ -106,6 +123,8 @@ namespace Kudubrowse.Views
 
         /// <summary>True when bookmarks are shown.</summary>
         public bool ShowingBookmarks => _bookmarksTab.IsChecked == true;
+        /// <summary>True when the pages kept to read later are shown.</summary>
+        public bool ShowingReadLater => _laterTab.IsChecked == true;
         /// <summary>How many are listed.</summary>
         public int ItemCount => _list.Items.Count;
 
@@ -121,8 +140,24 @@ namespace Kudubrowse.Views
         {
             _list.Items.Clear();
             var words = _search.Text.Trim();
-            _clear.Visibility = ShowingBookmarks ? Visibility.Collapsed : Visibility.Visible;
-            if (ShowingBookmarks)
+            _clear.Visibility = ShowingBookmarks || ShowingReadLater ? Visibility.Collapsed : Visibility.Visible;
+            if (ShowingReadLater)
+            {
+                var later = BrowserLibrary.ReadLater;
+                var terms = words.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var shown = later.All.Where(p => terms.All(t => p.Title.ToLowerInvariant().Contains(t) || p.Url.ToLowerInvariant().Contains(t))).ToList();
+                foreach (var p in shown)
+                {
+                    var when = p.Saved.ToLocalTime();
+                    var extra = (p.Read ? string.Empty : Lang.T("New") + " · ") + (when.Date == DateTime.Today ? when.ToString("t") : when.ToString("d MMM"));
+                    _list.Items.Add(Row(p.Read ? "IconNote" : "IconStar", p.Title, AddressBar.Display(p.Url), extra, p));
+                }
+                _count.Text = shown.Count == 0
+                    ? (words.Length > 0 ? "No pages match." : "Nothing kept yet. To keep a page, use the menu › Save for reading later; it opens here even without the internet.")
+                    : (later.All.Count == 1 ? Lang.T("1 page kept on this PC ({0})", Format.Size(later.TotalSize)) : Lang.T("{0} pages kept on this PC ({1})", later.All.Count, Format.Size(later.TotalSize)))
+                      + (later.Unread > 0 ? " · " + Lang.T("{0} not read yet", later.Unread) : string.Empty);
+            }
+            else if (ShowingBookmarks)
             {
                 var lib = BrowserLibrary.Bookmarks;
                 var terms = words.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -189,8 +224,17 @@ namespace Kudubrowse.Views
             var open = new MenuItem { Header = "Open in a new tab" };
             open.Click += (s, e) => OpenSelected();
             var copy = new MenuItem { Header = "Copy the address" };
-            copy.Click += (s, e) => Ui.Copy(tag is Bookmark b ? b.Url : ((Visit)tag).Url);
+            copy.Click += (s, e) => Ui.Copy(tag is Bookmark b ? b.Url : tag is LaterPage p ? p.Url : ((Visit)tag).Url);
             menu.Items.Add(open);
+            if (tag is LaterPage page)
+            {
+                var online = new MenuItem { Header = "Open the page online" };
+                online.Click += (s, e) => Browser()?.OpenAddress(page.Url, true);
+                var read = new MenuItem { Header = page.Read ? "Mark as not read" : "Mark as read" };
+                read.Click += (s, e) => BrowserLibrary.ReadLater.MarkRead(page, !page.Read);
+                menu.Items.Add(online);
+                menu.Items.Add(read);
+            }
             menu.Items.Add(copy);
             item.ContextMenu = menu;
             return item;
@@ -201,11 +245,20 @@ namespace Kudubrowse.Views
         {
             if (!(_list.SelectedItem is ListBoxItem item)) return;
             var url = item.Tag is Bookmark b ? b.Url : item.Tag is Visit v ? v.Url : null;
+            if (item.Tag is LaterPage page)
+            {
+                // The copy kept on this PC: it opens even without the internet.
+                url = BrowserLibrary.ReadLater.AddressOf(page);
+                BrowserLibrary.ReadLater.MarkRead(page);
+            }
             if (url == null) return;
-            var browser = MainWindow.Open.Contains(_browser) ? _browser : MainWindow.Open.FirstOrDefault();
+            var browser = Browser();
             browser?.OpenAddress(url, true);
             browser?.Activate();
         }
+
+        /// <summary>The browser window to open pages in: the one it was opened from, else the first one open.</summary>
+        private MainWindow Browser() => MainWindow.Open.Contains(_browser) ? _browser : MainWindow.Open.FirstOrDefault();
 
         /// <summary>Deletes the row chosen.</summary>
         private void DeleteSelected()
@@ -217,7 +270,8 @@ namespace Kudubrowse.Views
                 BrowserLibrary.History.Remove(v.Url);
                 BrowserLibrary.History.Save();
             }
-            _list.Items.Remove(item);
+            else if (item.Tag is LaterPage p) BrowserLibrary.ReadLater.Remove(p);
+            if (_list.Items.Contains(item)) _list.Items.Remove(item);
         }
     }
 

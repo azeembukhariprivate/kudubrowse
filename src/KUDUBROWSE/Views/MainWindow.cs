@@ -60,6 +60,9 @@ namespace Kudubrowse.Views
         /// <summary>When the window was last brought forward.</summary>
         private DateTime _activatedAt = DateTime.UtcNow;
 
+        /// <summary>The tabs' addresses as the window closed (they help find what to forget when closing).</summary>
+        private string[] _closingAddresses = new string[0];
+
         /// <summary>A private window: its tabs keep no history and their site data goes when the window closes.</summary>
         public bool IsPrivate { get; }
 
@@ -241,12 +244,17 @@ namespace Kudubrowse.Views
                     Downloads.Closing();
                 }
                 SaveSession(includeClosing: !IsPrivate && !Open.Any(w => !w.IsPrivate) ? this : null);
+                _closingAddresses = _tabs.Select(t => t.Url).ToArray();
                 CloseFloating();
                 foreach (var t in _tabs) t.Close();
             };
-            Closed += (s, e) =>
+            Closed += async (s, e) =>
             {
-                if (Open.Count == 0 && !SelfTest.Running) Application.Current.Shutdown();
+                if (Open.Count != 0 || SelfTest.Running) return;
+                // Clear when closing: the sites' cookies and history are forgotten before the browser ends
+                // (anything left is finished at the next start).
+                if (Forgetting.IsOn) await Forgetting.Run(_closingAddresses);
+                Application.Current.Shutdown();
             };
         }
 
@@ -275,19 +283,7 @@ namespace Kudubrowse.Views
             if (Settings.RestoreTabs)
             {
                 var (saved, selected) = Session.Load();
-                var groups = new Dictionary<string, TabGroup>();
-                foreach (var t in saved)
-                {
-                    var tab = new BrowserTab(t.Url, t.Title, t.Room);
-                    if (t.Muted) tab.SetMuted(true);
-                    if (t.Group != null)
-                    {
-                        var key = t.Group + "|" + t.GroupColor;
-                        if (!groups.TryGetValue(key, out var g)) groups[key] = g = new TabGroup { Name = t.Group, Color = t.GroupColor };
-                        tab.Group = g;
-                    }
-                    AddTab(tab, _tabs.Count, false);
-                }
+                AddSavedTabs(saved);
                 if (_tabs.Count > 0) Select(_tabs[selected]);
             }
             if (!string.IsNullOrWhiteSpace(address))
@@ -334,6 +330,11 @@ namespace Kudubrowse.Views
             WatchPasswords(tab);
             tab.PageClosed += CloseTab;
             tab.FullScreenChanged += (t, on) => SetFullScreen(on);
+            tab.InsecureChanged += t =>
+            {
+                Layout();
+                if (t == Current) UpdateToolbar();
+            };
             tab.BlockedChanged += t =>
             {
                 if (t == Current) UpdateShield();
@@ -371,11 +372,12 @@ namespace Kudubrowse.Views
         {
             var index = _tabs.IndexOf(tab);
             if (index < 0) return;
-            if (!IsPrivate) RecentlyClosed.Add(tab.ToSaved());
+            if (!IsPrivate && !_puttingAway) RecentlyClosed.Add(tab.ToSaved());
             CloseFloating(tab);
             _tabs.RemoveAt(index);
             if (tab == _splitPartner) _splitPartner = null;
             if (tab.View != null) _pages.Children.Remove(tab.View);
+            if (tab.HasWarning) _pages.Children.Remove(tab.Warning);
             tab.Close();
             if (_tabs.Count == 0)
             {
@@ -475,11 +477,20 @@ namespace Kudubrowse.Views
                 menu.Items.Add(move);
             }
             menu.Items.Add(Item(tab.Muted ? "Unmute tab" : "Mute tab", () => tab.SetMuted(!tab.Muted), "Ctrl+M"));
+            if (!IsPrivate && ReadLater.IsWebAddress(tab.Url) && tab.View != null)
+                menu.Items.Add(Item("Save for reading later", async () => await SaveForLater(tab)));
             var site = tab.PageHost.Length > 0 ? Core.Blocking.Domains.Registrable(tab.PageHost) : null;
             if (site != null && !IsPrivate)
             {
                 var always = Settings.MutedSites.Contains(site);
                 menu.Items.Add(Item(always ? "Stop always muting " + site : "Always mute " + site, () => AlwaysMute(site, !always)));
+            }
+            if (site != null && !IsPrivate)
+            {
+                var forgotten = Settings.ForgetWhenClosing == ForgetMode.Sites && Settings.ForgetSites.Contains(site);
+                if (Settings.ForgetWhenClosing != ForgetMode.Everything)
+                    menu.Items.Add(Item(forgotten ? "Stop forgetting " + site + " when closing" : "Forget " + site + " when closing",
+                        () => Forgetting.SetSite(site, !forgotten)));
             }
             if (site != null && Settings.DarkPages == DarkMode.Always)
             {
@@ -552,7 +563,7 @@ namespace Kudubrowse.Views
             _forward.IsEnabled = t.CanGoForward;
             _reload.Content = Ui.Label(t.IsLoading ? "IconClose" : "IconRefresh", null);
             _reload.ToolTip = t.IsLoading ? "Stop (Esc)" : "Reload (F5)";
-            _addressIcon.SetResourceReference(Glyph.DataProperty, AddressBar.IsSecure(t.Url) ? "IconLock" : "IconGlobe");
+            _addressIcon.SetResourceReference(Glyph.DataProperty, t.InsecureUrl != null ? "IconWarn" : AddressBar.IsSecure(t.Url) ? "IconLock" : "IconGlobe");
             _addressIcon.ToolTip = t.IsBlank ? null : AddressBar.IsSecure(t.Url) ? "The connection to this site is private (https)" : "The connection to this site isn't private";
             Title = (t.IsBlank ? "New tab" : t.Title) + " - " + AppInfo.Name + (IsPrivate ? " (private)" : string.Empty);
             if (t.View != null) _newTabPage.Visibility = Visibility.Collapsed;
@@ -695,6 +706,7 @@ namespace Kudubrowse.Views
             reopen.IsEnabled = RecentlyClosed.Count > 0;
             menu.Items.Add(reopen);
             menu.Items.Add(Item("Find a tab...", () => TabFinder.Show(this), "Ctrl+Shift+A"));
+            if (!IsPrivate) menu.Items.Add(TabSetsMenu());
             menu.Items.Add(new Separator());
             var zoom = new MenuItem { Header = $"Zoom ({Math.Round((Current?.Zoom ?? 1) * 100)}%)" };
             zoom.Items.Add(Item("Bigger", () => ZoomBy(1.1), "Ctrl++"));
@@ -714,11 +726,19 @@ namespace Kudubrowse.Views
             }));
             menu.Items.Add(Item("Screenshot of the whole page...", async () => await SaveScreenshot(), "Ctrl+Shift+S"));
             menu.Items.Add(Item("Save the page as PDF...", async () => await SavePdf()));
+            if (!IsPrivate)
+            {
+                var later = Item("Save for reading later", async () => await SaveForLater());
+                later.IsEnabled = Current != null && ReadLater.IsWebAddress(Current.Url) && Current.View != null;
+                menu.Items.Add(later);
+            }
             menu.Items.Add(Item("Full screen", () => SetFullScreen(!_fullScreen), "F11"));
             menu.Items.Add(Item(Settings.TabsOnSide ? "Tabs along the top" : "Tabs down the side", () => PlaceTabs(!Settings.TabsOnSide)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("History", () => LibraryWindow.Show(this, false), "Ctrl+H"));
             menu.Items.Add(Item("Bookmarks", () => LibraryWindow.Show(this, true), "Ctrl+Shift+O"));
+            var unread = BrowserLibrary.ReadLater.Unread;
+            menu.Items.Add(Item(unread > 0 ? Lang.T("Read later ({0} new)", unread) : "Read later", () => LibraryWindow.ShowReadLater(this)));
             menu.Items.Add(Item("Passwords", () => PasswordsWindow.Show(this)));
             menu.Items.Add(Item("Downloads", () => DownloadsWindow.Show(this), "Ctrl+J"));
             var barItem = Item(Settings.ShowBookmarksBar ? "Hide the bookmarks bar" : "Show the bookmarks bar", ToggleBookmarksBar, "Ctrl+Shift+B");

@@ -96,6 +96,15 @@ Part of the KUDU family of free, open-source (MIT) Windows apps by Azeem Bukhari
    through `Lang.T`). Web pages, search engine names and the block-list names stay as they are. Texts are in
    `src/KUDUBROWSE/Lang/<code>.txt`, made and checked with kudu-common's `tools/lang.py`; when adding or changing a text,
    add it to every language file (`tools/lang.py check ../kudubrowse`).
+1.9: tab sets (`Core/TabSets.cs`, tabsets.txt: a "set" line, then the tabs as the session file writes them, `Session.Line`/
+   `Parse`; `Views/MainWindow.TabSets.cs`: menu, save/put away, `AddSavedTabs` keeps rooms, groups and muting, and the
+   `TabSetsWindow`), read later (`Core/ReadLater.cs`: whole pages as MHTML from DevTools `Page.captureSnapshot` in
+   `ReadLater\`, list.txt; `Views/MainWindow.ReadLater.cs`; the library window's third tab), secure connections
+   (`Core/SecureConnections.cs` decides; `Views/BrowserTab.Secure.cs` cancels an http navigation, tries https for 6 s,
+   and shows a WPF warning in the page's place (`Layout`) with Go back / Open it anyway; local and allowed sites are
+   left alone), clear when closing (`Core/ForgetOnClose.cs`, `Views/Forgetting.cs`: when the last window closes, every
+   room's cookies and site data and/or history for the listed sites or all, through hidden controllers; `ForgetPending`
+   finishes it at the next start if closing was cut short). None of these in private windows.
 
 Versions below 1.0 are built and tested by CI but never released (see "Is this a new version?" in the workflow).
 
