@@ -1135,13 +1135,15 @@ namespace Kudubrowse.Views
                             var b = main.NewTab(forgotten, true);
                             await Wait(() => b.Title == "Cookie page" && !b.IsLoading, 30, "the page to forget");
                             var cookies = a.View.CoreWebView2.CookieManager;
+                            // Only this page's own cookie counts (earlier steps leave other cookies on 127.0.0.1).
+                            async Task<int> Visits(string url) => (await cookies.GetCookiesAsync(url)).Count(c => c.Name == "visit");
                             int keptCount = 0, forgottenCount = 0;
                             try
                             {
                                 await WaitAsync(async () =>
                                 {
-                                    keptCount = (await cookies.GetCookiesAsync(kept)).Count;
-                                    forgottenCount = (await cookies.GetCookiesAsync(forgotten)).Count;
+                                    keptCount = await Visits(kept);
+                                    forgottenCount = await Visits(forgotten);
                                     return keptCount == 1 && forgottenCount == 1;
                                 }, 10, "both cookies");
                             }
@@ -1156,8 +1158,8 @@ namespace Kudubrowse.Views
                             Expect(await Forgetting.Run(main.Tabs.Select(t => t.Url).ToArray()), "it finished");
                             Expect(!Settings.ForgetPending, "nothing left for the next start");
                             Note("forgotten");
-                            Expect((await cookies.GetCookiesAsync(forgotten)).Count == 0, "the listed site's cookie is gone");
-                            Expect((await cookies.GetCookiesAsync(kept)).Count == 1, "the other site's cookie stays");
+                            Expect(await Visits(forgotten) == 0, "the listed site's cookie is gone");
+                            Expect(await Visits(kept) == 1, "the other site's cookie stays");
                             Expect(!BrowserLibrary.History.All.Any(v => v.Url == forgotten), "the listed site's page left the history");
                             Expect(BrowserLibrary.History.All.Any(v => v.Url == kept), "the other site's page stays in the history");
                             Settings.ForgetWhenClosing = ForgetMode.Off;
